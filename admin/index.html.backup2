@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>商隐管理系统</title>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --apple-blue: #007AFF;
+            --apple-gray: #8E8E93;
+            --apple-light-gray: #F2F2F7;
+            --apple-dark-gray: #1C1C1E;
+            --apple-card-bg: #FFFFFF;
+            --apple-border: #E5E5EA;
+            --apple-success: #34C759;
+            --apple-warning: #FF9500;
+            --apple-danger: #FF3B30;
+            --shadow-light: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.1);
+            --shadow-heavy: 0 8px 25px rgba(0, 0, 0, 0.15);
+            --border-radius-small: 8px;
+            --border-radius-medium: 12px;
+            --border-radius-large: 16px;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--apple-dark-gray);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: var(--apple-card-bg);
+            border-radius: var(--border-radius-large);
+            box-shadow: var(--shadow-medium);
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--apple-blue), #5856D6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--apple-gray);
+            font-size: 1.1em;
+            font-weight: 400;
+        }
+
+        .nav-tabs {
+            display: flex;
+            background: var(--apple-card-bg);
+            border-radius: var(--border-radius-medium);
+            box-shadow: var(--shadow-light);
+            margin-bottom: 30px;
+            padding: 8px;
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            flex: 1;
+            text-align: center;
+            padding: 12px 20px;
+            border-radius: var(--border-radius-small);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            white-space: nowrap;
+            min-width: 120px;
+        }
+
+        .nav-tab:hover {
+            background: var(--apple-light-gray);
+            transform: translateY(-1px);
+        }
+
+        .nav-tab.active {
+            background: var(--apple-blue);
+            color: white;
+            box-shadow: var(--shadow-light);
+        }
+
+        .nav-tab i {
+            margin-right: 8px;
+            font-size: 0.9em;
+        }
+
+        .content-section {
+            background: var(--apple-card-bg);
+            border-radius: var(--border-radius-large);
+            box-shadow: var(--shadow-medium);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: var(--apple-dark-gray);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--border-radius-medium);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-medium);
+        }
+
+        .btn-primary {
+            background: var(--apple-blue);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--apple-success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--apple-danger);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--apple-blue);
+            color: var(--apple-blue);
+        }
+
+        .btn-outline:hover {
+            background: var(--apple-blue);
+            color: white;
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.8em;
+        }
+
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .data-card {
+            background: var(--apple-card-bg);
+            border: 1px solid var(--apple-border);
+            border-radius: var(--border-radius-medium);
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .data-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--apple-blue);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .data-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-heavy);
+        }
+
+        .data-card:hover::before {
+            transform: scaleY(1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: var(--apple-dark-gray);
+        }
+
+        .card-code {
+            font-family: 'SF Mono', 'Monaco', monospace;
+            background: var(--apple-light-gray);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            color: var(--apple-gray);
+        }
+
+        .card-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(52, 199, 89, 0.1);
+            color: var(--apple-success);
+        }
+
+        .status-inactive {
+            background: rgba(255, 59, 48, 0.1);
+            color: var(--apple-danger);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--apple-border);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--apple-blue), #5856D6);
+            color: white;
+            padding: 25px;
+            border-radius: var(--border-radius-medium);
+            text-align: center;
+            box-shadow: var(--shadow-medium);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: var(--apple-card-bg);
+            border-radius: var(--border-radius-large);
+            box-shadow: var(--shadow-heavy);
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { 
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to { 
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            padding: 25px 30px 15px;
+            border-bottom: 1px solid var(--apple-border);
+        }
+
+        .modal-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            color: var(--apple-dark-gray);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            color: var(--apple-gray);
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: var(--apple-dark-gray);
+        }
+
+        .modal-body {
+            padding: 25px 30px;
+        }
+
+        .modal-footer {
+            padding: 15px 30px 25px;
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--apple-dark-gray);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--apple-border);
+            border-radius: var(--border-radius-small);
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: var(--apple-card-bg);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--apple-blue);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--apple-gray);
+        }
+
+        .empty-state i {
+            font-size: 3em;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        /* 员工管理样式 */
+        .employee-checkbox {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        
+        .employee-info {
+            margin-bottom: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--apple-light-gray);
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            font-weight: 500;
+            color: var(--apple-gray);
+        }
+        
+        .status.active {
+            color: var(--apple-success);
+            font-weight: 600;
+        }
+        
+        .status.inactive {
+            color: var(--apple-danger);
+            font-weight: 600;
+        }
+        
+        .wechat-info {
+            color: #07C160;
+            font-weight: 500;
+        }
+        
+        .wechat-info i {
+            margin-right: 5px;
+        }
+        
+        .employee-processes {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--apple-border);
+        }
+        
+        .processes-label {
+            font-weight: 500;
+            color: var(--apple-gray);
+            margin-bottom: 8px;
+        }
+        
+        .process-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        
+        .process-tag {
+            background: var(--apple-blue);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        
+        .card-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+
+        .alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: var(--border-radius-small);
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            animation: slideInRight 0.3s ease;
+        }
+
+        @keyframes slideInRight {
+            from { 
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to { 
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .alert-success {
+            background: var(--apple-success);
+        }
+
+        .alert-danger {
+            background: var(--apple-danger);
+        }
+
+        .alert-info {
+            background: var(--apple-blue);
+        }
+
+        .process-selector {
+            margin-top: 20px;
+        }
+
+        .process-selector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .process-list {
+            border: 2px solid var(--apple-border);
+            border-radius: var(--border-radius-small);
+            min-height: 200px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .process-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--apple-border);
+            cursor: move;
+            transition: all 0.3s ease;
+        }
+
+        .process-item:last-child {
+            border-bottom: none;
+        }
+
+        .process-item:hover {
+            background: var(--apple-light-gray);
+        }
+
+        .process-item.sortable-ghost {
+            opacity: 0.5;
+        }
+
+        .process-item.sortable-drag {
+            background: var(--apple-blue);
+            color: white;
+        }
+
+        .process-info {
+            flex: 1;
+        }
+
+        .process-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .process-details {
+            font-size: 0.8em;
+            color: var(--apple-gray);
+        }
+
+        .process-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .available-processes {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .available-process {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid var(--apple-border);
+            border-radius: var(--border-radius-small);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .available-process:hover {
+            border-color: var(--apple-blue);
+            background: rgba(0, 122, 255, 0.05);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--apple-border);
+            border-radius: 50%;
+            border-top-color: var(--apple-blue);
+            animation: spin 0.8s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .data-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .nav-tabs {
+                padding: 4px;
+            }
+            
+            .nav-tab {
+                padding: 10px 15px;
+                font-size: 0.9em;
+            }
+
+            .modal-content {
+                max-width: 95%;
+            }
+
+            .available-processes {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <!-- 头部 -->
+            <div class="header">
+                <h1>商隐管理系统</h1>
+                <p>高效管理您的产品类型和工序流程</p>
+            </div>
+
+            <!-- 导航标签 -->
+            <div class="nav-tabs">
+                <div class="nav-tab" :class="{active: activeTab === 'dashboard'}" @click="setActiveTab('dashboard')">
+                    <i class="fas fa-chart-pie"></i>仪表盘
+                </div>
+                <div class="nav-tab" :class="{active: activeTab === 'productTypes'}" @click="setActiveTab('productTypes')">
+                    <i class="fas fa-cube"></i>产品类型
+                </div>
+                <div class="nav-tab" :class="{active: activeTab === 'processes'}" @click="setActiveTab('processes')">
+                    <i class="fas fa-cogs"></i>工序管理
+                </div>
+                <div class="nav-tab" :class="{active: activeTab === 'employees'}" @click="setActiveTab('employees')">
+                    <i class="fas fa-users"></i>员工管理
+                </div>
+                <div class="nav-tab" :class="{active: activeTab === 'contracts'}" @click="setActiveTab('contracts')">
+                    <i class="fas fa-file-contract"></i>合同管理
+                </div>
+            </div>
+
+            <!-- 仪表盘 -->
+            <div v-if="activeTab === 'dashboard'" class="content-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">{{ dashboardData.productTypes }}</div>
+                        <div class="stat-label">产品类型</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, var(--apple-success), #30B149);">
+                        <div class="stat-number">{{ dashboardData.processes }}</div>
+                        <div class="stat-label">工序数量</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, var(--apple-warning), #FF8C00);">
+                        <div class="stat-number">{{ dashboardData.employees }}</div>
+                        <div class="stat-label">员工数量</div>
+                    </div>
+                    <div class="stat-card" style="background: linear-gradient(135deg, #AF52DE, #9F44D3);">
+                        <div class="stat-number">{{ dashboardData.contracts }}</div>
+                        <div class="stat-label">合同数量</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 产品类型管理 -->
+            <div v-if="activeTab === 'productTypes'" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">产品类型管理</h2>
+                    <button class="btn btn-primary" @click="showProductTypeModal()">
+                        <i class="fas fa-plus"></i>添加产品类型
+                    </button>
+                </div>
+                
+                <div v-if="productTypes.length === 0" class="empty-state">
+                    <i class="fas fa-cube"></i>
+                    <p>暂无产品类型</p>
+                    <button class="btn btn-outline" @click="showProductTypeModal()">
+                        <i class="fas fa-plus"></i>创建第一个产品类型
+                    </button>
+                </div>
+                
+                <div v-else class="data-grid">
+                    <div v-for="item in productTypes" :key="item.id" class="data-card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">{{ item.name }}</div>
+                                <div class="card-code">{{ item.code }}</div>
+                            </div>
+                            <span class="card-status" :class="item.status === 'active' ? 'status-active' : 'status-inactive'">
+                                {{ item.status === 'active' ? '启用' : '禁用' }}
+                            </span>
+                        </div>
+                        <div v-if="item.processes && item.processes.length > 0" style="margin: 10px 0;">
+                            <strong>工序:</strong>
+                            <div style="margin-top: 5px;">
+                                <span v-for="(process, index) in item.processes" :key="process.id" 
+                                      style="display: inline-block; background: var(--apple-light-gray); padding: 2px 8px; margin: 2px; border-radius: 4px; font-size: 0.8em;">
+                                    {{ index + 1 }}. {{ process.name }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm" @click="editProductType(item)">
+                                <i class="fas fa-edit"></i>编辑
+                            </button>
+                            <button class="btn btn-danger btn-sm" @click="deleteProductType(item.id)">
+                                <i class="fas fa-trash"></i>删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 工序管理 -->
+            <div v-if="activeTab === 'processes'" class="content-section">
+                <div class="section-header">
+                    <h2 class="section-title">工序管理</h2>
+                    <button class="btn btn-primary" @click="showProcessModal()">
+                        <i class="fas fa-plus"></i>添加工序
+                    </button>
+                </div>
+                
+                <div v-if="processes.length === 0" class="empty-state">
+                    <i class="fas fa-cogs"></i>
+                    <p>暂无工序</p>
+                    <button class="btn btn-outline" @click="showProcessModal()">
+                        <i class="fas fa-plus"></i>创建第一个工序
+                    </button>
+                </div>
+                
+                <div v-else class="data-grid">
+                    <div v-for="item in processes" :key="item.id" class="data-card">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">{{ item.name }}</div>
+                                <div class="card-code">{{ item.code }}</div>
+                            </div>
+                            <span class="card-status" :class="item.status === 'active' ? 'status-active' : 'status-inactive'">
+                                {{ item.status === 'active' ? '启用' : '禁用' }}
+                            </span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-outline btn-sm" @click="editProcess(item)">
+                                <i class="fas fa-edit"></i>编辑
+                            </button>
+                            <button class="btn btn-danger btn-sm" @click="deleteProcess(item.id)">
+                                <i class="fas fa-trash"></i>删除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 其他标签页内容 -->
+            <div v-if="activeTab === 'employees'" class="content-section">
+                <div class="section-header">
+                    <div class="header-left">
+                        <h2><i class="fas fa-users"></i> 员工管理</h2>
+                        <p>管理员工信息、工序分配和微信关联</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" @click="showEmployeeModal()">
+                            <i class="fas fa-plus"></i> 添加员工
+                        </button>
+                        <button class="btn btn-danger" @click="batchClearWechat()" :disabled="selectedEmployees.length === 0">
+                            <i class="fas fa-unlink"></i> 批量清除微信
+                        </button>
+                        <button class="btn btn-danger" @click="batchDeleteEmployees()" :disabled="selectedEmployees.length === 0">
+                            <i class="fas fa-trash"></i> 批量删除
+                        </button>
+                    </div>
+                </div>
+
+                <div class="data-grid" v-if="employees.length > 0">
+                    <div v-for="employee in employees" :key="employee.id" class="data-card">
+                        <div class="card-header">
+                            <div class="header-left">
+                                <h3 class="card-title">{{ employee.name }}</h3>
+                                <div class="card-code">{{ employee.code }}</div>
+                            </div>
+                            <div class="card-actions">
+                                <input type="checkbox" :value="employee.id" v-model="selectedEmployees" class="employee-checkbox">
+                                <button class="btn btn-sm btn-secondary" @click="editEmployee(employee)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-warning" @click="clearEmployeeWechat(employee.id)" v-if="employee.wxOpenId">
+                                    <i class="fas fa-unlink"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger" @click="deleteEmployee(employee.id)">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="employee-info">
+                                <div class="info-item">
+                                    <span class="label">状态:</span>
+                                    <span class="status" :class="employee.status">{{ employee.status === 'active' ? '在职' : '离职' }}</span>
+                                </div>
+                                <div class="info-item" v-if="employee.wxOpenId">
+                                    <span class="label">微信:</span>
+                                    <span class="wechat-info">
+                                        <i class="fab fa-weixin"></i>
+                                        已绑定
+                                    </span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="label">创建时间:</span>
+                                    <span>{{ formatDate(employee.createdAt) }}</span>
+                                </div>
+                            </div>
+                            <div class="employee-processes" v-if="employee.processes && employee.processes.length > 0">
+                                <div class="processes-label">分配工序:</div>
+                                <div class="process-tags">
+                                    <span v-for="process in employee.processes" :key="process.id" class="process-tag">
+                                        {{ process.name }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" v-else>
+                    <i class="fas fa-users"></i>
+                    <p>暂无员工数据</p>
+                    <button class="btn btn-primary" @click="showEmployeeModal()">
+                        <i class="fas fa-plus"></i> 添加第一个员工
+                    </button>
+                </div>
+            </div>
+            </div>
+
+            <div v-if="activeTab === 'contracts'" class="content-section">
+                <div class="empty-state">
+                    <i class="fas fa-file-contract"></i>
+                    <p>合同管理功能开发中</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 产品类型模态框 -->
+        <div class="modal" id="productTypeModal" :class="{show: showModal === 'productType'}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ modalTitle }}</h3>
+                    <button class="modal-close" @click="closeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">名称 *</label>
+                        <input type="text" class="form-control" v-model="currentItem.name" placeholder="请输入产品类型名称">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <select class="form-control" v-model="currentItem.status">
+                            <option value="active">启用</option>
+                            <option value="inactive">禁用</option>
+                        </select>
+                    </div>
+
+                    <!-- 工序选择器 -->
+                    <div class="process-selector">
+                        <div class="process-selector-header">
+                            <h4>工序配置</h4>
+                            <button type="button" class="btn btn-outline btn-sm" @click="showAvailableProcesses">
+                                <i class="fas fa-plus"></i>添加工序
+                            </button>
+                        </div>
+
+                        <!-- 已选择的工序列表 -->
+                        <div class="process-list" id="selectedProcessList">
+                            <div v-if="selectedProcesses.length === 0" style="padding: 40px; text-align: center; color: var(--apple-gray);">
+                                <i class="fas fa-cogs" style="font-size: 2em; margin-bottom: 10px; opacity: 0.5;"></i>
+                                <p>暂未选择工序，点击上方"添加工序"按钮选择</p>
+                            </div>
+                            <div v-for="(process, index) in selectedProcesses" :key="process.id" class="process-item" :data-id="process.id">
+                                <div class="process-info">
+                                    <div class="process-name">{{ index + 1 }}. {{ process.name }}</div>
+                                    <div class="process-details">{{ process.code }}</div>
+                                </div>
+                                <div class="process-actions">
+                                    <button type="button" class="btn btn-danger btn-sm" @click="removeProcess(index)">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 可选工序列表 -->
+                        <div v-if="showAvailableProcessesFlag" style="margin-top: 15px;">
+                            <h5>可选工序</h5>
+                            <div class="available-processes">
+                                <div v-for="process in availableProcesses" :key="process.id" 
+                                     class="available-process" 
+                                     @click="addProcess(process)">
+                                    <div>
+                                        <div style="font-weight: 500;">{{ process.name }}</div>
+                                        <div style="font-size: 0.8em; color: var(--apple-gray);">{{ process.code }}</div>
+                                    </div>
+                                    <button type="button" class="btn btn-success btn-sm">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @click="closeModal">取消</button>
+                    <button class="btn btn-primary" @click="saveProductType">
+                        <span v-if="loading" class="loading"></span>
+                        <span v-else>保存</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 工序模态框 -->
+        <div class="modal" id="processModal" :class="{show: showModal === 'process'}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ modalTitle }}</h3>
+                    <button class="modal-close" @click="closeModal">&times;</button>
+                </div>
+        
+        <!-- 员工模态框 -->
+        <div class="modal" id="employeeModal" :class="{show: showModal === 'employee'}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ modalTitle }}</h3>
+                    <button class="modal-close" @click="closeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form @submit.prevent="saveEmployee">
+                        <div class="form-group">
+                            <label>员工姓名 *</label>
+                            <input type="text" v-model="currentItem.name" placeholder="请输入员工姓名" required>
+                        </div>
+                        <div class="form-group">
+                            <label>员工编码</label>
+                            <input type="text" v-model="currentItem.code" placeholder="留空自动生成">
+                        </div>
+                        <div class="form-group">
+                            <label>状态</label>
+                            <select v-model="currentItem.status">
+                                <option value="active">在职</option>
+                                <option value="inactive">离职</option>
+                            </select>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" @click="closeModal">取消</button>
+                            <button type="submit" class="btn btn-primary" :disabled="loading">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">名称 *</label>
+                        <input type="text" class="form-control" v-model="currentItem.name" placeholder="请输入工序名称">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <select class="form-control" v-model="currentItem.status">
+                            <option value="active">启用</option>
+                            <option value="inactive">禁用</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @click="closeModal">取消</button>
+                    <button class="btn btn-primary" @click="saveProcess">
+                        <span v-if="loading" class="loading"></span>
+                        <span v-else>保存</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    activeTab: 'dashboard',
+                    apiBaseUrl: '/shangyin',
+                    showModal: null,
+                    loading: false,
+                    showAvailableProcessesFlag: false,
+                    
+                    dashboardData: {
+                        productTypes: 0,
+                        processes: 0,
+                        employees: 0,
+                        contracts: 0
+                    },
+                    
+                    productTypes: [],
+                    processes: [],
+                    employees: [],
+                    selectedEmployees: [],
+                    selectedProcesses: [],
+                    sortableInstance: null,
+                    
+                    currentItem: {},
+                    isEditing: false,
+                    modalTitle: ''
+                }
+            },
+            
+            computed: {
+                availableProcesses() {
+                    const selectedIds = this.selectedProcesses.map(p => p.id);
+                    return this.processes.filter(p => !selectedIds.includes(p.id) && p.status === 'active');
+                }
+            },
+            
+            mounted() {
+                this.loadDashboardData();
+                this.loadProductTypes();
+                this.loadProcesses();
+                this.loadEmployees();
+            },
+            
+            methods: {
+                setActiveTab(tab) {
+                    this.activeTab = tab;
+                    
+                    if (tab === 'productTypes' && this.productTypes.length === 0) {
+                        this.loadProductTypes();
+                    } else if (tab === 'processes' && this.processes.length === 0) {
+                        this.loadProcesses();
+                this.loadEmployees();
+                    }
+                },
+                
+                async loadDashboardData() {
+                    try {
+                        const [productTypesRes, processesRes] = await Promise.all([
+                            axios.get(this.apiBaseUrl + '/product-types'),
+                            axios.get(this.apiBaseUrl + '/processes')
+                        ]);
+                        
+                        this.dashboardData.productTypes = productTypesRes.data.data?.productTypes?.length || 0;
+                        this.dashboardData.processes = processesRes.data.data?.processes?.length || 0;
+                    } catch (error) {
+                        console.error('加载仪表盘数据失败:', error);
+                    }
+                },
+                
+                async loadEmployees() {
+                    try {
+                        const response = await axios.get(this.apiBaseUrl + '/admin/employees');
+                        if (response.data.success) {
+                            this.employees = response.data.data.employees;
+                        }
+                    } catch (error) {
+                        console.error('获取员工列表失败:', error);
+                        this.showAlert('获取员工列表失败', 'danger');
+                    }
+                },
+                
+                showEmployeeModal(employee = null) {
+                    this.currentItem = employee ? { ...employee } : { name: '', code: '', status: 'active' };
+                    this.isEditing = !!employee;
+                    this.modalTitle = employee ? '编辑员工' : '添加员工';
+                    this.showModal = 'employee';
+                },
+                
+                async saveEmployee() {
+                    if (!this.currentItem.name) {
+                        this.showAlert('姓名不能为空', 'danger');
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    try {
+                        const url = this.isEditing 
+                            ? this.apiBaseUrl + '/employees/' + this.currentItem.id
+                            : this.apiBaseUrl + '/employees';
+                            
+                        const method = this.isEditing ? 'put' : 'post';
+                        
+                        const response = await axios[method](url, this.currentItem);
+                        
+                        if (response.data.success) {
+                            this.showAlert(response.data.message || '保存成功', 'success');
+                            this.loadEmployees();
+                            this.loadDashboardData();
+                            this.closeModal();
+                        }
+                    } catch (error) {
+                        console.error('保存员工失败:', error);
+                        this.showAlert(error.response?.data?.message || '保存失败', 'danger');
+                    }
+                    this.loading = false;
+                },
+                
+                editEmployee(employee) {
+                    this.showEmployeeModal(employee);
+                },
+                
+                async deleteEmployee(id) {
+                    if (!confirm('确定要删除这个员工吗？删除后该员工的微信关联也将被清除。')) return;
+                    
+                    try {
+                        const response = await axios.delete(this.apiBaseUrl + '/admin/employees/' + id);
+                        if (response.data.success) {
+                            this.showAlert(response.data.message || '删除成功', 'success');
+                            this.loadEmployees();
+                            this.loadDashboardData();
+                        }
+                    } catch (error) {
+                        console.error('删除员工失败:', error);
+                        this.showAlert(error.response?.data?.message || '删除失败', 'danger');
+                    }
+                },
+                
+                async clearEmployeeWechat(id) {
+                    if (!confirm('确定要清除该员工的微信关联吗？清除后该微信下次登录将被视为新用户。')) return;
+                    
+                    try {
+                        const response = await axios.delete(this.apiBaseUrl + '/admin/employees/' + id + '/wechat');
+                        if (response.data.success) {
+                            this.showAlert(response.data.message || '微信关联已清除', 'success');
+                            this.loadEmployees();
+                        }
+                    } catch (error) {
+                        console.error('清除微信关联失败:', error);
+                        this.showAlert(error.response?.data?.message || '操作失败', 'danger');
+                    }
+                },
+                
+                async batchClearWechat() {
+                    if (this.selectedEmployees.length === 0) return;
+                    
+                    if (!confirm(`确定要清除${this.selectedEmployees.length}个员工的微信关联吗？`)) return;
+                    
+                    try {
+                        const response = await axios.post(this.apiBaseUrl + '/admin/employees/batch/clear-wechat', {
+                            employeeIds: this.selectedEmployees
+                        });
+                        if (response.data.success) {
+                            this.showAlert(response.data.message || '批量清除成功', 'success');
+                            this.selectedEmployees = [];
+                            this.loadEmployees();
+                        }
+                    } catch (error) {
+                        console.error('批量清除微信关联失败:', error);
+                        this.showAlert(error.response?.data?.message || '操作失败', 'danger');
+                    }
+                },
+                
+                async batchDeleteEmployees() {
+                    if (this.selectedEmployees.length === 0) return;
+                    
+                    if (!confirm(`确定要删除${this.selectedEmployees.length}个员工吗？删除后相关的微信关联也将被清除。`)) return;
+                    
+                    try {
+                        const response = await axios.post(this.apiBaseUrl + '/admin/employees/batch/delete', {
+                            employeeIds: this.selectedEmployees
+                        });
+                        if (response.data.success) {
+                            this.showAlert(response.data.message || '批量删除成功', 'success');
+                            this.selectedEmployees = [];
+                            this.loadEmployees();
+                            this.loadDashboardData();
+                        }
+                    } catch (error) {
+                        console.error('批量删除员工失败:', error);
+                        this.showAlert(error.response?.data?.message || '操作失败', 'danger');
+                    }
+                },
+                
+                formatDate(dateStr) {
+                    if (!dateStr) return '未知';
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('zh-CN') + ' ' + date.toLocaleTimeString('zh-CN');
+                },
+                
+                async loadProductTypes() {
+                    try {
+                        const response = await axios.get(this.apiBaseUrl + '/product-types');
+                        this.productTypes = response.data.data?.productTypes || [];
+                    } catch (error) {
+                        console.error('加载产品类型失败:', error);
+                        this.showAlert('加载产品类型失败', 'danger');
+                    }
+                },
+                
+                async loadProcesses() {
+                    try {
+                        const response = await axios.get(this.apiBaseUrl + '/processes');
+                        this.processes = response.data.data?.processes || [];
+                    } catch (error) {
+                        console.error('加载工序失败:', error);
+                        this.showAlert('加载工序失败', 'danger');
+                    }
+                },
+                
+                showProductTypeModal(item = null) {
+                    this.isEditing = !!item;
+                    this.modalTitle = this.isEditing ? '编辑产品类型' : '添加产品类型';
+                    
+                    if (item) {
+                        this.currentItem = JSON.parse(JSON.stringify(item));
+                        this.selectedProcesses = item.processes ? JSON.parse(JSON.stringify(item.processes)) : [];
+                    } else {
+                        this.currentItem = {
+                            name: '',
+                            status: 'active'
+                        };
+                        this.selectedProcesses = [];
+                    }
+                    
+                    this.showModal = 'productType';
+                    this.showAvailableProcessesFlag = false;
+                    
+                    this.$nextTick(() => {
+                        this.initSortable();
+                    });
+                },
+                
+                showProcessModal(item = null) {
+                    this.isEditing = !!item;
+                    this.modalTitle = this.isEditing ? '编辑工序' : '添加工序';
+                    this.currentItem = item ? JSON.parse(JSON.stringify(item)) : {
+                        name: '',
+                        status: 'active'
+                    };
+                    this.showModal = 'process';
+                },
+                
+                closeModal() {
+                    this.showModal = null;
+                    this.loading = false;
+                    this.showAvailableProcessesFlag = false;
+                    this.selectedProcesses = [];
+                    if (this.sortableInstance) {
+                        this.sortableInstance.destroy();
+                        this.sortableInstance = null;
+                    }
+                },
+                
+                initSortable() {
+                    const el = document.getElementById('selectedProcessList');
+                    if (el && !this.sortableInstance) {
+                        this.sortableInstance = Sortable.create(el, {
+                            animation: 150,
+                            ghostClass: 'sortable-ghost',
+                            dragClass: 'sortable-drag',
+                            onEnd: (evt) => {
+                                const oldIndex = evt.oldIndex;
+                                const newIndex = evt.newIndex;
+                                
+                                if (oldIndex !== newIndex) {
+                                    const movedProcess = this.selectedProcesses.splice(oldIndex, 1)[0];
+                                    this.selectedProcesses.splice(newIndex, 0, movedProcess);
+                                }
+                            }
+                        });
+                    }
+                },
+                
+                showAvailableProcesses() {
+                    this.showAvailableProcessesFlag = !this.showAvailableProcessesFlag;
+                },
+                
+                addProcess(process) {
+                    if (!this.selectedProcesses.find(p => p.id === process.id)) {
+                        this.selectedProcesses.push(JSON.parse(JSON.stringify(process)));
+                    }
+                },
+                
+                removeProcess(index) {
+                    this.selectedProcesses.splice(index, 1);
+                },
+                
+                async saveProductType() {
+                    if (!this.currentItem.name) {
+                        this.showAlert('名称不能为空', 'danger');
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    try {
+                        const data = {
+                            ...this.currentItem,
+                            processes: this.selectedProcesses
+                        };
+                        
+                        const url = this.isEditing 
+                            ? this.apiBaseUrl + '/product-types/' + this.currentItem.id
+                            : this.apiBaseUrl + '/product-types';
+                            
+                        const method = this.isEditing ? 'put' : 'post';
+                        
+                        const response = await axios[method](url, data);
+                        
+                        if (response.data.success) {
+                            this.showAlert(response.data.message || '保存成功', 'success');
+                            this.loadProductTypes();
+                            this.loadDashboardData();
+                            this.closeModal();
+                        }
+                    } catch (error) {
+                        console.error('保存产品类型失败:', error);
+                        this.showAlert(error.response?.data?.message || '保存失败', 'danger');
+                    }
+                    this.loading = false;
+                },
+                
+                async saveProcess() {
+                    if (!this.currentItem.name) {
+                        this.showAlert('名称不能为空', 'danger');
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    try {
+                        const url = this.isEditing 
+                            ? this.apiBaseUrl + '/processes/' + this.currentItem.id
+                            : this.apiBaseUrl + '/processes';
+                            
+                        const method = this.isEditing ? 'put' : 'post';
+                        
+                        const response = await axios[method](url, this.currentItem);
+                        
+                        if (response.data.success) {
+                            this.showAlert(response.data.message || '保存成功', 'success');
+                            this.loadProcesses();
+                this.loadEmployees();
+                            this.loadDashboardData();
+                            this.closeModal();
+                        }
+                    } catch (error) {
+                        console.error('保存工序失败:', error);
+                        this.showAlert(error.response?.data?.message || '保存失败', 'danger');
+                    }
+                    this.loading = false;
+                },
+                
+                editProductType(item) {
+                    this.showProductTypeModal(item);
+                },
+                
+                editProcess(item) {
+                    this.showProcessModal(item);
+                },
+                
+                async deleteProductType(id) {
+                    if (!confirm('确定要删除这个产品类型吗？此操作不可撤销！')) return;
+                    
+                    try {
+                        const response = await axios.delete(this.apiBaseUrl + '/product-types/' + id);
+                        if (response.data.success) {
+                            this.showAlert('删除成功', 'success');
+                            this.loadProductTypes();
+                            this.loadDashboardData();
+                        }
+                    } catch (error) {
+                        console.error('删除产品类型失败:', error);
+                        this.showAlert(error.response?.data?.message || '删除失败', 'danger');
+                    }
+                },
+                
+                async deleteProcess(id) {
+                    if (!confirm('确定要删除这个工序吗？')) return;
+                    
+                    try {
+                        const response = await axios.delete(this.apiBaseUrl + '/processes/' + id);
+                        if (response.data.success) {
+                            this.showAlert('删除成功', 'success');
+                            this.loadProcesses();
+                this.loadEmployees();
+                            this.loadDashboardData();
+                        }
+                    } catch (error) {
+                        console.error('删除工序失败:', error);
+                        this.showAlert(error.response?.data?.message || '删除失败', 'danger');
+                    }
+                },
+                
+                showAlert(message, type = 'info') {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = `alert alert-${type}`;
+                    alertDiv.textContent = message;
+                    
+                    document.body.appendChild(alertDiv);
+                    
+                    setTimeout(() => {
+                        if (alertDiv && alertDiv.parentNode) {
+                            alertDiv.style.animation = 'slideInRight 0.3s ease reverse';
+                            setTimeout(() => {
+                                alertDiv.parentNode.removeChild(alertDiv);
+                            }, 300);
+                        }
+                    }, 3000);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

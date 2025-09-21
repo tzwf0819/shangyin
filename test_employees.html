@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>员工数据测试</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>员工数据测试</h1>
+    <div id="stats"></div>
+    <div id="employees"></div>
+    
+    <script>
+        async function testEmployeeData() {
+            try {
+                // 测试dashboard统计
+                const statsRes = await axios.get('/shangyin/admin/dashboard/stats');
+                document.getElementById('stats').innerHTML = 
+                    '<h2>Dashboard统计:</h2><pre>' + JSON.stringify(statsRes.data, null, 2) + '</pre>';
+                
+                // 测试员工列表
+                const employeesRes = await axios.get('/shangyin/admin/employees');
+                document.getElementById('employees').innerHTML = 
+                    '<h2>员工列表 (总数: ' + employeesRes.data.data.total + '):</h2>' +
+                    '<ul>' + 
+                    employeesRes.data.data.employees.map(emp => 
+                        `<li>${emp.name} (${emp.code}) - 微信: ${emp.wxOpenId ? '已绑定' : '未绑定'}</li>`
+                    ).join('') + 
+                    '</ul>';
+                    
+            } catch (error) {
+                console.error('Error:', error);
+                document.body.innerHTML += '<p style="color: red;">错误: ' + error.message + '</p>';
+            }
+        }
+        
+        testEmployeeData();
+    </script>
+</body>
+</html>
