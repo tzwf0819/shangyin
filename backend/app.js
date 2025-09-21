@@ -30,7 +30,8 @@ app.get('/', (req, res) => {
       '/shangyin/processes', 
       '/shangyin/employees',
       '/shangyin/wechat',
-      '/shangyin/task'
+      '/shangyin/task',
+      '/shangyin/api/admin'
     ],
     timestamp: new Date().toISOString()
   });
@@ -42,7 +43,7 @@ app.use('/shangyin/product-types', productTypeRoutes);
 app.use('/shangyin/processes', processRoutes);
 app.use('/shangyin/employees', employeeRoutes);
 app.use('/shangyin/wechat', wechatRoutes);
-app.use('/shangyin/admin', adminRoutes);
+app.use('/shangyin/api/admin', adminRoutes);
 app.use('/shangyin/task', taskRoutes);
 
 // 错误处理中间件

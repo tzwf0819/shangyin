@@ -822,6 +822,7 @@
                 return {
                     activeTab: 'dashboard',
                     apiBaseUrl: '/shangyin',
+                    adminApiBaseUrl: '/shangyin/api/admin',
                     showModal: null,
                     loading: false,
                     
@@ -865,23 +866,20 @@
                 
                 async loadDashboardData() {
                     try {
-                        const [productTypesRes, processesRes, employeesRes] = await Promise.all([
-                            axios.get(this.apiBaseUrl + '/product-types'),
-                            axios.get(this.apiBaseUrl + '/processes'),
-                
-                            axios.get(this.apiBaseUrl + '/admin/employees')
-                        ]);
-                        
-                        this.dashboardData.employees = employeesRes.data.data?.employees?.length || 0;
-                        this.dashboardData.productTypes = productTypesRes.data.data?.productTypes?.length || 0;
-                        this.dashboardData.processes = processesRes.data.data?.processes?.length || 0;
+                        const statsRes = await axios.get(this.adminApiBaseUrl + '/dashboard/stats');
+                        const statsData = statsRes.data?.data || {};
+
+                        this.dashboardData.productTypes = statsData.productTypes ?? 0;
+                        this.dashboardData.processes = statsData.processes ?? 0;
+                        this.dashboardData.employees = statsData.employees ?? 0;
+                        this.dashboardData.contracts = statsData.contracts ?? 0;
                     } catch (error) {
                         console.error('加载仪表盘数据失败:', error);
                     },
 
                 async loadEmployees() {
                     try {
-                        const response = await axios.get(this.apiBaseUrl + '/admin/employees');
+                        const response = await axios.get(this.adminApiBaseUrl + '/employees');
                         if (response.data.success) {
                             this.employees = response.data.data.employees;
                             this.dashboardData.employees = this.employees.length;
@@ -1056,7 +1054,7 @@
                     if (!confirm('确定要删除这个员工吗？删除后该员工的微信关联也将被清除。')) return;
                     
                     try {
-                        const response = await axios.delete(this.apiBaseUrl + '/admin/employees/' + id);
+                        const response = await axios.delete(this.adminApiBaseUrl + '/employees/' + id);
                         if (response.data.success) {
                             this.showAlert(response.data.message || '删除成功', 'success');
                             this.loadEmployees();
@@ -1072,7 +1070,7 @@
                     if (!confirm('确定要清除该员工的微信关联吗？清除后该微信下次登录将被视为新用户。')) return;
                     
                     try {
-                        const response = await axios.delete(this.apiBaseUrl + '/admin/employees/' + id + '/wechat');
+                        const response = await axios.delete(this.adminApiBaseUrl + '/employees/' + id + '/wechat');
                         if (response.data.success) {
                             this.showAlert(response.data.message || '微信关联已清除', 'success');
                             this.loadEmployees();
@@ -1089,7 +1087,7 @@
                     if (!confirm(`确定要清除${this.selectedEmployees.length}个员工的微信关联吗？`)) return;
                     
                     try {
-                        const response = await axios.post(this.apiBaseUrl + '/admin/employees/batch/clear-wechat', {
+                        const response = await axios.post(this.adminApiBaseUrl + '/employees/batch/clear-wechat', {
                             employeeIds: this.selectedEmployees
                         });
                         if (response.data.success) {
@@ -1109,7 +1107,7 @@
                     if (!confirm(`确定要删除${this.selectedEmployees.length}个员工吗？删除后相关的微信关联也将被清除。`)) return;
                     
                     try {
-                        const response = await axios.post(this.apiBaseUrl + '/admin/employees/batch/delete', {
+                        const response = await axios.post(this.adminApiBaseUrl + '/employees/batch/delete', {
                             employeeIds: this.selectedEmployees
                         });
                         if (response.data.success) {

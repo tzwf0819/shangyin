@@ -1,13 +1,22 @@
 // controllers/adminController.js
-const { Employee, Process, EmployeeProcess } = require('../models');
+const { Employee, Process, ProductType, Contract, EmployeeProcess } = require('../models');
 const { Op } = require('sequelize');
 
 // 获取管理员面板统计数据
 exports.getDashboardStats = async (req, res) => {
   try {
-    const [employeesCount, processesCount, activeEmployeesCount, employeesWithWechatCount] = await Promise.all([
+    const [
+      employeesCount,
+      processesCount,
+      productTypesCount,
+      contractsCount,
+      activeEmployeesCount,
+      employeesWithWechatCount
+    ] = await Promise.all([
       Employee.count(),
       Process.count(),
+      ProductType.count(),
+      Contract.count(),
       Employee.count({ where: { status: 'active' } }),
       Employee.count({ where: { wxOpenId: { [Op.not]: null } } })
     ]);
@@ -15,8 +24,14 @@ exports.getDashboardStats = async (req, res) => {
     res.json({
       success: true,
       data: {
+        employees: employeesCount,
+        processes: processesCount,
+        productTypes: productTypesCount,
+        contracts: contractsCount,
         totalEmployees: employeesCount,
         totalProcesses: processesCount,
+        totalProductTypes: productTypesCount,
+        totalContracts: contractsCount,
         activeEmployees: activeEmployeesCount,
         employeesWithWechat: employeesWithWechatCount
       }
