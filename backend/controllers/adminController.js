@@ -57,45 +57,73 @@ exports.getAllEmployeesAdmin = async (req, res) => {
   try {
     const { page = 1, limit = 50, status, hasWechat, keyword } = req.query;
 
-    const whereClause = {};
-    if (status) whereClause.status = status;
-    if (keyword) {
-      whereClause[Op.or] = [
-        { name: { [Op.like]: `%${keyword}%` } },
-        { code: { [Op.like]: `%${keyword}%` } }
-      ];
-    }
-    if (hasWechat !== undefined) {
-      if (hasWechat === 'true') {
-        whereClause.wxOpenId = { [Op.not]: null };
-      } else if (hasWechat === 'false') {
-        whereClause.wxOpenId = null;
-      }
-    }
+    const buildWhereClause = () => {
+      const conditions = [];
 
-    const employees = await Employee.findAndCountAll({
+      if (status) {
+        conditions.push({ status });
+      }
+
+      if (keyword) {
+        conditions.push({
+          [Op.or]: [
+            { name: { [Op.like]: `%${keyword}%` } },
+            { code: { [Op.like]: `%${keyword}%` } }
+          ]
+        });
+      }
+
+      if (hasWechat !== undefined) {
+        if (hasWechat === 'true') {
+          conditions.push({
+            [Op.or]: [
+              { wxOpenId: { [Op.not]: null } },
+              { wxUnionId: { [Op.not]: null } }
+            ]
+          });
+        } else if (hasWechat === 'false') {
+          conditions.push({
+            [Op.and]: [
+              { wxOpenId: null },
+              { wxUnionId: null }
+            ]
+          });
+        }
+      }
+
+      if (conditions.length === 0) {
+        return {};
+      }
+
+      return { [Op.and]: conditions };
+    };
+
+    const whereClause = buildWhereClause();
+    const countWhereClause = buildWhereClause();
+
+    const employees = await Employee.findAll({
       where: whereClause,
       include: [{
         model: Process,
         as: 'processes',
-        through: { 
+        through: {
           attributes: ['assignedAt', 'status'],
           where: { status: 'active' }
         },
         required: false
       }],
-      distinct: true,
-      col: 'Employee.id',
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit),
       order: [['createdAt', 'DESC']]
     });
 
+    const total = await Employee.count({ where: countWhereClause });
+
     res.json({
       success: true,
       data: {
-        employees: employees.rows,
-        total: employees.count,
+        employees,
+        total,
         page: parseInt(page),
         limit: parseInt(limit)
       }
@@ -104,7 +132,8 @@ exports.getAllEmployeesAdmin = async (req, res) => {
     console.error('Get employees admin error:', error);
     res.status(500).json({
       success: false,
-      message: '获取员工列表失败'
+      message: '获取员工列表失败',
+      error: error.message
     });
   }
 };
