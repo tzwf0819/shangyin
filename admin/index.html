@@ -875,7 +875,8 @@
                         this.dashboardData.contracts = statsData.contracts ?? 0;
                     } catch (error) {
                         console.error('加载仪表盘数据失败:', error);
-                    },
+                    }
+                },
 
                 async loadEmployees() {
                     try {
@@ -888,7 +889,6 @@
                         console.error('获取员工列表失败:', error);
                         this.showAlert ? this.showAlert('获取员工列表失败', 'danger') : alert('获取员工列表失败');
                     }
-                },
                 },
                 
                 async loadProductTypes() {
@@ -1048,8 +1048,7 @@
                     };
                     return map[difficulty] || difficulty;
                 },
-                
-                
+
                 async deleteEmployee(id) {
                     if (!confirm('确定要删除这个员工吗？删除后该员工的微信关联也将被清除。')) return;
                     

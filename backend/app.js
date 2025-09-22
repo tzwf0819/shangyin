@@ -2,6 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const bodyParser = require('body-parser');
 const { sequelize } = require('./models');
 
@@ -35,6 +36,16 @@ app.get('/', (req, res) => {
     ],
     timestamp: new Date().toISOString()
   });
+});
+
+// 管理后台静态页面
+const adminStaticPath = path.join(__dirname, '../admin');
+app.use('/shangyin/admin', express.static(adminStaticPath));
+app.get('/shangyin/admin', (req, res) => {
+  res.sendFile(path.join(adminStaticPath, 'index.html'));
+});
+app.get('/shangyin/admin/*', (req, res) => {
+  res.sendFile(path.join(adminStaticPath, 'index.html'));
 });
 
 // 配置路由 - 添加 /shangyin 前缀
