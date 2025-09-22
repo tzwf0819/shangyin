@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   getDashboardStats,
   getAllEmployeesAdmin,
+  updateEmployeeAdmin,
   deleteEmployeeAdmin,
   clearWechatBinding,
   batchClearWechatBinding,
@@ -15,6 +16,7 @@ router.get('/dashboard/stats', getDashboardStats);
 
 // 员工管理
 router.get('/employees', getAllEmployeesAdmin);
+router.put('/employees/:id', updateEmployeeAdmin);
 
 // 删除单个员工（含微信关联清除）
 router.delete('/employees/:id', deleteEmployeeAdmin);

@@ -506,7 +506,38 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
-    </style>
+            .process-checkbox-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-height: 220px;
+            overflow-y: auto;
+            padding: 8px;
+            background: var(--apple-light-gray);
+            border-radius: var(--border-radius-medium);
+        }
+
+        .process-checkbox {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 122, 255, 0.12);
+            padding: 8px 12px;
+            border-radius: var(--border-radius-small);
+            font-size: 0.9em;
+        }
+
+        .process-checkbox input {
+            width: 16px;
+            height: 16px;
+        }
+
+        .empty-state.small {
+            padding: 16px;
+            font-size: 0.9em;
+        }
+
+</style>
 </head>
 <body>
     <div id="app">
@@ -562,7 +593,74 @@
             <div v-if="activeTab === 'productTypes'" class="content-section">
                 <div class="section-header">
                     <h2 class="section-title">产品类型管理</h2>
-                    <button class="btn btn-primary" @click="showProductTypeModal()">
+                    <button class="btn btn-primary" @click="                openEmployeeModal(employee) {
+                    if (!employee) return;
+                    if (this.processes.length === 0) {
+                        this.loadProcesses();
+                    }
+                    this.employeeModalTitle = `编辑 ${employee.name || ''}`.trim();
+                    this.employeeForm = {
+                        id: employee.id,
+                        name: employee.name || '',
+                        status: employee.status || 'active',
+                        processIds: (employee.processes || []).map(process => String(process.id))
+                    };
+                    this.employeeModalVisible = true;
+                    this.loading = false;
+                },
+
+                closeEmployeeModal() {
+                    this.employeeModalVisible = false;
+                    this.resetEmployeeForm();
+                },
+
+                resetEmployeeForm() {
+                    this.employeeModalTitle = '';
+                    this.employeeForm = {
+                        id: null,
+                        name: '',
+                        status: 'active',
+                        processIds: []
+                    };
+                    this.loading = false;
+                },
+
+                async saveEmployee() {
+                    if (!this.employeeForm.id) {
+                        return;
+                    }
+
+                    if (!this.employeeForm.name || this.employeeForm.name.trim() === '') {
+                        this.showAlert('员工姓名不能为空', 'danger');
+                        return;
+                    }
+
+                    this.loading = true;
+
+                    try {
+                        const payload = {
+                            name: this.employeeForm.name.trim(),
+                            status: this.employeeForm.status,
+                            processIds: this.employeeForm.processIds.map(id => Number(id)).filter(id => !Number.isNaN(id))
+                        };
+
+                        const response = await axios.put(this.adminApiBaseUrl + '/employees/' + this.employeeForm.id, payload);
+                        if (response.data.success) {
+                            this.showAlert(response.data.message || '员工信息已更新', 'success');
+                            this.employeeModalVisible = false;
+                            this.resetEmployeeForm();
+                            this.loadEmployees();
+                            this.loadDashboardData();
+                        }
+                    } catch (error) {
+                        console.error('更新员工信息失败:', error);
+                        this.showAlert(error.response?.data?.message || '保存失败', 'danger');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+showProductTypeModal()">
                         <i class="fas fa-plus"></i>添加产品类型
                     </button>
                 </div>
@@ -667,6 +765,9 @@
                                 <div class="card-code">{{ employee.code }}</div>
                             </div>
                             <div class="card-actions">
+                                <button class="btn btn-sm btn-outline" @click="openEmployeeModal(employee)">
+                                    <i class="fas fa-edit"></i> 编辑
+                                </button>
                                 <button class="btn btn-sm btn-warning" @click="clearEmployeeWechat(employee.id)" v-if="employee.wxOpenId">
                                     <i class="fas fa-unlink"></i> 清除微信
                                 </button>
@@ -810,7 +911,50 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+            <!-- 员工编辑模态框 -->
+        <div class="modal" id="employeeModal" :class="{show: employeeModalVisible}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ employeeModalTitle || '编辑员工' }}</h3>
+                    <button class="modal-close" @click="closeEmployeeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">姓名 *</label>
+                        <input type="text" class="form-control" v-model="employeeForm.name" placeholder="请输入员工姓名">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">状态</label>
+                        <select class="form-control" v-model="employeeForm.status">
+                            <option value="active">在职</option>
+                            <option value="inactive">离职</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">工序权限</label>
+                        <div v-if="processes.length > 0" class="process-checkbox-list">
+                            <label v-for="process in processes" :key="process.id" class="process-checkbox">
+                                <input type="checkbox" :value="process.id" v-model="employeeForm.processIds">
+                                <span>{{ process.name }}</span>
+                            </label>
+                        </div>
+                        <div v-else class="empty-state small">
+                            <i class="fas fa-info-circle"></i>
+                            <p>暂无可用工序，请先在工序管理中创建。</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-outline" @click="closeEmployeeModal">取消</button>
+                    <button class="btn btn-primary" @click="saveEmployee">
+                        <span v-if="loading" class="loading"></span>
+                        <span v-else>保存</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+<!-- Scripts -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     
@@ -837,7 +981,16 @@
                     processes: [],
                     employees: [],
                     selectedEmployees: [],
-                    
+
+                    employeeModalVisible: false,
+                    employeeModalTitle: '',
+                    employeeForm: {
+                        id: null,
+                        name: '',
+                        status: 'active',
+                        processIds: []
+                    },
+
                     currentItem: {},
                     isEditing: false,
                     modalTitle: ''

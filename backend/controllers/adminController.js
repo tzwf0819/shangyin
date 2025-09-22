@@ -138,6 +138,118 @@ exports.getAllEmployeesAdmin = async (req, res) => {
   }
 };
 
+// Admin专用：更新员工信息及工序
+exports.updateEmployeeAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, status, processIds } = req.body;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID参数无效'
+      });
+    }
+
+    const employee = await Employee.findByPk(id);
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: '员工不存在'
+      });
+    }
+
+    const updateData = {};
+
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim() === '') {
+        return res.status(400).json({
+          success: false,
+          message: '员工姓名不能为空'
+        });
+      }
+      if (name.trim().length > 100) {
+        return res.status(400).json({
+          success: false,
+          message: '员工姓名不能超过100个字符'
+        });
+      }
+      updateData.name = name.trim();
+    }
+
+    if (status !== undefined) {
+      if (!['active', 'inactive'].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: '员工状态无效'
+        });
+      }
+      updateData.status = status;
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await employee.update(updateData);
+    }
+
+    if (processIds !== undefined) {
+      if (!Array.isArray(processIds)) {
+        return res.status(400).json({
+          success: false,
+          message: 'processIds必须为数组'
+        });
+      }
+
+      const normalizedIds = [...new Set(processIds.map(id => parseInt(id, 10)).filter(id => !Number.isNaN(id)))];
+
+      if (normalizedIds.length > 0) {
+        const validProcesses = await Process.findAll({
+          where: { id: normalizedIds }
+        });
+
+        if (validProcesses.length !== normalizedIds.length) {
+          return res.status(400).json({
+            success: false,
+            message: '存在无效的工序ID'
+          });
+        }
+
+        await employee.setProcesses(validProcesses, {
+          through: {
+            assignedAt: new Date(),
+            status: 'active'
+          }
+        });
+      } else {
+        await employee.setProcesses([]);
+      }
+    }
+
+    const updatedEmployee = await Employee.findByPk(id, {
+      include: [{
+        model: Process,
+        as: 'processes',
+        through: {
+          attributes: ['assignedAt', 'status'],
+          where: { status: 'active' }
+        },
+        required: false
+      }]
+    });
+
+    res.json({
+      success: true,
+      message: '员工更新成功',
+      data: { employee: updatedEmployee }
+    });
+  } catch (error) {
+    console.error('Update employee admin error:', error);
+    res.status(500).json({
+      success: false,
+      message: '更新员工失败'
+    });
+  }
+};
+
 // Admin专用：删除员工并清除微信关联
 exports.deleteEmployeeAdmin = async (req, res) => {
   try {
