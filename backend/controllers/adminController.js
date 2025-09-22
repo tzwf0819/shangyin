@@ -18,7 +18,14 @@ exports.getDashboardStats = async (req, res) => {
       ProductType.count(),
       Contract.count(),
       Employee.count({ where: { status: 'active' } }),
-      Employee.count({ where: { wxOpenId: { [Op.not]: null } } })
+      Employee.count({
+        where: {
+          [Op.or]: [
+            { wxOpenId: { [Op.not]: null } },
+            { wxUnionId: { [Op.not]: null } }
+          ]
+        }
+      })
     ]);
 
     res.json({
@@ -77,6 +84,8 @@ exports.getAllEmployeesAdmin = async (req, res) => {
         },
         required: false
       }],
+      distinct: true,
+      col: 'Employee.id',
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit),
       order: [['createdAt', 'DESC']]
