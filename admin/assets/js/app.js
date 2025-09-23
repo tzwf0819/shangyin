@@ -1,628 +1,604 @@
 ﻿const { createApp } = Vue;
-const Sortable = window.Sortable;
 
 createApp({
-    data() {
-        return {
-            navItems: [
-                { id: 'dashboard', label: '数据概览', icon: 'fas fa-gauge-high' },
-                { id: 'employees', label: '员工管理', icon: 'fas fa-users' },
-                { id: 'productTypes', label: '产品类型', icon: 'fas fa-layer-group' },
-                { id: 'processes', label: '工序管理', icon: 'fas fa-diagram-project' }
-            ],
-            activeSection: 'dashboard',
-            showModal: null,
-            isEditing: false,
-            apiBaseUrl: '/shangyin',
-            adminApiBaseUrl: '/shangyin/api/admin',
-            dashboardData: {
-                employees: 0,
-                processes: 0,
-                productTypes: 0,
-                contracts: 0,
-                activeEmployees: 0,
-                employeesWithWechat: 0
-            },
-            employees: [],
-            employeeFilters: {
-                keyword: '',
-                status: 'all',
-                wechat: 'all'
-            },
-            selectedEmployeeIds: [],
-            employeeDrawerVisible: false,
-            employeeDrawerTitle: '',
-            employeeForm: {
-                id: null,
-                name: '',
-                code: '',
-                status: 'active',
-                processIds: []
-            },
-            productTypes: [],
-            productSheetVisible: false,
-            productSheetTitle: '',
-            productForm: {
-                id: null,
-                name: '',
-                status: 'active',
-                processIds: []
-            },
-            processes: [],
-            processSheetVisible: false,
-            processSheetTitle: '',
-            processForm: {
-                id: null,
-                name: '',
-                status: 'active',
-                description: ''
-            },
-            employeeProcessSortable: null,
-            productProcessSortable: null,
-            alerts: [],
-            loading: false
+  data() {
+    return {
+      apiBaseUrl: '/shangyin',
+      adminApiBaseUrl: '/shangyin/api/admin',
+      activeTab: 'dashboard',
+      loading: false,
+      dashboardData: {
+        productTypes: 0,
+        processes: 0,
+        employees: 0,
+        contracts: 0,
+        activeEmployees: 0,
+        employeesWithWechat: 0,
+      },
+      productTypes: [],
+      processList: [],
+      productTypeForm: { id: null, name: '', code: '', status: 'active', processIds: [] },
+      showProductTypeModal: false,
+      processForm: {
+        id: null,
+        name: '',
+        code: '',
+        category: '',
+        description: '',
+        standardTime: '',
+        difficulty: 'medium',
+        status: 'active',
+      },
+      showProcessModal: false,
+      employees: [],
+      employeePagination: { page: 1, limit: 12, total: 0 },
+      employeeFilters: { keyword: '', status: 'all', wechat: 'all' },
+      employeeForm: { id: null, name: '', code: '', status: 'active', processIds: [] },
+      showEmployeeModal: false,
+      selectedEmployeeIds: [],
+      contracts: [],
+      contractPagination: { page: 1, pageSize: 10, total: 0 },
+      contractFilters: { keyword: '', status: '', salesId: '' },
+      showContractImportModal: false,
+      contractImport: { rawText: '', loading: false, result: null },
+      toastList: [],
+    };
+  },
+  computed: {
+    currentSectionTitle() {
+      const mapping = {
+        dashboard: '仪表盘',
+        productTypes: '产品类型',
+        processes: '工序管理',
+        employees: '员工管理',
+        contracts: '合同管理',
+      };
+      return mapping[this.activeTab] || '管理后台';
+    },
+    currentSectionSubtitle() {
+      const mapping = {
+        dashboard: '查看整体运行指标',
+        productTypes: '维护产品类型与对应工序',
+        processes: '维护工序元数据',
+        employees: '管理员工及其工序权限',
+        contracts: '查询与导入合同数据',
+      };
+      return mapping[this.activeTab] || '';
+    },
+    hasEmployeeSelection() {
+      return this.selectedEmployeeIds.length > 0;
+    },
+    contractTotalPages() {
+      if (this.contractPagination.pageSize <= 0) return 1;
+      return Math.max(1, Math.ceil(this.contractPagination.total / this.contractPagination.pageSize));
+    },
+    employeeTotalPages() {
+      if (this.employeePagination.limit <= 0) return 1;
+      return Math.max(1, Math.ceil(this.employeePagination.total / this.employeePagination.limit));
+    },
+  },
+  watch: {
+    'employeeFilters.status'() {
+      this.loadEmployees(1);
+    },
+    'employeeFilters.wechat'() {
+      this.loadEmployees(1);
+    },
+  },
+  mounted() {
+    this.bootstrap();
+  },
+  methods: {
+    async bootstrap() {
+      await Promise.all([
+        this.loadDashboard(),
+        this.loadProcesses(),
+        this.loadProductTypes(),
+      ]);
+      await Promise.all([
+        this.loadEmployees(),
+        this.loadContracts(),
+      ]);
+    },
+    setActiveTab(tab) {
+      this.activeTab = tab;
+      if (tab === 'productTypes' && !this.productTypes.length) {
+        this.loadProductTypes();
+      }
+      if (tab === 'processes' && !this.processList.length) {
+        this.loadProcesses();
+      }
+      if (tab === 'employees') {
+        this.loadEmployees();
+      }
+      if (tab === 'contracts') {
+        this.loadContracts();
+      }
+    },
+    async loadDashboard() {
+      try {
+        const response = await axios.get(`${this.adminApiBaseUrl}/dashboard/stats`);
+        if (response.data?.success) {
+          this.dashboardData = Object.assign({}, this.dashboardData, response.data.data || {});
+        }
+      } catch (error) {
+        console.error('加载仪表盘数据失败:', error);
+        this.showToast(error.response?.data?.message || '加载仪表盘数据失败', 'danger');
+      }
+    },
+    async loadProductTypes() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/product-types`);
+        this.productTypes = response.data?.data?.productTypes || response.data?.data || [];
+      } catch (error) {
+        console.error('加载产品类型失败:', error);
+        this.showToast(error.response?.data?.message || '加载产品类型失败', 'danger');
+      }
+    },
+    async loadProcesses() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/processes`);
+        this.processList = response.data?.data?.processes || response.data?.data || [];
+      } catch (error) {
+        console.error('加载工序失败:', error);
+        this.showToast(error.response?.data?.message || '加载工序失败', 'danger');
+      }
+    },
+    openProductTypeModal(item = null) {
+      if (item) {
+        this.productTypeForm = {
+          id: item.id,
+          name: item.name || '',
+          code: item.code || '',
+          status: item.status || 'active',
+          processIds: (item.processes || []).map(proc => proc.id),
         };
+      } else {
+        this.productTypeForm = { id: null, name: '', code: '', status: 'active', processIds: [] };
+      }
+      this.showProductTypeModal = true;
     },
-    computed: {
-        dashboardMetrics() {
-            return [
-                { id: 'employees', label: '员工总数', value: this.dashboardData.employees, hint: '含所有状态的员工', icon: 'fas fa-users' },
-                { id: 'activeEmployees', label: '在职员工', value: this.dashboardData.activeEmployees, hint: '当前可用账号', icon: 'fas fa-user-check' },
-                { id: 'processes', label: '工序模板', value: this.dashboardData.processes, hint: '正在启用的工序', icon: 'fas fa-diagram-project' },
-                { id: 'productTypes', label: '产品类型', value: this.dashboardData.productTypes, hint: '已配置流程的类别', icon: 'fas fa-layer-group' }
-            ];
-        },
-        currentSectionTitle() {
-            const current = this.navItems.find(item => item.id === this.activeSection);
-            return current ? current.label : '';
-        },
-        currentSectionSubtitle() {
-            switch (this.activeSection) {
-                case 'dashboard':
-                    return '实时掌握业务运行状态';
-                case 'employees':
-                    return '支持员工资料维护、工序分配与微信绑定管理';
-                case 'productTypes':
-                    return '为不同产品配置标准工序组合';
-                case 'processes':
-                    return '定义并维护生产流程的基础节点';
-                default:
-                    return '';
-            }
-        },
-        employeeSelectedProcesses() {
-            return this.employeeForm.processIds
-                .map(id => this.processes.find(proc => Number(proc.id) === Number(id)))
-                .filter(Boolean);
-        },
-        productSelectedProcesses() {
-            return this.productForm.processIds
-                .map(id => this.processes.find(proc => Number(proc.id) === Number(id)))
-                .filter(Boolean);
-        },
-        filteredEmployees() {
-            const keyword = this.employeeFilters.keyword.trim().toLowerCase();
-            return this.employees.filter(emp => {
-                const matchKeyword = !keyword || (emp.name && emp.name.toLowerCase().includes(keyword)) || (emp.code && emp.code.toLowerCase().includes(keyword));
-                const matchStatus = this.employeeFilters.status === 'all' || emp.status === this.employeeFilters.status;
-                const matchWechat = this.employeeFilters.wechat === 'all'
-                    || (this.employeeFilters.wechat === 'bound' && !!emp.wxOpenId)
-                    || (this.employeeFilters.wechat === 'unbound' && !emp.wxOpenId);
-                return matchKeyword && matchStatus && matchWechat;
-            });
+    closeProductTypeModal() {
+      this.showProductTypeModal = false;
+    },
+    async saveProductType() {
+      if (!this.productTypeForm.name.trim()) {
+        this.showToast('请输入产品类型名称', 'danger');
+        return;
+      }
+      if (!this.productTypeForm.code.trim()) {
+        this.showToast('请输入类型编码', 'danger');
+        return;
+      }
+
+      const payload = {
+        name: this.productTypeForm.name.trim(),
+        code: this.productTypeForm.code.trim(),
+        status: this.productTypeForm.status,
+        processes: this.productTypeForm.processIds,
+      };
+
+      try {
+        let response;
+        if (this.productTypeForm.id) {
+          response = await axios.put(`${this.apiBaseUrl}/product-types/${this.productTypeForm.id}`, payload);
+        } else {
+          response = await axios.post(`${this.apiBaseUrl}/product-types`, payload);
         }
-    },
-    watch: {
-        employeeDrawerVisible(value) {
-            if (value) {
-                this.$nextTick(() => this.initEmployeeSortable());
-            } else {
-                this.destroyEmployeeSortable();
-                this.employeeDrawerTitle = '';
-                this.resetEmployeeForm();
-            }
-        },
-        productSheetVisible(value) {
-            if (value) {
-                this.$nextTick(() => this.initProductProcessSortable());
-            } else {
-                this.destroyProductProcessSortable();
-            }
-        },
-        "employeeForm.processIds": {
-            handler() {
-                if (this.employeeDrawerVisible) {
-                    this.$nextTick(() => this.initEmployeeSortable());
-                }
-            },
-            deep: true
-        },
-        "productForm.processIds": {
-            handler() {
-                if (this.productSheetVisible) {
-                    this.$nextTick(() => this.initProductProcessSortable());
-                }
-            },
-            deep: true
+
+        if (response.data?.success) {
+          this.showToast(response.data.message || '保存成功', 'success');
+          this.showProductTypeModal = false;
+          await Promise.all([this.loadProductTypes(), this.loadDashboard()]);
+        } else {
+          throw new Error(response.data?.message || '保存失败');
         }
+      } catch (error) {
+        console.error('保存产品类型失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '保存产品类型失败', 'danger');
+      }
     },
-    mounted() {
-        this.refreshAll();
-    },
-    methods: {
-        async refreshAll() {
-            await Promise.all([
-                this.loadDashboardData(),
-                this.loadEmployees(),
-                this.loadProcesses(),
-                this.loadProductTypes()
-            ]);
-        },
-        refreshCurrentSection() {
-            switch (this.activeSection) {
-                case 'dashboard':
-                    this.loadDashboardData();
-                    break;
-                case 'employees':
-                    this.loadEmployees();
-                    break;
-                case 'productTypes':
-                    this.loadProductTypes();
-                    break;
-                case 'processes':
-                    this.loadProcesses();
-                    break;
-                default:
-                    break;
-            }
-        },
-        setActiveSection(section) {
-            this.activeSection = section;
-            if (section === 'dashboard') {
-                this.loadDashboardData();
-            }
-            if (section === 'employees' && this.employees.length === 0) {
-                this.loadEmployees();
-            }
-            if (section === 'productTypes' && this.productTypes.length === 0) {
-                this.loadProductTypes();
-            }
-            if (section === 'processes' && this.processes.length === 0) {
-                this.loadProcesses();
-            }
-        },
-        async loadDashboardData() {
-            try {
-                const response = await axios.get(`${this.adminApiBaseUrl}/dashboard/stats`);
-                if (response.data.success) {
-                    this.dashboardData = Object.assign({}, this.dashboardData, response.data.data || {});
-                }
-            } catch (error) {
-                console.error('加载仪表盘数据失败', error);
-                this.showToast('仪表盘数据加载失败', 'danger');
-            }
-        },
-        async loadEmployees() {
-            try {
-                const response = await axios.get(`${this.adminApiBaseUrl}/employees`);
-                if (response.data.success) {
-                    this.employees = response.data.data.employees || [];
-                    this.dashboardData.employees = response.data.data.total ?? this.employees.length;
-                }
-            } catch (error) {
-                console.error('获取员工列表失败', error);
-                this.showToast('获取员工列表失败', 'danger');
-            }
-        },
-        async loadProductTypes() {
-            try {
-                const response = await axios.get(`${this.apiBaseUrl}/product-types`);
-                if (response.data.success) {
-                    this.productTypes = response.data.data?.productTypes || [];
-                }
-            } catch (error) {
-                console.error('获取产品类型失败', error);
-                this.showToast('加载产品类型失败', 'danger');
-            }
-        },
-        async loadProcesses() {
-            try {
-                const response = await axios.get(`${this.apiBaseUrl}/processes`);
-                if (response.data.success) {
-                    this.processes = response.data.data?.processes || [];
-                    this.dashboardData.processes = response.data.data?.total ?? this.processes.length;
-                }
-            } catch (error) {
-                console.error('获取工序失败', error);
-                this.showToast('加载工序失败', 'danger');
-            }
-        },
-        orderedProcesses(processes = []) {
-            return [...processes].sort((a, b) => {
-                const orderA = a.ProductTypeProcess?.sequenceOrder || 0;
-                const orderB = b.ProductTypeProcess?.sequenceOrder || 0;
-                return orderA - orderB;
-            });
-        },
-        openEmployeeEditor(employee = null) {
-            const title = employee ? `编辑 ${employee.name || ''}`.trim() : '添加员工';
-            this.employeeDrawerTitle = title === '编辑' ? '编辑员工' : title;
-            this.employeeForm = {
-                id: employee?.id ?? null,
-                name: employee?.name || '',
-                code: employee?.code || '',
-                status: employee?.status || 'active',
-                processIds: employee?.processes ? employee.processes.map(proc => Number(proc.id)).filter(id => !Number.isNaN(id)) : []
-            };
-            this.employeeDrawerVisible = true;
-        },
-        closeEmployeeDrawer() {
-            this.employeeDrawerVisible = false;
-        },
-        resetEmployeeForm() {
-            this.employeeForm = {
-                id: null,
-                name: '',
-                code: '',
-                status: 'active',
-                processIds: []
-            };
-            this.loading = false;
-        },
-        async saveEmployee() {
-            if (!this.employeeForm.name.trim()) {
-                this.showToast('员工姓名不能为空', 'danger');
-                return;
-            }
-            this.loading = true;
-            try {
-                const normalized = Array.from(new Set(this.employeeForm.processIds.map(id => Number(id)).filter(id => !Number.isNaN(id))));
-                if (this.employeeForm.id) {
-                    const payload = {
-                        name: this.employeeForm.name.trim(),
-                        status: this.employeeForm.status,
-                        processIds: normalized
-                    };
-                    if (this.employeeForm.code && this.employeeForm.code.trim()) {
-                        payload.code = this.employeeForm.code.trim();
-                    }
-                    const response = await axios.put(`${this.adminApiBaseUrl}/employees/${this.employeeForm.id}`, payload);
-                    if (response.data.success) {
-                        this.showToast(response.data.message || '员工信息已更新', 'success');
-                        this.closeEmployeeDrawer();
-                        this.loadEmployees();
-                        this.loadDashboardData();
-                    }
-                } else {
-                    const payload = {
-                        name: this.employeeForm.name.trim(),
-                        status: this.employeeForm.status,
-                        processes: normalized
-                    };
-                    if (this.employeeForm.code && this.employeeForm.code.trim()) {
-                        payload.code = this.employeeForm.code.trim();
-                    }
-                    const response = await axios.post(`${this.apiBaseUrl}/employees`, payload);
-                    if (response.data.success) {
-                        this.showToast(response.data.message || '员工创建成功', 'success');
-                        this.closeEmployeeDrawer();
-                        this.loadEmployees();
-                        this.loadDashboardData();
-                    }
-                }
-            } catch (error) {
-                console.error('保存员工失败', error);
-                this.showToast(error.response?.data?.message || '保存员工失败', 'danger');
-            } finally {
-                this.loading = false;
-            }
-        },
-        async deleteEmployee(id) {
-            if (!confirm('确定要删除这个员工吗？删除后该员工的微信关联也将被清除。')) return;
-            try {
-                const response = await axios.delete(`${this.adminApiBaseUrl}/employees/${id}`);
-                if (response.data.success) {
-                    this.showToast(response.data.message || '员工删除成功', 'success');
-                    this.selectedEmployeeIds = this.selectedEmployeeIds.filter(eid => eid !== id);
-                    this.loadEmployees();
-                    this.loadDashboardData();
-                }
-            } catch (error) {
-                console.error('删除员工失败', error);
-                this.showToast(error.response?.data?.message || '删除失败', 'danger');
-            }
-        },
-        async clearEmployeeWechat(id) {
-            if (!confirm('确定要清除该员工的微信关联吗？清除后该微信下次登录将被视为新用户。')) return;
-            try {
-                const response = await axios.delete(`${this.adminApiBaseUrl}/employees/${id}/wechat`);
-                if (response.data.success) {
-                    this.showToast(response.data.message || '微信关联已清除', 'success');
-                    this.loadEmployees();
-                }
-            } catch (error) {
-                console.error('清除微信关联失败', error);
-                this.showToast(error.response?.data?.message || '操作失败', 'danger');
-            }
-        },
-        async batchClearWechat() {
-            if (!this.selectedEmployeeIds.length) return;
-            if (!confirm(`确定要清除${this.selectedEmployeeIds.length}个员工的微信关联吗？`)) return;
-            try {
-                const response = await axios.post(`${this.adminApiBaseUrl}/employees/batch/clear-wechat`, {
-                    employeeIds: this.selectedEmployeeIds
-                });
-                if (response.data.success) {
-                    this.showToast(response.data.message || '批量清除成功', 'success');
-                    this.selectedEmployeeIds = [];
-                    this.loadEmployees();
-                }
-            } catch (error) {
-                console.error('批量清除微信关联失败', error);
-                this.showToast(error.response?.data?.message || '操作失败', 'danger');
-            }
-        },
-        async batchDeleteEmployees() {
-            if (!this.selectedEmployeeIds.length) return;
-            if (!confirm(`确定要删除${this.selectedEmployeeIds.length}个员工吗？删除后相关的微信关联也将被清除。`)) return;
-            try {
-                const response = await axios.post(`${this.adminApiBaseUrl}/employees/batch/delete`, {
-                    employeeIds: this.selectedEmployeeIds
-                });
-                if (response.data.success) {
-                    this.showToast(response.data.message || '批量删除成功', 'success');
-                    this.selectedEmployeeIds = [];
-                    this.loadEmployees();
-                    this.loadDashboardData();
-                }
-            } catch (error) {
-                console.error('批量删除失败', error);
-                this.showToast(error.response?.data?.message || '操作失败', 'danger');
-            }
-        },
-        openProductTypeSheet(type = null) {
-            this.productSheetTitle = type ? `编辑 ${type.name}` : '新增产品类型';
-            this.productForm = {
-                id: type?.id ?? null,
-                name: type?.name || '',
-                status: type?.status || 'active',
-                processIds: type?.processes ? this.orderedProcesses(type.processes).map(proc => Number(proc.id)) : []
-            };
-            this.productSheetVisible = true;
-            this.$nextTick(() => this.initProductProcessSortable());
-        },
-        closeProductTypeSheet() {
-            this.productSheetVisible = false;
-            this.productSheetTitle = '';
-            this.destroyProductProcessSortable();
-            this.productForm = {
-                id: null,
-                name: '',
-                status: 'active',
-                processIds: []
-            };
-        },
-        async saveProductType() {
-            if (!this.productForm.name.trim()) {
-                this.showToast('产品类型名称不能为空', 'danger');
-                return;
-            }
-            const processesPayload = this.productForm.processIds.map((id, idx) => ({ id, sequenceOrder: idx + 1 }));
-            const payload = {
-                name: this.productForm.name.trim(),
-                status: this.productForm.status,
-                processes: processesPayload
-            };
-            try {
-                if (this.productForm.id) {
-                    const response = await axios.put(`${this.apiBaseUrl}/product-types/${this.productForm.id}`, payload);
-                    if (response.data.success) {
-                        this.showToast(response.data.message || '产品类型已更新', 'success');
-                        this.closeProductTypeSheet();
-                        this.loadProductTypes();
-                        this.loadDashboardData();
-                    }
-                } else {
-                    const response = await axios.post(`${this.apiBaseUrl}/product-types`, payload);
-                    if (response.data.success) {
-                        this.showToast(response.data.message || '产品类型已创建', 'success');
-                        this.closeProductTypeSheet();
-                        this.loadProductTypes();
-                        this.loadDashboardData();
-                    }
-                }
-            } catch (error) {
-                console.error('保存产品类型失败', error);
-                this.showToast(error.response?.data?.message || '保存失败', 'danger');
-            }
-        },
-        async deleteProductType(id) {
-            if (!confirm('确定要删除该产品类型吗？如果有工序关联将一并移除。')) return;
-            try {
-                const response = await axios.delete(`${this.apiBaseUrl}/product-types/${id}`);
-                if (response.data.success) {
-                    this.showToast(response.data.message || '产品类型已删除', 'success');
-                    this.loadProductTypes();
-                    this.loadDashboardData();
-                }
-            } catch (error) {
-                console.error('删除产品类型失败', error);
-                this.showToast(error.response?.data?.message || '删除失败', 'danger');
-            }
-        },
-        openProcessSheet(process = null) {
-            this.processSheetTitle = process ? `编辑 ${process.name}` : '新增工序';
-            this.processForm = {
-                id: process?.id ?? null,
-                name: process?.name || '',
-                status: process?.status || 'active',
-                description: process?.description || ''
-            };
-            this.processSheetVisible = true;
-        },
-        closeProcessSheet() {
-            this.processSheetVisible = false;
-            this.processSheetTitle = '';
-            this.processForm = {
-                id: null,
-                name: '',
-                status: 'active',
-                description: ''
-            };
-        },
-        async saveProcess() {
-            if (!this.processForm.name.trim()) {
-                this.showToast('工序名称不能为空', 'danger');
-                return;
-            }
-            const payload = {
-                name: this.processForm.name.trim(),
-                status: this.processForm.status
-            };
-            try {
-                if (this.processForm.id) {
-                    const response = await axios.put(`${this.apiBaseUrl}/processes/${this.processForm.id}`, payload);
-                    if (response.data.success) {
-                        this.showToast(response.data.message || '工序已更新', 'success');
-                        this.closeProcessSheet();
-                        this.loadProcesses();
-                        this.loadDashboardData();
-                    }
-                } else {
-                    const response = await axios.post(`${this.apiBaseUrl}/processes`, payload);
-                    if (response.data.success) {
-                        this.showToast(response.data.message || '工序已创建', 'success');
-                        this.closeProcessSheet();
-                        this.loadProcesses();
-                        this.loadDashboardData();
-                    }
-                }
-            } catch (error) {
-                console.error('保存工序失败', error);
-                this.showToast(error.response?.data?.message || '保存失败', 'danger');
-            }
-        },
-        async deleteProcess(id) {
-            if (!confirm('确定要删除该工序吗？删除后将从所有产品类型中移除。')) return;
-            try {
-                const response = await axios.delete(`${this.apiBaseUrl}/processes/${id}`);
-                if (response.data.success) {
-                    this.showToast(response.data.message || '工序已删除', 'success');
-                    this.loadProcesses();
-                    this.loadProductTypes();
-                    this.loadDashboardData();
-                }
-            } catch (error) {
-                console.error('删除工序失败', error);
-                this.showToast(error.response?.data?.message || '删除失败', 'danger');
-            }
-        },
-        initEmployeeSortable() {
-            if (!Sortable || !this.$refs.employeeProcessList) {
-                return;
-            }
-            if (this.employeeProcessSortable) {
-                this.employeeProcessSortable.destroy();
-                this.employeeProcessSortable = null;
-            }
-            const el = this.$refs.employeeProcessList;
-            const items = el ? el.querySelectorAll('.selected-process-item') : [];
-            if (!el || !items.length) {
-                return;
-            }
-            this.employeeProcessSortable = Sortable.create(el, {
-                animation: 150,
-                handle: '.drag-handle',
-                draggable: '.selected-process-item',
-                onEnd: () => {
-                    const orderedIds = Array.from(el.querySelectorAll('.selected-process-item'))
-                        .map(item => Number(item.dataset.id))
-                        .filter(id => !Number.isNaN(id));
-                    this.employeeForm.processIds = orderedIds;
-                }
-            });
-        },
-        destroyEmployeeSortable() {
-            if (this.employeeProcessSortable) {
-                this.employeeProcessSortable.destroy();
-                this.employeeProcessSortable = null;
-            }
-        },
-        removeEmployeeProcess(id) {
-            this.employeeForm.processIds = this.employeeForm.processIds.filter(pid => Number(pid) !== Number(id));
-            this.$nextTick(() => this.initEmployeeSortable());
-        },
-        initProductProcessSortable() {
-            if (!Sortable || !this.$refs.productProcessList) {
-                return;
-            }
-            if (this.productProcessSortable) {
-                this.productProcessSortable.destroy();
-                this.productProcessSortable = null;
-            }
-            const el = this.$refs.productProcessList;
-            const items = el ? el.querySelectorAll('.selected-process-item') : [];
-            if (!el || !items.length) {
-                return;
-            }
-            this.productProcessSortable = Sortable.create(el, {
-                animation: 150,
-                handle: '.drag-handle',
-                draggable: '.selected-process-item',
-                onEnd: () => {
-                    const orderedIds = Array.from(el.querySelectorAll('.selected-process-item'))
-                        .map(item => Number(item.dataset.id))
-                        .filter(id => !Number.isNaN(id));
-                    this.productForm.processIds = orderedIds;
-                }
-            });
-        },
-        destroyProductProcessSortable() {
-            if (this.productProcessSortable) {
-                this.productProcessSortable.destroy();
-                this.productProcessSortable = null;
-            }
-        },
-        removeProductProcess(id) {
-            this.productForm.processIds = this.productForm.processIds.filter(pid => Number(pid) !== Number(id));
-            this.$nextTick(() => this.initProductProcessSortable());
-        },
-        formatDate(value) {
-            if (!value) return '-';
-            const date = new Date(value);
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        },
-        showToast(message, type = 'info') {
-            const icons = {
-                success: 'fas fa-check-circle',
-                danger: 'fas fa-circle-exclamation',
-                info: 'fas fa-circle-info'
-            };
-            const id = Date.now() + Math.random();
-            this.alerts.push({ id, message, type, icon: icons[type] || icons.info });
-            setTimeout(() => {
-                this.alerts = this.alerts.filter(alert => alert.id !== id);
-            }, 3200);
+    async deleteProductType(id) {
+      if (!confirm('确定删除该产品类型吗？')) return;
+      try {
+        const response = await axios.delete(`${this.apiBaseUrl}/product-types/${id}`);
+        if (response.data?.success) {
+          this.showToast('产品类型已删除', 'success');
+          await Promise.all([this.loadProductTypes(), this.loadDashboard()]);
+        } else {
+          throw new Error(response.data?.message || '删除失败');
         }
-    }
+      } catch (error) {
+        console.error('删除产品类型失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '删除产品类型失败', 'danger');
+      }
+    },
+    openProcessModal(item = null) {
+      if (item) {
+        this.processForm = {
+          id: item.id,
+          name: item.name || '',
+          code: item.code || '',
+          category: item.category || '',
+          description: item.description || '',
+          standardTime: item.standardTime || '',
+          difficulty: item.difficulty || 'medium',
+          status: item.status || 'active',
+        };
+      } else {
+        this.processForm = {
+          id: null,
+          name: '',
+          code: '',
+          category: '',
+          description: '',
+          standardTime: '',
+          difficulty: 'medium',
+          status: 'active',
+        };
+      }
+      this.showProcessModal = true;
+    },
+    closeProcessModal() {
+      this.showProcessModal = false;
+    },
+    async saveProcess() {
+      if (!this.processForm.name.trim()) {
+        this.showToast('请输入工序名称', 'danger');
+        return;
+      }
+      if (!this.processForm.code.trim()) {
+        this.showToast('请输入工序编码', 'danger');
+        return;
+      }
+
+      const payload = {
+        name: this.processForm.name.trim(),
+        code: this.processForm.code.trim(),
+        category: this.processForm.category || null,
+        description: this.processForm.description || null,
+        standardTime: this.processForm.standardTime || null,
+        difficulty: this.processForm.difficulty,
+        status: this.processForm.status,
+      };
+
+      try {
+        let response;
+        if (this.processForm.id) {
+          response = await axios.put(`${this.apiBaseUrl}/processes/${this.processForm.id}`, payload);
+        } else {
+          response = await axios.post(`${this.apiBaseUrl}/processes`, payload);
+        }
+
+        if (response.data?.success) {
+          this.showToast(response.data.message || '保存成功', 'success');
+          this.showProcessModal = false;
+          await Promise.all([this.loadProcesses(), this.loadDashboard()]);
+        } else {
+          throw new Error(response.data?.message || '保存失败');
+        }
+      } catch (error) {
+        console.error('保存工序失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '保存工序失败', 'danger');
+      }
+    },
+    async deleteProcess(id) {
+      if (!confirm('确定删除该工序吗？')) return;
+      try {
+        const response = await axios.delete(`${this.apiBaseUrl}/processes/${id}`);
+        if (response.data?.success) {
+          this.showToast('工序已删除', 'success');
+          await Promise.all([this.loadProcesses(), this.loadDashboard()]);
+        } else {
+          throw new Error(response.data?.message || '删除失败');
+        }
+      } catch (error) {
+        console.error('删除工序失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '删除工序失败', 'danger');
+      }
+    },
+    async loadEmployees(page = 1) {
+      try {
+        const params = {
+          page,
+          limit: this.employeePagination.limit,
+        };
+        if (this.employeeFilters.keyword.trim()) {
+          params.keyword = this.employeeFilters.keyword.trim();
+        }
+        if (this.employeeFilters.status !== 'all') {
+          params.status = this.employeeFilters.status;
+        }
+        if (this.employeeFilters.wechat === 'bound') {
+          params.hasWechat = true;
+        } else if (this.employeeFilters.wechat === 'unbound') {
+          params.hasWechat = false;
+        }
+
+        const response = await axios.get(`${this.adminApiBaseUrl}/employees`, { params });
+        const data = response.data?.data || {};
+        this.employees = data.employees || [];
+        this.employeePagination = {
+          page: data.page || page,
+          limit: data.limit || this.employeePagination.limit,
+          total: data.total || this.employees.length,
+        };
+        this.selectedEmployeeIds = [];
+      } catch (error) {
+        console.error('加载员工失败:', error);
+        this.showToast(error.response?.data?.message || '加载员工失败', 'danger');
+      }
+    },
+    employeePageChange(delta) {
+      const nextPage = this.employeePagination.page + delta;
+      if (nextPage < 1 || nextPage > this.employeeTotalPages) return;
+      this.loadEmployees(nextPage);
+    },
+    resetEmployeeFilters() {
+      this.employeeFilters = { keyword: '', status: 'all', wechat: 'all' };
+      this.loadEmployees(1);
+    },
+    openEmployeeModal(employee = null) {
+      if (employee) {
+        this.employeeForm = {
+          id: employee.id,
+          name: employee.name || '',
+          code: employee.code || '',
+          status: employee.status || 'active',
+          processIds: (employee.processes || []).map(proc => proc.id),
+        };
+      } else {
+        this.employeeForm = { id: null, name: '', code: '', status: 'active', processIds: [] };
+      }
+      this.showEmployeeModal = true;
+    },
+    closeEmployeeModal() {
+      this.showEmployeeModal = false;
+    },
+    toggleEmployeeProcess(processId) {
+      const index = this.employeeForm.processIds.indexOf(processId);
+      if (index >= 0) {
+        this.employeeForm.processIds.splice(index, 1);
+      } else {
+        this.employeeForm.processIds.push(processId);
+      }
+    },
+    async saveEmployee() {
+      if (!this.employeeForm.name.trim()) {
+        this.showToast('请输入员工姓名', 'danger');
+        return;
+      }
+
+      const payload = {
+        name: this.employeeForm.name.trim(),
+        status: this.employeeForm.status,
+      };
+      if (this.employeeForm.code?.trim()) {
+        payload.code = this.employeeForm.code.trim();
+      }
+
+      try {
+        if (this.employeeForm.id) {
+          payload.processIds = this.employeeForm.processIds;
+          const response = await axios.put(`${this.adminApiBaseUrl}/employees/${this.employeeForm.id}`, payload);
+          if (!response.data?.success) {
+            throw new Error(response.data?.message || '更新失败');
+          }
+        } else {
+          payload.processes = this.employeeForm.processIds;
+          const response = await axios.post(`${this.apiBaseUrl}/employees`, payload);
+          if (!response.data?.success) {
+            throw new Error(response.data?.message || '创建失败');
+          }
+        }
+
+        this.showToast('员工信息已保存', 'success');
+        this.showEmployeeModal = false;
+        await Promise.all([this.loadEmployees(this.employeePagination.page), this.loadDashboard()]);
+      } catch (error) {
+        console.error('保存员工失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '保存员工失败', 'danger');
+      }
+    },
+    async deleteEmployee(id) {
+      if (!confirm('确定删除该员工吗？')) return;
+      try {
+        const response = await axios.delete(`${this.adminApiBaseUrl}/employees/${id}`);
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || '删除失败');
+        }
+        this.showToast('员工已删除', 'success');
+        await Promise.all([this.loadEmployees(this.employeePagination.page), this.loadDashboard()]);
+      } catch (error) {
+        console.error('删除员工失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '删除员工失败', 'danger');
+      }
+    },
+    async clearEmployeeWechat(id) {
+      if (!confirm('确定解绑该员工的微信吗？')) return;
+      try {
+        const response = await axios.delete(`${this.adminApiBaseUrl}/employees/${id}/wechat`);
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || '解绑失败');
+        }
+        this.showToast('已解绑微信', 'success');
+        await Promise.all([this.loadEmployees(this.employeePagination.page), this.loadDashboard()]);
+      } catch (error) {
+        console.error('解绑微信失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '解绑微信失败', 'danger');
+      }
+    },
+    async batchClearWechat() {
+      if (!this.hasEmployeeSelection) return;
+      if (!confirm(`确定批量解绑 ${this.selectedEmployeeIds.length} 名员工的微信吗？`)) return;
+      try {
+        const response = await axios.post(`${this.adminApiBaseUrl}/employees/batch/clear-wechat`, {
+          employeeIds: this.selectedEmployeeIds,
+        });
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || '批量解绑失败');
+        }
+        this.showToast(`已解绑 ${response.data.data?.clearedCount || this.selectedEmployeeIds.length} 名员工`, 'success');
+        await Promise.all([this.loadEmployees(this.employeePagination.page), this.loadDashboard()]);
+      } catch (error) {
+        console.error('批量解绑失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '批量解绑失败', 'danger');
+      }
+    },
+    async batchDeleteEmployees() {
+      if (!this.hasEmployeeSelection) return;
+      if (!confirm(`确定批量删除 ${this.selectedEmployeeIds.length} 名员工吗？操作不可恢复。`)) return;
+      try {
+        const response = await axios.post(`${this.adminApiBaseUrl}/employees/batch/delete`, {
+          employeeIds: this.selectedEmployeeIds,
+        });
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || '批量删除失败');
+        }
+        this.showToast(`已删除 ${response.data.data?.deletedCount || this.selectedEmployeeIds.length} 名员工`, 'success');
+        await Promise.all([this.loadEmployees(1), this.loadDashboard()]);
+      } catch (error) {
+        console.error('批量删除失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '批量删除失败', 'danger');
+      }
+    },
+    toggleEmployeeSelection(id) {
+      const index = this.selectedEmployeeIds.indexOf(id);
+      if (index >= 0) {
+        this.selectedEmployeeIds.splice(index, 1);
+      } else {
+        this.selectedEmployeeIds.push(id);
+      }
+    },
+    selectAllEmployees() {
+      if (this.selectedEmployeeIds.length === this.employees.length) {
+        this.selectedEmployeeIds = [];
+      } else {
+        this.selectedEmployeeIds = this.employees.map(emp => emp.id);
+      }
+    },
+    async loadContracts(page = 1) {
+      try {
+        const params = {
+          page,
+          pageSize: this.contractPagination.pageSize,
+        };
+        if (this.contractFilters.keyword.trim()) {
+          params.keyword = this.contractFilters.keyword.trim();
+        }
+        if (this.contractFilters.status) {
+          params.status = this.contractFilters.status;
+        }
+        if (this.contractFilters.salesId.trim()) {
+          params.salesId = this.contractFilters.salesId.trim();
+        }
+
+        const response = await axios.get(`${this.apiBaseUrl}/contracts`, { params });
+        const data = response.data?.data || {};
+        this.contracts = data.items || [];
+        const pagination = data.pagination || {};
+        this.contractPagination = {
+          page: pagination.page || page,
+          pageSize: pagination.pageSize || this.contractPagination.pageSize,
+          total: pagination.total || this.contracts.length,
+        };
+      } catch (error) {
+        console.error('加载合同失败:', error);
+        this.showToast(error.response?.data?.message || '加载合同失败', 'danger');
+      }
+    },
+    contractPageChange(delta) {
+      const nextPage = this.contractPagination.page + delta;
+      if (nextPage < 1 || nextPage > this.contractTotalPages) return;
+      this.loadContracts(nextPage);
+    },
+    resetContractFilters() {
+      this.contractFilters = { keyword: '', status: '', salesId: '' };
+      this.loadContracts(1);
+    },
+    openContractImportModal() {
+      this.contractImport = { rawText: '', loading: false, result: null };
+      this.showContractImportModal = true;
+    },
+    closeContractImportModal() {
+      this.showContractImportModal = false;
+    },
+    async runContractImport() {
+      if (!this.contractImport.rawText.trim()) {
+        this.showToast('请输入要导入的合同 JSON 数据', 'danger');
+        return;
+      }
+
+      let payload;
+      try {
+        payload = JSON.parse(this.contractImport.rawText);
+      } catch (error) {
+        this.showToast('JSON 格式不合法，请检查输入', 'danger');
+        return;
+      }
+
+      if (!Array.isArray(payload)) {
+        payload = [payload];
+      }
+
+      this.contractImport.loading = true;
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/contracts/import`, { contracts: payload });
+        this.contractImport.result = response.data?.data || null;
+        if (response.data?.success) {
+          this.showToast(`导入成功 ${this.contractImport.result?.successCount || 0} 条合同`, 'success');
+        } else {
+          this.showToast(response.data?.message || '部分合同导入失败', 'danger');
+        }
+        await Promise.all([this.loadContracts(), this.loadDashboard()]);
+      } catch (error) {
+        console.error('批量导入合同失败:', error);
+        this.showToast(error.response?.data?.message || '批量导入合同失败', 'danger');
+      } finally {
+        this.contractImport.loading = false;
+      }
+    },
+    async deleteContract(id) {
+      if (!confirm('确定删除该合同吗？')) return;
+      try {
+        const response = await axios.delete(`${this.apiBaseUrl}/contracts/${id}`);
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || '删除失败');
+        }
+        this.showToast('合同已删除', 'success');
+        await Promise.all([this.loadContracts(this.contractPagination.page), this.loadDashboard()]);
+      } catch (error) {
+        console.error('删除合同失败:', error);
+        this.showToast(error.response?.data?.message || error.message || '删除合同失败', 'danger');
+      }
+    },
+    refreshActiveTab() {
+      switch (this.activeTab) {
+        case 'dashboard':
+          this.loadDashboard();
+          break;
+        case 'productTypes':
+          this.loadProductTypes();
+          break;
+        case 'processes':
+          this.loadProcesses();
+          break;
+        case 'employees':
+          this.loadEmployees(this.employeePagination.page);
+          break;
+        case 'contracts':
+          this.loadContracts(this.contractPagination.page);
+          break;
+        default:
+          break;
+      }
+    },
+    showToast(message, type = 'info') {
+      const toast = { id: Date.now(), message, type };
+      this.toastList.push(toast);
+      setTimeout(() => {
+        this.toastList = this.toastList.filter(item => item.id !== toast.id);
+      }, 3200);
+    },
+  },
 }).mount('#app');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

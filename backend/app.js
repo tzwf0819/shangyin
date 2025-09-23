@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
@@ -10,31 +10,33 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// 引入路由
+// 注册路由
 const authRoutes = require('./routes/auth');
-const productTypeRoutes = require("./routes/productType");
+const productTypeRoutes = require('./routes/productType');
 const processRoutes = require('./routes/process');
+const contractRoutes = require('./routes/contract');
 const taskRoutes = require('./routes/task');
 const employeeRoutes = require('./routes/employee');
 const wechatRoutes = require('./routes/wechat');
 const adminRoutes = require('./routes/admin');
 
-// 根路径处理
+// 根路径返回服务信息
 app.get('/', (req, res) => {
-  res.json({ 
+  res.json({
     success: true,
-    message: '版辊加工工厂管理系统API',
+    message: '上茚工厂管理系统 API',
     version: '1.0.0',
     endpoints: [
-      '/shangyin/auth', 
-      '/shangyin/product-types', 
-      '/shangyin/processes', 
+      '/shangyin/auth',
+      '/shangyin/product-types',
+      '/shangyin/processes',
       '/shangyin/employees',
       '/shangyin/wechat',
+      '/shangyin/contracts',
       '/shangyin/task',
-      '/shangyin/api/admin'
+      '/shangyin/api/admin',
     ],
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -48,22 +50,23 @@ app.get('/shangyin/admin/*', (req, res) => {
   res.sendFile(path.join(adminStaticPath, 'index.html'));
 });
 
-// 配置路由 - 添加 /shangyin 前缀
+// 配置路由 - 统一 /shangyin 前缀
 app.use('/shangyin/auth', authRoutes);
 app.use('/shangyin/product-types', productTypeRoutes);
 app.use('/shangyin/processes', processRoutes);
 app.use('/shangyin/employees', employeeRoutes);
 app.use('/shangyin/wechat', wechatRoutes);
+app.use('/shangyin/contracts', contractRoutes);
 app.use('/shangyin/api/admin', adminRoutes);
 app.use('/shangyin/task', taskRoutes);
 
-// 错误处理中间件
+// 全局错误处理中间件
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ success: false, message: '服务器内部错误' });
 });
 
-// 404处理
+// 处理 404
 app.use('*', (req, res) => {
   res.status(404).json({ success: false, message: '接口不存在' });
 });
@@ -71,10 +74,11 @@ app.use('*', (req, res) => {
 const PORT = process.env.PORT || 3000;
 
 // 数据库连接和服务器启动
-sequelize.authenticate()
+sequelize
+  .authenticate()
   .then(() => {
     console.log('Database connected successfully');
-    return sequelize.sync({ force: false });  // 改为false，避免每次重建表
+    return sequelize.sync({ alter: true }); // 根据模型自动调整表结构
   })
   .then(() => {
     console.log('Database tables synchronized');
