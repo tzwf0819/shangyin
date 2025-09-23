@@ -39,7 +39,31 @@ createApp({
       contracts: [],
       contractPagination: { page: 1, pageSize: 10, total: 0 },
       contractFilters: { keyword: '', status: '', salesId: '' },
+      showContractModal: false,
       showContractImportModal: false,
+      contractSaveLoading: false,
+      contractForm: {
+        id: null,
+        contractNumber: '',
+        partyAName: '',
+        partyBName: '',
+        signedDate: '',
+        signedLocation: '',
+        status: '进行中',
+        salesId: '',
+        deliveryDeadline: '',
+        remark: '',
+        products: [
+          {
+            productName: '',
+            productCode: '',
+            specification: '',
+            quantity: '',
+            unitPrice: '',
+            totalAmount: ''
+          }
+        ]
+      },
       contractImport: { rawText: '', loading: false, result: null },
       toastList: [],
     };
@@ -75,6 +99,23 @@ createApp({
     employeeTotalPages() {
       if (this.employeePagination.limit <= 0) return 1;
       return Math.max(1, Math.ceil(this.employeePagination.total / this.employeePagination.limit));
+    },
+    contractTableRows() {
+      if (!this.contracts || !Array.isArray(this.contracts)) {
+        return [];
+      }
+      return this.contracts.map(contract => ({
+        id: contract.id,
+        contractNumber: contract.contractNumber || '',
+        partyAName: contract.partyAName || '',
+        partyBName: contract.partyBName || '',
+        signedDate: contract.signedDate || '',
+        status: contract.status || '',
+        totalAmount: contract.totalAmount || 0,
+        salesId: contract.salesId || '',
+        deliveryDeadline: contract.deliveryDeadline || '',
+        remark: contract.remark || ''
+      }));
     },
   },
   watch: {
@@ -515,6 +556,103 @@ createApp({
     resetContractFilters() {
       this.contractFilters = { keyword: '', status: '', salesId: '' };
       this.loadContracts(1);
+    },
+    openContractModal(contract = null) {
+      if (contract) {
+        // 编辑合同，填充表单
+        this.contractForm = JSON.parse(JSON.stringify(contract));
+      } else {
+        // 新增合同，重置表单
+        this.contractForm = {
+          id: null,
+          contractNumber: '',
+          partyAName: '',
+          partyBName: '',
+          signedDate: '',
+          signedLocation: '',
+          status: '进行中',
+          salesId: '',
+          deliveryDeadline: '',
+          remark: '',
+          products: [
+            {
+              productName: '',
+              productCode: '',
+              specification: '',
+              quantity: '',
+              unitPrice: '',
+              totalAmount: ''
+            }
+          ]
+        };
+      }
+      this.showContractModal = true;
+    },
+    closeContractModal() {
+      this.showContractModal = false;
+    },
+    addContractProductLine() {
+      if (this.contractForm.products.length < 10) {
+        this.contractForm.products.push({
+          productName: '',
+          productCode: '',
+          specification: '',
+          quantity: '',
+          unitPrice: '',
+          totalAmount: ''
+        });
+      } else {
+        this.showToast('每份合同最多只能添加10个产品', 'warning');
+      }
+    },
+    removeContractProductLine(index) {
+      if (this.contractForm.products.length > 1) {
+        this.contractForm.products.splice(index, 1);
+      }
+    },
+    async saveContract() {
+      // 表单验证
+      if (!this.contractForm.contractNumber.trim()) {
+        this.showToast('请输入合同编号', 'danger');
+        return;
+      }
+      if (!this.contractForm.products.some(p => p.productName.trim())) {
+        this.showToast('请至少添加一个产品', 'danger');
+        return;
+      }
+
+      this.contractSaveLoading = true;
+      try {
+        const url = this.contractForm.id
+          ? `${this.apiBaseUrl}/contracts/${this.contractForm.id}`
+          : `${this.apiBaseUrl}/contracts`;
+        const method = this.contractForm.id ? 'PUT' : 'POST';
+
+        const response = await axios({
+          method,
+          url,
+          data: this.contractForm
+        });
+
+        if (response.data.success) {
+          this.showToast(
+            this.contractForm.id ? '合同更新成功' : '合同创建成功',
+            'success'
+          );
+          this.closeContractModal();
+          await Promise.all([this.loadContracts(), this.loadDashboard()]);
+        } else {
+          this.showToast(response.data.message || '保存失败', 'danger');
+        }
+      } catch (error) {
+        console.error('保存合同失败:', error);
+        this.showToast(
+          error.response?.data?.message || '保存合同失败',
+          'danger'
+        );
+      } finally {
+        this.contractSaveLoading = false;
+      }
     },
     openContractImportModal() {
       this.contractImport = { rawText: '', loading: false, result: null };

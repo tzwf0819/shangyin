@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue测试</title>
+</head>
+<body>
+    <div id="app">
+        <h1>{{ message }}</h1>
+        <p>Vue版本: {{ version }}</p>
+    </div>
+
+    <script src="./assets/lib/vue.global.js"></script>
+    <script>
+        const { createApp } = Vue;
+        createApp({
+            data() {
+                return {
+                    message: 'Vue.js 本地化成功！',
+                    version: Vue.version
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

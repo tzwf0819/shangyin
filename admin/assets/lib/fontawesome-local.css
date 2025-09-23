@@ -1,0 +1,60 @@
+/* Font Awesome 图标 - 本地简化版本 */
+.fas {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+}
+
+.fa-chart-pie:before { content: "\f200"; }
+.fa-cubes:before { content: "\f1b3"; }
+.fa-diagram-project:before { content: "\f542"; }
+.fa-users:before { content: "\f0c0"; }
+.fa-file-contract:before { content: "\f56c"; }
+.fa-circle-info:before { content: "\f05a"; }
+.fa-rotate:before { content: "\f2f1"; }
+.fa-plus:before { content: "\f067"; }
+.fa-filter:before { content: "\f0b0"; }
+.fa-eraser:before { content: "\f12d"; }
+.fa-trash:before { content: "\f1f8"; }
+.fa-edit:before { content: "\f044"; }
+.fa-eye:before { content: "\f06e"; }
+.fa-check:before { content: "\f00c"; }
+.fa-times:before { content: "\f00d"; }
+.fa-spinner:before { content: "\f110"; }
+.fa-spin {
+  animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.fa-minus-circle:before { content: "\f056"; }
+.fa-upload:before { content: "\f093"; }
+
+/* 使用系统字体替代Font Awesome，确保基本功能 */
+@font-face {
+  font-family: "Font Awesome 6 Free";
+  src: local("Arial"), local("Helvetica");
+  font-weight: 900;
+}
+
+/* 简化版图标，使用Unicode符号替代 */
+.fas.fa-chart-pie:before { content: "📊"; font-family: inherit; }
+.fas.fa-cubes:before { content: "📦"; font-family: inherit; }
+.fas.fa-diagram-project:before { content: "🔧"; font-family: inherit; }
+.fas.fa-users:before { content: "👥"; font-family: inherit; }
+.fas.fa-file-contract:before { content: "📄"; font-family: inherit; }
+.fas.fa-circle-info:before { content: "ℹ️"; font-family: inherit; }
+.fas.fa-rotate:before { content: "🔄"; font-family: inherit; }
+.fas.fa-plus:before { content: "➕"; font-family: inherit; }
+.fas.fa-filter:before { content: "🔍"; font-family: inherit; }
+.fas.fa-eraser:before { content: "🧹"; font-family: inherit; }
+.fas.fa-trash:before { content: "🗑️"; font-family: inherit; }
+.fas.fa-edit:before { content: "✏️"; font-family: inherit; }
+.fas.fa-eye:before { content: "👁️"; font-family: inherit; }
+.fas.fa-check:before { content: "✅"; font-family: inherit; }
+.fas.fa-times:before { content: "❌"; font-family: inherit; }
+.fas.fa-spinner:before { content: "⏳"; font-family: inherit; }
+.fas.fa-minus-circle:before { content: "➖"; font-family: inherit; }
+.fas.fa-upload:before { content: "📤"; font-family: inherit; }

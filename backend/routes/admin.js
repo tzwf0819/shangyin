@@ -11,6 +11,15 @@ const {
   batchDeleteEmployees
 } = require('../controllers/adminController');
 
+const {
+  listContracts,
+  getContractDetail,
+  createContract,
+  updateContract,
+  deleteContract,
+  importContracts
+} = require('../controllers/contractController');
+
 // 管理员面板统计数据
 router.get('/dashboard/stats', getDashboardStats);
 
@@ -29,5 +38,13 @@ router.post('/employees/batch/clear-wechat', batchClearWechatBinding);
 
 // 批量删除员工
 router.post('/employees/batch/delete', batchDeleteEmployees);
+
+// 合同管理
+router.get('/contracts', listContracts);
+router.get('/contracts/:id', getContractDetail);
+router.post('/contracts', createContract);
+router.put('/contracts/:id', updateContract);
+router.delete('/contracts/:id', deleteContract);
+router.post('/contracts/import', importContracts);
 
 module.exports = router;
