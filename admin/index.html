@@ -297,6 +297,7 @@
                                 <th>签订日期</th>
                                 <th>状态</th>
                                 <th>产品名称</th>
+                                <th>产品类型</th>
                                 <th>产品编号</th>
                                 <th>规格</th>
                                 <th>数量</th>
@@ -314,6 +315,7 @@
                                     <td v-if="row.isFirst" :rowspan="row.rowSpan">{{ row.contract.signedDate || '-' }}</td>
                                     <td v-if="row.isFirst" :rowspan="row.rowSpan">{{ row.contract.status || '-' }}</td>
                                     <td>{{ row.product.productName || '-' }}</td>
+                                    <td>{{ row.product.productTypeName || row.product.productTypeId || '-' }}</td>
                                     <td>{{ row.product.productCode || '-' }}</td>
                                     <td>{{ row.product.specification || '-' }}</td>
                                     <td>{{ row.product.quantity || '-' }}</td>
@@ -539,6 +541,13 @@
                                     <div class="form-field">
                                         <label class="form-label">产品名称 *</label>
                                         <input class="input-field" v-model="product.productName" placeholder="请输入产品名称" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">产品类型</label>
+                                        <select class="input-field" v-model="product.productTypeId" @change="updateProductTypeName(product)">
+                                            <option value="">请选择产品类型</option>
+                                            <option v-for="type in productTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                                        </select>
                                     </div>
                                     <div class="form-field">
                                         <label class="form-label">产品编号</label>

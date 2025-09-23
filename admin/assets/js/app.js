@@ -55,12 +55,14 @@ createApp({
         remark: '',
         products: [
           {
-            productName: '',
+                        productName: '',
+            productTypeId: '',
+            productTypeName: '',
             productCode: '',
             specification: '',
             quantity: '',
             unitPrice: '',
-            totalAmount: ''
+            totalAmount:  ''
           }
         ]
       },
@@ -100,22 +102,60 @@ createApp({
       if (this.employeePagination.limit <= 0) return 1;
       return Math.max(1, Math.ceil(this.employeePagination.total / this.employeePagination.limit));
     },
-    contractTableRows() {
+        contractTableRows() {
       if (!this.contracts || !Array.isArray(this.contracts)) {
         return [];
       }
-      return this.contracts.map(contract => ({
-        id: contract.id,
-        contractNumber: contract.contractNumber || '',
-        partyAName: contract.partyAName || '',
-        partyBName: contract.partyBName || '',
-        signedDate: contract.signedDate || '',
-        status: contract.status || '',
-        totalAmount: contract.totalAmount || 0,
-        salesId: contract.salesId || '',
-        deliveryDeadline: contract.deliveryDeadline || '',
-        remark: contract.remark || ''
-      }));
+      
+      const rows = [];
+      this.contracts.forEach(contract => {
+        const products = contract.products || [];
+        
+        if (products.length === 0) {
+          // 如果没有产品，创建一个空产品行
+          rows.push({
+            rowKey: `contract-${contract.id}`,
+            contract: contract,
+            product: {
+              productName: '',
+              productTypeId: '',
+              productTypeName: '',
+              productCode: '',
+              specification: '',
+              quantity: '',
+              unitPrice: '',
+              totalAmount: ''
+            },
+            isFirst: true,
+            rowSpan: 1
+          });
+        } else {
+          // 为每个产品创建一行
+          products.forEach((product, index) => {
+            // 确保product对象有基本的属性
+            const safeProduct = Object.assign({
+              productName: '',
+              productTypeId: '',
+              productTypeName: '',
+              productCode: '',
+              specification: '',
+              quantity: '',
+              unitPrice: '',
+              totalAmount: ''
+            }, product || {});
+            
+            rows.push({
+              rowKey: `contract-${contract.id}-product-${(product && product.id) || index}`,
+              contract: contract,
+              product: safeProduct,
+              isFirst: index === 0,
+              rowSpan: products.length
+            });
+          });
+        }
+      });
+      
+      return rows;
     },
   },
   watch: {
@@ -576,12 +616,14 @@ createApp({
           remark: '',
           products: [
             {
-              productName: '',
-              productCode: '',
-              specification: '',
-              quantity: '',
-              unitPrice: '',
-              totalAmount: ''
+                          productName: '',
+            productTypeId: '',
+            productTypeName: '',
+            productCode: '',
+            specification: '',
+            quantity: '',
+            unitPrice: '',
+            totalAmount:  ''
             }
           ]
         };
@@ -594,12 +636,14 @@ createApp({
     addContractProductLine() {
       if (this.contractForm.products.length < 10) {
         this.contractForm.products.push({
-          productName: '',
-          productCode: '',
-          specification: '',
-          quantity: '',
-          unitPrice: '',
-          totalAmount: ''
+                      productName: '',
+            productTypeId: '',
+            productTypeName: '',
+            productCode: '',
+            specification: '',
+            quantity: '',
+            unitPrice: '',
+            totalAmount:  ''
         });
       } else {
         this.showToast('每份合同最多只能添加10个产品', 'warning');
@@ -608,6 +652,14 @@ createApp({
     removeContractProductLine(index) {
       if (this.contractForm.products.length > 1) {
         this.contractForm.products.splice(index, 1);
+      }
+    },
+    updateProductTypeName(product) {
+      const selectedType = this.productTypes.find(type => type.id == product.productTypeId);
+      if (selectedType) {
+        product.productTypeName = selectedType.name;
+      } else {
+        product.productTypeName = '';
       }
     },
     async saveContract() {
