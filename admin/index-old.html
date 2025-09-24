@@ -1,0 +1,819 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>上茚管理系统</title>
+    <link rel="stylesheet" href="./assets/lib/fontawesome-local.css" />
+    <link rel="stylesheet" href="./assets/css/admin.css" />
+</head>
+<body>
+    <div id="app" v-cloak>
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo">SY</div>
+                <div class="brand-name">上茚管理后台</div>
+            </div>
+            <nav class="nav">
+                <button :class="{ active: activeTab === 'dashboard' }" @click="setActiveTab('dashboard')">
+                    <i class="fas fa-chart-pie"></i> 仪表盘
+                </button>
+                <button :class="{ active: activeTab === 'productTypes' }" @click="setActiveTab('productTypes')">
+                    <i class="fas fa-cubes"></i> 产品类型
+                </button>
+                <button :class="{ active: activeTab === 'processes' }" @click="setActiveTab('processes')">
+                    <i class="fas fa-diagram-project"></i> 工序管理
+                </button>
+                <button :class="{ active: activeTab === 'employees' }" @click="setActiveTab('employees')">
+                    <i class="fas fa-users"></i> 员工管理
+                </button>
+                <button :class="{ active: activeTab === 'contracts' }" @click="setActiveTab('contracts')">
+                    <i class="fas fa-file-contract"></i> 合同管理
+                </button>
+                <button :class="{ active: activeTab === 'production' }" @click="setActiveTab('production')">
+                    <i class="fas fa-tasks"></i> 生产进度
+                </button>
+                <button :class="{ active: activeTab === 'performance' }" @click="setActiveTab('performance')">
+                    <i class="fas fa-chart-line"></i> 绩效管理
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-tip">
+                    <i class="fas fa-circle-info"></i>
+                    <span>后台与小程序共用同一套 API，操作前请确认数据无冲突。</span>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main">
+            <div class="topbar">
+                <div>
+                    <h1>{{ currentSectionTitle }}</h1>
+                    <p v-if="currentSectionSubtitle">{{ currentSectionSubtitle }}</p>
+                </div>
+                <div class="actions">
+                    <button class="ghost-button" @click="refreshActiveTab">
+                        <i class="fas fa-rotate"></i> 刷新
+                    </button>
+                    <button v-if="activeTab === 'productTypes'" class="primary-button" @click="openProductTypeModal()">
+                        <i class="fas fa-plus"></i> 新增类型
+                    </button>
+                    <button v-if="activeTab === 'processes'" class="primary-button" @click="openProcessModal()">
+                        <i class="fas fa-plus"></i> 新增工序
+                    <button v-if="activeTab === 'processes'" class="ghost-button" @click="openTimingProcessModal()">
+                        <i class="fas fa-clock"></i> 新建计时工序
+                    </button>
+                    </button>
+                    <button v-if="activeTab === 'employees'" class="primary-button" @click="openEmployeeModal()">
+                    <button v-if="activeTab === 'contracts'" class="primary-button" @click="openContractModal()">
+                        <i class="fas fa-plus"></i> 新增合同
+                    </button>
+                    <button v-if="activeTab === 'contracts'" class="ghost-button" @click="openContractImportModal()">
+                        <i class="fas fa-cloud-upload"></i> 导入合同
+                    </button>
+                        <i class="fas fa-user-plus"></i> 新增员工
+                    </button>
+                </div>
+            </div>
+
+            <!-- 仪表盘 -->
+            <section v-if="activeTab === 'dashboard'" class="section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">{{ dashboardData.productTypes }}</div>
+                        <div class="stat-label">产品类型</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ dashboardData.processes }}</div>
+                        <div class="stat-label">工序数量</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ dashboardData.employees }}</div>
+                        <div class="stat-label">员工总数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ dashboardData.contracts }}</div>
+                        <div class="stat-label">合同数量</div>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-card">
+                        <div class="info-title">员工概览</div>
+                        <ul class="info-list">
+                            <li><span>在职员工</span><span>{{ dashboardData.activeEmployees }}</span></li>
+                            <li><span>绑定微信</span><span>{{ dashboardData.employeesWithWechat }}</span></li>
+                        </ul>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-title">上茚工具包</div>
+                        <p class="info-desc">建议每次发布前在此跑通核心流程，确保小程序与后台数据一致。</p>
+                        <ul class="info-actions">
+                            <li><i class="fas fa-wrench"></i> API Smoke 脚本：`scripts/api-smoke.ps1`</li>
+                            <li><i class="fas fa-database"></i> 合同导入接口：`/shangyin/contracts/import`</li>
+                            <li><i class="fas fa-book"></i> 文档：`docs/api-overview.md`</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 产品类型 -->
+            <section v-if="activeTab === 'productTypes'" class="section">
+                <div class="section-header">
+                    <div>
+                        <h2>产品类型列表</h2>
+                        <p>可选择关联工序以指导生产流程。</p>
+                    </div>
+                </div>
+
+                <div v-if="productTypes.length" class="data-grid">
+                    <div class="data-card" v-for="type in productTypes" :key="type.id">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">{{ type.name }}</div>
+                                <div class="card-subtitle">编码：{{ type.code }}</div>
+                            </div>
+                            <span class="status-badge" :class="type.status === 'active' ? 'status-active' : 'status-inactive'">
+                                {{ type.status === 'active' ? '启用' : '停用' }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="label">关联工序</div>
+                            <div class="tag-list">
+                                <span v-if="!type.processes || !type.processes.length" class="tag muted">未关联</span>
+                                <span v-else class="tag" v-for="proc in type.processes" :key="proc.id">{{ proc.name }}</span>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="ghost-button" @click="openProductTypeModal(type)"><i class="fas fa-pen"></i> 编辑</button>
+                            <button class="ghost-button danger" @click="deleteProductType(type.id)"><i class="fas fa-trash"></i> 删除</button>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="empty-state">
+                    <i class="fas fa-cubes"></i>
+                    <p>暂无产品类型，请点击右上角按钮新建。</p>
+                </div>
+            </section>
+
+            <!-- 工序管理 -->
+            <section v-if="activeTab === 'processes'" class="section">
+                <div class="section-header">
+                    <div>
+                        <h2>工序列表</h2>
+                        <p>维护上茚工厂的生产工序信息。</p>
+                    </div>
+                </div>
+
+                <div v-if="processList.length" class="data-grid">
+                    <div class="data-card" v-for="proc in processList" :key="proc.id">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">{{ proc.name }}</div>
+                                <div class="card-subtitle">编码：{{ proc.code }}</div>
+                            </div>
+                            <span class="status-badge" :class="proc.status === 'active' ? 'status-active' : 'status-inactive'">
+                                {{ proc.status === 'active' ? '启用' : '停用' }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="label">标准工时</div>
+                            <div class="value">{{ proc.standardTime || '未填写' }}</div>
+                            <div class="label">难度</div>
+                            <div class="value">{{ proc.difficulty || '未设置' }}</div>
+                            <div class="label" v-if="proc.description">说明</div>
+                            <div class="value" v-if="proc.description">{{ proc.description }}</div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="ghost-button" @click="openProcessModal(proc)"><i class="fas fa-pen"></i> 编辑</button>
+                            <button class="ghost-button danger" @click="deleteProcess(proc.id)"><i class="fas fa-trash"></i> 删除</button>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="empty-state">
+                    <i class="fas fa-diagram-project"></i>
+                    <p>暂无工序，请新建后再试。</p>
+                </div>
+            </section>
+
+            <!-- 员工管理 -->
+            <section v-if="activeTab === 'employees'" class="section">
+                <div class="section-header">
+                    <div>
+                        <h2>员工列表</h2>
+                        <p>在此维护员工资料及工序权限。</p>
+                    </div>
+                </div>
+
+                <div class="filters">
+                    <input class="input-field" v-model="employeeFilters.keyword" @keyup.enter="loadEmployees(1)" placeholder="搜索姓名或编码" />
+                    <select class="select-field" v-model="employeeFilters.status">
+                        <option value="all">全部状态</option>
+                        <option value="active">在职</option>
+                        <option value="inactive">离职</option>
+                    </select>
+                    <select class="select-field" v-model="employeeFilters.wechat">
+                        <option value="all">微信绑定 - 全部</option>
+                        <option value="bound">已绑定</option>
+                        <option value="unbound">未绑定</option>
+                    </select>
+                    <button class="ghost-button" @click="loadEmployees(1)"><i class="fas fa-filter"></i> 应用</button>
+                    <button class="ghost-button" @click="resetEmployeeFilters"><i class="fas fa-eraser"></i> 重置</button>
+                </div>
+
+                <div class="batch-actions" v-if="hasEmployeeSelection">
+                    <span>已选 {{ selectedEmployeeIds.length }} 名员工</span>
+                    <div class="action-buttons">
+                        <button class="ghost-button" @click="batchClearWechat"><i class="fas fa-unlink"></i> 批量解绑微信</button>
+                        <button class="ghost-button danger" @click="batchDeleteEmployees"><i class="fas fa-trash"></i> 批量删除</button>
+                    </div>
+                </div>
+
+                <div v-if="employees.length" class="data-grid">
+                    <div class="data-card" v-for="emp in employees" :key="emp.id">
+                        <div class="card-header">
+                            <div>
+                                <div class="card-title">{{ emp.name }}</div>
+                                <div class="card-subtitle">编码：{{ emp.code || '未设置' }}</div>
+                            </div>
+                            <span class="status-badge" :class="emp.status === 'active' ? 'status-active' : 'status-inactive'">
+                                {{ emp.status === 'active' ? '在职' : '离职' }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <div class="label">微信绑定</div>
+                            <div class="value">
+                                <span v-if="emp.wxOpenId || emp.wxUnionId" class="tag success"><i class="fab fa-weixin"></i> 已绑定</span>
+                                <span v-else class="tag muted">未绑定</span>
+                            </div>
+                            <div class="label">工序权限</div>
+                            <div class="tag-list">
+                                <span v-if="!emp.processes || !emp.processes.length" class="tag muted">暂无工序</span>
+                                <span v-else class="tag" v-for="proc in emp.processes" :key="proc.id">{{ proc.name }}</span>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <label class="checkbox">
+                                <input type="checkbox" :value="emp.id" :checked="selectedEmployeeIds.includes(emp.id)" @change="toggleEmployeeSelection(emp.id)" />
+                                <span>选择</span>
+                            </label>
+                            <button class="ghost-button" @click="openEmployeeModal(emp)"><i class="fas fa-pen"></i> 编辑</button>
+                            <button class="ghost-button" v-if="emp.wxOpenId || emp.wxUnionId" @click="clearEmployeeWechat(emp.id)"><i class="fas fa-unlink"></i> 解绑微信</button>
+                            <button class="ghost-button danger" @click="deleteEmployee(emp.id)"><i class="fas fa-trash"></i> 删除</button>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="empty-state">
+                    <i class="fas fa-users"></i>
+                    <p>暂无员工数据，请点击右上角按钮新建。</p>
+                </div>
+
+                <div class="pagination" v-if="employeeTotalPages > 1">
+                    <button class="ghost-button" :disabled="employeePagination.page === 1" @click="employeePageChange(-1)"><i class="fas fa-arrow-left"></i></button>
+                    <span>第 {{ employeePagination.page }} / {{ employeeTotalPages }} 页</span>
+                    <button class="ghost-button" :disabled="employeePagination.page >= employeeTotalPages" @click="employeePageChange(1)"><i class="fas fa-arrow-right"></i></button>
+                </div>
+            </section>
+
+            <!-- 合同管理 -->
+                </button>
+                <button :class="{ active: activeTab === 'production' }" @click="setActiveTab('production')">
+                    <i class="fas fa-tasks"></i> 生产进度
+                </button>
+                <button :class="{ active: activeTab === 'performance' }" @click="setActiveTab('performance')">
+                    <i class="fas fa-chart-line"></i> 绩效管理
+            <section v-if="activeTab === 'contracts'" class="section">
+                <div class="section-header">
+                    <div>
+                        <h2>合同列表</h2>
+                        <p>支持筛选、导入与删除合同记录。</p>
+                    </div>
+                </div>
+
+                <div class="filters">
+                    <input class="input-field" v-model="contractFilters.keyword" @keyup.enter="loadContracts(1)" placeholder="搜索合同编号 / 客户名称" />
+                    <select class="select-field" v-model="contractFilters.status">
+                        <option value="">合同状态 - 全部</option>
+                        <option value="进行中">进行中</option>
+                        <option value="已完成">已完成</option>
+                        <option value="已取消">已取消</option>
+                    </select>
+                    <input class="input-field" v-model="contractFilters.salesId" @keyup.enter="loadContracts(1)" placeholder="按销售编码筛选" />
+                    <button class="ghost-button" @click="loadContracts(1)"><i class="fas fa-filter"></i> 应用</button>
+                    <button class="ghost-button" @click="resetContractFilters"><i class="fas fa-eraser"></i> 重置</button>
+                </div>
+                <div v-if="contracts.length" class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>合同编号</th>
+                                <th>甲方</th>
+                                <th>乙方</th>
+                                <th>签订日期</th>
+                                <th>状态</th>
+                                <th>产品名称</th>
+                                <th>产品类型</th>
+                                <th>产品编号</th>
+                                <th>规格</th>
+                                <th>数量</th>
+                                <th>单价</th>
+                                <th>总金额</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-for="row in contractTableRows" :key="row.rowKey">
+                                <tr>
+                                    <td v-if="row.isFirst" :rowspan="row.rowSpan">{{ row.contract.contractNumber || '-' }}</td>
+                                    <td v-if="row.isFirst" :rowspan="row.rowSpan">{{ row.contract.partyAName || '-' }}</td>
+                                    <td v-if="row.isFirst" :rowspan="row.rowSpan">{{ row.contract.partyBName || '-' }}</td>
+                                    <td v-if="row.isFirst" :rowspan="row.rowSpan">{{ row.contract.signedDate || '-' }}</td>
+                                    <td v-if="row.isFirst" :rowspan="row.rowSpan">{{ row.contract.status || '-' }}</td>
+                                    <td>{{ row.product.productName || '-' }}</td>
+                                    <td>{{ row.product.productTypeName || row.product.productTypeId || '-' }}</td>
+                                    <td>{{ row.product.productCode || '-' }}</td>
+                                    <td>{{ row.product.specification || '-' }}</td>
+                                    <td>{{ row.product.quantity || '-' }}</td>
+                                    <td>{{ row.product.unitPrice || '-' }}</td>
+                                    <td>{{ row.product.totalAmount || '-' }}</td>
+                                    <td v-if="row.isFirst" :rowspan="row.rowSpan" class="contract-actions">
+                                        <button class="ghost-button" @click="openContractModal(row.contract)"><i class="fas fa-pen"></i> 编辑</button>
+                                        <button class="ghost-button danger" @click="deleteContract(row.contract.id)"><i class="fas fa-trash"></i> 删除</button>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <div v-else class="section-empty">
+                    <i class="fas fa-file-contract"></i>
+                    <p>暂无合同记录，请先导入或点击“新增合同”创建。</p>
+                </div>
+
+                <div class="pagination" v-if="contractTotalPages > 1">
+                    <button class="ghost-button" :disabled="contractPagination.page === 1" @click="contractPageChange(-1)"><i class="fas fa-arrow-left"></i></button>
+                    <span>第 {{ contractPagination.page }} / {{ contractTotalPages }} 页</span>
+                    <button class="ghost-button" :disabled="contractPagination.page >= contractTotalPages" @click="contractPageChange(1)"><i class="fas fa-arrow-right"></i></button>
+                </div>
+            </section>
+
+            <!-- 生产进度管理 -->
+            <section v-if="activeTab === 'production'" class="section">
+                <div class="section-header">
+                    <div>
+                        <h2>生产进度管理</h2>
+                        <p>查看合同和产品的生产进度，生成二维码。</p>
+                    </div>
+                    <div class="section-actions">
+                        <button class="ghost-button" @click="generateAllQRCodes()">
+                            <i class="fas fa-qrcode"></i> 生成二维码
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 合同生产进度列表 -->
+                <div v-if="productionContracts.length" class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>合同编号</th>
+                                <th>甲方</th>
+                                <th>产品数量</th>
+                                <th>整体进度</th>
+                                <th>合同二维码</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="contract in productionContracts" :key="contract.id">
+                                <td>{{ contract.contractNumber }}</td>
+                                <td>{{ contract.partyAName || '-' }}</td>
+                                <td>{{ contract.totalProducts }}</td>
+                                <td>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" :style="{ width: contract.overallProgress + '%' }"></div>
+                                        <span class="progress-text">{{ Math.round(contract.overallProgress) }}%</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <button class="ghost-button small" @click="showContractQR(contract)">
+                                        <i class="fas fa-qrcode"></i>
+                                    </button>
+                                </td>
+                                <td>
+                                    <button class="ghost-button" @click="viewContractProgress(contract.id)">
+                                        <i class="fas fa-eye"></i> 查看详情
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-else class="empty-state">
+                    <i class="fas fa-tasks"></i>
+                    <p>暂无生产进度数据。</p>
+
+            <!-- 绩效管理 -->
+            <section v-if="activeTab === 'performance'" class="section">
+                <div class="section-header">
+                    <div>
+                        <h2>绩效管理</h2>
+                        <p>查看员工绩效，生成月度报表。</p>
+                    </div>
+                    <div class="section-actions">
+                        <select v-model="performanceYear" @change="loadPerformanceData()" class="input-field">
+                            <option v-for="year in availableYears" :key="year" :value="year">{{ year }}年</option>
+                        </select>
+                        <select v-model="performanceMonth" @change="loadPerformanceData()" class="input-field">
+                            <option v-for="month in 12" :key="month" :value="month">{{ month }}月</option>
+                        </select>
+                        <button class="primary-button" @click="generateMonthlyReport()">
+                            <i class="fas fa-file-excel"></i> 生成报表
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 月度绩效汇总 -->
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-number">{{ performanceSummary.totalEmployees }}</div>
+                        <div class="stat-label">活跃员工</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ performanceSummary.totalRecords }}</div>
+                        <div class="stat-label">总记录数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">¥{{ performanceSummary.totalWage || 0 }}</div>
+                        <div class="stat-label">总工资</div>
+                    </div>
+                </div>
+
+                <!-- 员工绩效列表 -->
+                <div v-if="performanceData.length" class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>员工姓名</th>
+                                <th>员工编号</th>
+                                <th>完成记录数</th>
+                                <th>总工资</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="employee in performanceData" :key="employee.id">
+                                <td>{{ employee.name }}</td>
+                                <td>{{ employee.code }}</td>
+                                <td>{{ employee.totalRecords }}</td>
+                                <td>¥{{ employee.totalWage }}</td>
+                                <td>
+                                    <button class="ghost-button" @click="viewEmployeeDetails(employee.id)">
+                                        <i class="fas fa-eye"></i> 查看详情
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div v-else class="empty-state">
+                    <i class="fas fa-chart-line"></i>
+                    <p>暂无绩效数据。</p>
+                </div>
+            </section>
+                </div>
+            </section>
+        </main>
+
+        <!-- 产品类型模态框 -->
+        <div class="modal" :class="{ show: showProductTypeModal }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ productTypeForm.id ? '编辑产品类型' : '新增产品类型' }}</h3>
+                    <button class="modal-close" @click="closeProductTypeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <label class="form-label">类型名称 *</label>
+                        <input class="input-field" v-model="productTypeForm.name" placeholder="请输入类型名称" />
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">类型编码 *</label>
+                        <input class="input-field" v-model="productTypeForm.code" placeholder="请输入类型编码" />
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">状态</label>
+                        <select class="select-field" v-model="productTypeForm.status">
+                            <option value="active">启用</option>
+                            <option value="inactive">停用</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">关联工序</label>
+                        <div class="checkbox-list">
+                            <label class="checkbox-item" v-for="proc in processList" :key="proc.id">
+                                <input type="checkbox" :value="proc.id" v-model="productTypeForm.processIds" />
+                                <span>{{ proc.name }}（{{ proc.code }}）</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="ghost-button" @click="closeProductTypeModal">取消</button>
+                    <button class="primary-button" @click="saveProductType">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 工序模态框 -->
+        <div class="modal" :class="{ show: showProcessModal }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ processForm.id ? '编辑工序' : '新增工序' }}</h3>
+                    <button v-if="activeTab === 'processes'" class="ghost-button" @click="openTimingProcessModal()">
+                        <i class="fas fa-clock"></i> 新建计时工序
+                    </button>
+                    <button class="modal-close" @click="closeProcessModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <label class="form-label">工序名称 *</label>
+                        <input class="input-field" v-model="processForm.name" placeholder="请输入工序名称" />
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">工序编码 *</label>
+                        <input class="input-field" v-model="processForm.code" placeholder="请输入工序编码" />
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">类别</label>
+                        <input class="input-field" v-model="processForm.category" placeholder="如：制版/质检" />
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">标准工时</label>
+                        <input class="input-field" v-model="processForm.standardTime" placeholder="请输入标准工时" />
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">难度</label>
+                        <select class="select-field" v-model="processForm.difficulty">
+                            <option value="easy">简单</option>
+                            <option value="medium">中等</option>
+                            <option value="hard">困难</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">状态</label>
+                        <select class="select-field" v-model="processForm.status">
+                            <option value="active">启用</option>
+                            <option value="inactive">停用</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">说明</label>
+                        <textarea class="input-field" rows="3" v-model="processForm.description" placeholder="补充说明"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="ghost-button" @click="closeProcessModal">取消</button>
+                    <button class="primary-button" @click="saveProcess">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 员工模态框 -->
+        <div class="modal" :class="{ show: showEmployeeModal }">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ employeeForm.id ? '编辑员工' : '新增员工' }}</h3>
+                    <button class="modal-close" @click="closeEmployeeModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <label class="form-label">姓名 *</label>
+                        <input class="input-field" v-model="employeeForm.name" placeholder="请输入员工姓名" />
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">员工编码</label>
+                        <input class="input-field" v-model="employeeForm.code" placeholder="用于在合同中关联销售" />
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">状态</label>
+                        <select class="select-field" v-model="employeeForm.status">
+                            <option value="active">在职</option>
+                            <option value="inactive">离职</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label class="form-label">工序权限</label>
+                        <div class="checkbox-list">
+                            <label class="checkbox-item" v-for="proc in processList" :key="proc.id">
+                                <input type="checkbox" :value="proc.id" v-model="employeeForm.processIds" />
+                                <span>{{ proc.name }}（{{ proc.code }}）</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="ghost-button" @click="closeEmployeeModal">取消</button>
+                    <button class="primary-button" @click="saveEmployee">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合同新增/编辑模态框 -->
+        <div class="modal" :class="{ show: showContractModal }">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3 class="modal-title">{{ contractForm.id ? '编辑合同' : '新增合同' }}</h3>
+                    <button class="modal-close" @click="closeContractModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <label class="form-label">合同编号 *</label>
+                        <input class="input-field" v-model="contractForm.contractNumber" placeholder="请输入合同编号" />
+                    </div>
+                    <div class="form-row inline">
+                        <div class="form-field">
+                            <label class="form-label">甲方</label>
+                            <input class="input-field" v-model="contractForm.partyAName" placeholder="甲方公司名称" />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">乙方</label>
+                            <input class="input-field" v-model="contractForm.partyBName" placeholder="乙方公司名称" />
+                        </div>
+                    </div>
+                    <div class="form-row inline">
+                        <div class="form-field">
+                            <label class="form-label">签订日期</label>
+                            <input class="input-field" type="date" v-model="contractForm.signedDate" />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">签订地点</label>
+                            <input class="input-field" v-model="contractForm.signedLocation" placeholder="请输入签订地点" />
+                        </div>
+                    </div>
+                    <div class="form-row inline">
+                        <div class="form-field">
+                            <label class="form-label">状态</label>
+                            <select class="select-field" v-model="contractForm.status">
+                                <option value="进行中">进行中</option>
+                                <option value="已完成">已完成</option>
+                                <option value="已取消">已取消</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">销售编码</label>
+                            <input class="input-field" v-model="contractForm.salesId" placeholder="用于关联销售人员" />
+                        </div>
+                    </div>
+                    <div class="form-row inline">
+                        <div class="form-field">
+                            <label class="form-label">交货期限</label>
+                            <input class="input-field" v-model="contractForm.deliveryDeadline" placeholder="请输入交货期限" />
+                        </div>
+                        <div class="form-field">
+                            <label class="form-label">备注</label>
+                            <input class="input-field" v-model="contractForm.remark" placeholder="补充说明" />
+                        </div>
+                    </div>
+                    <div class="product-section">
+                        <div class="form-row">
+                            <label class="form-label">成品明细</label>
+                            <p class="form-help">每份合同最多可添加 10 条成品记录。</p>
+                        </div>
+                        <div class="product-lines">
+                            <div v-for="(product, index) in contractForm.products" :key="index" class="product-line">
+                                <div class="product-grid">
+                                    <div class="form-field">
+                                        <label class="form-label">产品名称 *</label>
+                                        <input class="input-field" v-model="product.productName" placeholder="请输入产品名称" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">产品类型</label>
+                                        <select class="input-field" v-model="product.productTypeId" @change="updateProductTypeName(product)">
+                                            <option value="">请选择产品类型</option>
+                                            <option v-for="type in productTypes" :key="type.id" :value="type.id">{{ type.name }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">产品编号</label>
+                                        <input class="input-field" v-model="product.productCode" placeholder="请输入产品编号" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">规格</label>
+                                        <input class="input-field" v-model="product.specification" placeholder="请输入规格" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">数量</label>
+                                        <input class="input-field" v-model="product.quantity" placeholder="数量" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">单价</label>
+                                        <input class="input-field" v-model="product.unitPrice" placeholder="单价" />
+                                    </div>
+                                    <div class="form-field">
+                                        <label class="form-label">总金额</label>
+                                        <input class="input-field" v-model="product.totalAmount" placeholder="总金额" />
+                                    </div>
+                                </div>
+                                <div class="product-actions">
+                                    <button class="mini-button danger" v-if="contractForm.products.length > 1" @click="removeContractProductLine(index)">
+                                        <i class="fas fa-minus-circle"></i> 删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="ghost-button" type="button" @click="addContractProductLine">
+                            <i class="fas fa-plus"></i> 添加产品
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="ghost-button" @click="closeContractModal">取消</button>
+                    <button class="primary-button" :disabled="contractSaveLoading" @click="saveContract">
+                        <span v-if="contractSaveLoading"><i class="fas fa-spinner fa-spin"></i> 保存中</span>
+                        <span v-else>保存</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合同导入模态框 -->
+        <div class="modal" :class="{ show: showContractImportModal }">
+            <div class="modal-content large">
+                <div class="modal-header">
+                    <h3 class="modal-title">导入合同</h3>
+                    <button class="modal-close" @click="closeContractImportModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p class="info-desc">请输入合同 JSON 数组，每条合同最多包含 10 个成品。示例：</p>
+                    <pre class="code-block">[
+  {
+    "合同编号": "HT-2024-001",
+    "甲方": "广州上茚科技",
+    "销售ID": "EMP001",
+    "产品列表": [
+      {
+        "产品名称": "凹版辊A",
+        "数量": "2",
+        "单价": "1800"
+      }
+    ]
+  }
+]</pre>
+                    <textarea class="input-field" rows="10" v-model="contractImport.rawText" placeholder="粘贴合同 JSON 数据"></textarea>
+                    <div v-if="contractImport.result" class="import-result">
+                        <p>成功导入：{{ contractImport.result.successCount }} 条，失败：{{ contractImport.result.failureCount }} 条。</p>
+                        <ul v-if="contractImport.result.errors && contractImport.result.errors.length" class="error-list">
+                            <li v-for="err in contractImport.result.errors" :key="err.index">
+                                第 {{ err.index + 1 }} 条（{{ err.contractNumber || '未填写合同编号' }}）：{{ err.message }}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="ghost-button" @click="closeContractImportModal">取消</button>
+                    <button class="primary-button" :disabled="contractImport.loading" @click="runContractImport">
+                        <i class="fas fa-cloud-upload"></i>
+                        <span v-if="contractImport.loading">正在导入...</span>
+                        <span v-else>导入</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <transition-group name="fade" tag="div" class="toast-container">
+            <div class="toast" :class="toast.type" v-for="toast in toastList" :key="toast.id">
+                <i class="fas" :class="{
+                    'fa-circle-info': toast.type === 'info',
+                    'fa-check-circle': toast.type === 'success',
+                    'fa-triangle-exclamation': toast.type === 'danger'
+                }"></i>
+                <span>{{ toast.message }}</span>
+            </div>
+        </transition-group>
+    </div>
+
+    <script src="./assets/lib/vue.global.js"></script>
+    <script>
+        // 错误捕获和调试
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript错误:', e.error);
+            alert('JavaScript错误: ' + e.message + '\n文件: ' + e.filename + '\n行号: ' + e.lineno);
+        });
+        
+        // Vue错误处理
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Promise错误:', e.reason);
+        });
+        
+        console.log('Vue版本:', Vue.version);
+        console.log('createApp函数:', typeof Vue.createApp);
+    </script>
+    <script src="./assets/lib/axios.min.js"></script>
+    <script src="./assets/js/app.js"></script>
+</body>
+</html>
+

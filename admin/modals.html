@@ -1,0 +1,132 @@
+
+        <!-- 产品类型新增模态框 -->
+        <div v-if="showCreateProductTypeModal" class="sony-modal-overlay" @click="showCreateProductTypeModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>新增产品类型</h3>
+                    <button class="sony-modal-close" @click="showCreateProductTypeModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="createProductType">
+                        <div class="sony-form-group">
+                            <label>产品名称 *</label>
+                            <input type="text" v-model="newProductType.name" required class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>描述</label>
+                            <textarea v-model="newProductType.description" class="sony-input"></textarea>
+                        </div>
+                        <div class="sony-form-group">
+                            <label>单位</label>
+                            <input type="text" v-model="newProductType.unit" class="sony-input" placeholder="个">
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showCreateProductTypeModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 工序新增模态框 -->
+        <div v-if="showCreateProcessModal" class="sony-modal-overlay" @click="showCreateProcessModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>新增工序</h3>
+                    <button class="sony-modal-close" @click="showCreateProcessModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="createProcess">
+                        <div class="sony-form-group">
+                            <label>工序名称 *</label>
+                            <input type="text" v-model="newProcess.name" required class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>描述</label>
+                            <textarea v-model="newProcess.description" class="sony-input"></textarea>
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showCreateProcessModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 员工新增模态框 -->
+        <div v-if="showCreateEmployeeModal" class="sony-modal-overlay" @click="showCreateEmployeeModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>新增员工</h3>
+                    <button class="sony-modal-close" @click="showCreateEmployeeModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="createEmployee">
+                        <div class="sony-form-group">
+                            <label>姓名 *</label>
+                            <input type="text" v-model="newEmployee.name" required class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>部门</label>
+                            <input type="text" v-model="newEmployee.department" class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>职位</label>
+                            <input type="text" v-model="newEmployee.position" class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>手机号</label>
+                            <input type="tel" v-model="newEmployee.phone" class="sony-input">
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showCreateEmployeeModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合同新增模态框 -->
+        <div v-if="showCreateContractModal" class="sony-modal-overlay" @click="showCreateContractModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>新增合同</h3>
+                    <button class="sony-modal-close" @click="showCreateContractModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="createContract">
+                        <div class="sony-form-group">
+                            <label>合同编号 *</label>
+                            <input type="text" v-model="newContract.contractNumber" required class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>甲方名称 *</label>
+                            <input type="text" v-model="newContract.partyAName" required class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>签订日期 *</label>
+                            <input type="date" v-model="newContract.signDate" required class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>合同金额 *</label>
+                            <input type="number" v-model="newContract.totalAmount" required class="sony-input" step="0.01">
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showCreateContractModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>

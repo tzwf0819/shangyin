@@ -37,6 +37,19 @@ createApp({
       showEmployeeModal: false,
       selectedEmployeeIds: [],
       contracts: [],
+      // 生产进度管理
+      productionContracts: [],
+      selectedContract: null,
+      // 绩效管理
+      performanceData: [],
+      performanceSummary: { totalEmployees: 0, totalRecords: 0, totalWage: 0 },
+      performanceYear: new Date().getFullYear(),
+      performanceMonth: new Date().getMonth() + 1,
+      availableYears: [2024, 2025, 2026],
+      // 工序配置
+      processConfigs: [],
+      showTimingProcessModal: false,
+      timingProcessForm: { name: ', code: ', unitWage: 0 },
       contractPagination: { page: 1, pageSize: 10, total: 0 },
       contractFilters: { keyword: '', status: '', salesId: '' },
       showContractModal: false,
@@ -104,6 +117,12 @@ createApp({
     },
         contractTableRows() {
       if (!this.contracts || !Array.isArray(this.contracts)) {
+      if (tab === 'production') {
+        this.loadProductionContracts();
+      }
+      if (tab === 'performance') {
+        this.loadPerformanceData();
+      }
         return [];
       }
       
@@ -193,6 +212,12 @@ createApp({
         this.loadEmployees();
       }
       if (tab === 'contracts') {
+      if (tab === 'production') {
+        this.loadProductionContracts();
+      }
+      if (tab === 'performance') {
+        this.loadPerformanceData();
+      }
         this.loadContracts();
       }
     },
@@ -526,6 +551,75 @@ createApp({
         this.showToast(error.response?.data?.message || error.message || '批量解绑失败', 'danger');
       }
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     async batchDeleteEmployees() {
       if (!this.hasEmployeeSelection) return;
       if (!confirm(`确定批量删除 ${this.selectedEmployeeIds.length} 名员工吗？操作不可恢复。`)) return;
@@ -543,6 +637,75 @@ createApp({
         this.showToast(error.response?.data?.message || error.message || '批量删除失败', 'danger');
       }
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     toggleEmployeeSelection(id) {
       const index = this.selectedEmployeeIds.indexOf(id);
       if (index >= 0) {
@@ -551,11 +714,149 @@ createApp({
         this.selectedEmployeeIds.push(id);
       }
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     selectAllEmployees() {
       if (this.selectedEmployeeIds.length === this.employees.length) {
         this.selectedEmployeeIds = [];
       } else {
         this.selectedEmployeeIds = this.employees.map(emp => emp.id);
+      }
+    },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
       }
     },
     async loadContracts(page = 1) {
@@ -588,14 +889,221 @@ createApp({
         this.showToast(error.response?.data?.message || '加载合同失败', 'danger');
       }
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     contractPageChange(delta) {
       const nextPage = this.contractPagination.page + delta;
       if (nextPage < 1 || nextPage > this.contractTotalPages) return;
       this.loadContracts(nextPage);
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     resetContractFilters() {
       this.contractFilters = { keyword: '', status: '', salesId: '' };
       this.loadContracts(1);
+    },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
     },
     openContractModal(contract = null) {
       if (contract) {
@@ -630,8 +1138,146 @@ createApp({
       }
       this.showContractModal = true;
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     closeContractModal() {
       this.showContractModal = false;
+    },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
     },
     addContractProductLine() {
       if (this.contractForm.products.length < 10) {
@@ -649,9 +1295,147 @@ createApp({
         this.showToast('每份合同最多只能添加10个产品', 'warning');
       }
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     removeContractProductLine(index) {
       if (this.contractForm.products.length > 1) {
         this.contractForm.products.splice(index, 1);
+      }
+    },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
       }
     },
     updateProductTypeName(product) {
@@ -660,6 +1444,75 @@ createApp({
         product.productTypeName = selectedType.name;
       } else {
         product.productTypeName = '';
+      }
+    },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
       }
     },
     async saveContract() {
@@ -706,12 +1559,219 @@ createApp({
         this.contractSaveLoading = false;
       }
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     openContractImportModal() {
       this.contractImport = { rawText: '', loading: false, result: null };
       this.showContractImportModal = true;
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     closeContractImportModal() {
       this.showContractImportModal = false;
+    },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
     },
     async runContractImport() {
       if (!this.contractImport.rawText.trim()) {
@@ -748,6 +1808,75 @@ createApp({
         this.contractImport.loading = false;
       }
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     async deleteContract(id) {
       if (!confirm('确定删除该合同吗？')) return;
       try {
@@ -760,6 +1889,75 @@ createApp({
       } catch (error) {
         console.error('删除合同失败:', error);
         this.showToast(error.response?.data?.message || error.message || '删除合同失败', 'danger');
+      }
+    },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
       }
     },
     refreshActiveTab() {
@@ -783,6 +1981,75 @@ createApp({
           break;
       }
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
     showToast(message, type = 'info') {
       const toast = { id: Date.now(), message, type };
       this.toastList.push(toast);
@@ -790,5 +2057,143 @@ createApp({
         this.toastList = this.toastList.filter(item => item.id !== toast.id);
       }, 3200);
     },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
   },
+    // 生产进度管理方法
+    async loadProductionContracts() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract-list`);
+        this.productionContracts = response.data?.data || [];
+      } catch (error) {
+        console.error("加载生产进度失败:", error);
+        this.showToast("加载生产进度失败", "danger");
+      }
+    },
+    async viewContractProgress(contractId) {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/production/contract/${contractId}/progress`);
+        this.selectedContract = response.data?.data;
+        this.showContractProgressModal = true;
+      } catch (error) {
+        console.error("获取合同进度失败:", error);
+        this.showToast("获取合同进度失败", "danger");
+      }
+    },
+    // 绩效管理方法
+    async loadPerformanceData() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth }
+        });
+        const data = response.data?.data;
+        this.performanceData = data?.monthlyReport || [];
+        this.performanceSummary = data?.totalSummary || { totalEmployees: 0, totalRecords: 0, totalWage: 0 };
+      } catch (error) {
+        console.error("加载绩效数据失败:", error);
+        this.showToast("加载绩效数据失败", "danger");
+      }
+    },
+    async generateMonthlyReport() {
+      try {
+        const response = await axios.get(`${this.apiBaseUrl}/performance/monthly-report`, {
+          params: { year: this.performanceYear, month: this.performanceMonth },
+          responseType: "blob"
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", `绩效报表_${this.performanceYear}_${this.performanceMonth}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast("报表生成成功", "success");
+      } catch (error) {
+        console.error("生成报表失败:", error);
+        this.showToast("生成报表失败", "danger");
+      }
+    },
+    // 工序配置方法
+    openTimingProcessModal() {
+      this.timingProcessForm = { name: "", code: "", unitWage: 0 };
+      this.showTimingProcessModal = true;
+    },
+    async saveTimingProcess() {
+      try {
+        const response = await axios.post(`${this.apiBaseUrl}/performance/timing-process`, this.timingProcessForm);
+        this.showToast("计时工序创建成功", "success");
+        this.showTimingProcessModal = false;
+        this.loadProcesses();
+      } catch (error) {
+        console.error("创建计时工序失败:", error);
+        this.showToast(error.response?.data?.message || "创建计时工序失败", "danger");
+      }
+    },
 }).mount('#app');

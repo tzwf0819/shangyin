@@ -1,0 +1,5 @@
+        <div v-if="toast.show" :class="['sony-toast', 'sony-toast-' + toast.type]">
+            <i :class="['fas', toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle']"></i>
+            <span>{{ toast.message }}</span>
+        </div>
+

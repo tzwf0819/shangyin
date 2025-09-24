@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
@@ -10,17 +10,14 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// 注册路由
-const authRoutes = require('./routes/auth');
-const productTypeRoutes = require('./routes/productType');
-const processRoutes = require('./routes/process');
-const contractRoutes = require('./routes/contract');
-const taskRoutes = require('./routes/task');
-const employeeRoutes = require('./routes/employee');
-const wechatRoutes = require('./routes/wechat');
-const adminRoutes = require('./routes/admin');
+// 管理后台静态页面
+const adminStaticPath = path.join(__dirname, '../admin');
+app.use('/shangyin/admin', express.static(adminStaticPath));
+app.get('/shangyin/admin*', (req, res) => {
+  res.sendFile(path.join(adminStaticPath, 'index.html'));
+});
 
-// 根路径返回服务信息
+// 健康检查与根信息
 app.get('/', (req, res) => {
   res.json({
     success: true,
@@ -35,30 +32,35 @@ app.get('/', (req, res) => {
       '/shangyin/contracts',
       '/shangyin/task',
       '/shangyin/api/admin',
+      '/shangyin/production',
+      '/shangyin/performance',
+      '/shangyin/admin'
     ],
     timestamp: new Date().toISOString(),
   });
 });
-
-// 管理后台静态页面
-const adminStaticPath = path.join(__dirname, '../admin');
-app.use('/shangyin/admin', express.static(adminStaticPath));
-app.get('/shangyin/admin', (req, res) => {
-  res.sendFile(path.join(adminStaticPath, 'index.html'));
+app.get('/shangyin', (req, res) => res.redirect('/shangyin/'));
+app.get('/shangyin/', (req, res) => {
+  res.json({
+    success: true,
+    message: '上茚工厂管理系统 API',
+    version: '1.0.0',
+    status: 'running',
+    timestamp: new Date().toISOString(),
+  });
 });
-app.get('/shangyin/admin/*', (req, res) => {
-  res.sendFile(path.join(adminStaticPath, 'index.html'));
-});
 
-// 配置路由 - 统一 /shangyin 前缀
-app.use('/shangyin/auth', authRoutes);
-app.use('/shangyin/product-types', productTypeRoutes);
-app.use('/shangyin/processes', processRoutes);
-app.use('/shangyin/employees', employeeRoutes);
-app.use('/shangyin/wechat', wechatRoutes);
-app.use('/shangyin/contracts', contractRoutes);
-app.use('/shangyin/api/admin', adminRoutes);
-app.use('/shangyin/task', taskRoutes);
+// 业务路由 - 统一 /shangyin 前缀
+app.use('/shangyin/auth', require('./routes/auth'));
+app.use('/shangyin/product-types', require('./routes/productType'));
+app.use('/shangyin/processes', require('./routes/process'));
+app.use('/shangyin/employees', require('./routes/employee'));
+app.use('/shangyin/wechat', require('./routes/wechat'));
+app.use('/shangyin/contracts', require('./routes/contract'));
+app.use('/shangyin/api/admin', require('./routes/admin'));
+app.use('/shangyin/task', require('./routes/task'));
+app.use('/shangyin/production', require('./routes/production'));
+app.use('/shangyin/performance', require('./routes/performance'));
 
 // 全局错误处理中间件
 app.use((err, req, res, next) => {
@@ -78,7 +80,7 @@ sequelize
   .authenticate()
   .then(() => {
     console.log('Database connected successfully');
-    return sequelize.sync({ alter: true }); // 根据模型自动调整表结构
+    return sequelize.sync({ alter: true });
   })
   .then(() => {
     console.log('Database tables synchronized');
