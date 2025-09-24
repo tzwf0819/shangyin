@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上茚工厂管理系统</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/img/favicon.svg">
+    <link rel="icon" type="image/png" href="./assets/img/favicon.png">
+    <link rel="apple-touch-icon" href="./assets/img/favicon.png">
+    <link rel="stylesheet" href="./assets/css/sony-design.css">
+    <link rel="stylesheet" href="./assets/lib/fontawesome-local.css">
+    <style>
+        .sortable-ghost {
+            opacity: 0.5;
+        }
+        .process-item {
+            padding: 12px;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .process-item:hover {
+            background: #e9ecef;
+        }
+        .process-info {
+            flex: 1;
+        }
+        .process-order {
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            margin-right: 12px;
+        }
+        .contract-products {
+            background: #f8f9fa;
+            border-radius: 4px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .product-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .product-item:last-child {
+            border-bottom: none;
+        }
+        .tab-navigation {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 24px;
+        }
+        .tab-btn {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        .tab-btn.active {
+            border-bottom-color: #007bff;
+            color: #007bff;
+            font-weight: 600;
+        }
+        .tab-btn:hover {
+            background: #f8f9fa;
+        }
+        .sony-modal-large {
+            width: 90vw;
+            max-width: 1200px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .sony-button-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+            min-height: auto;
+        }
+        .text-muted {
+            color: #6c757d;
+        }
+        [v-cloak] {
+            display: none;
+        }
+        .sony-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        .sony-section {
+            margin-bottom: 32px;
+        }
+        .sony-section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 24px;
+        }
+        .sony-section-title {
+            font-size: 28px;
+            font-weight: 600;
+            color: #212121;
+            margin: 0 0 8px 0;
+        }
+        .sony-section-subtitle {
+            color: #757575;
+            font-size: 16px;
+            margin: 0;
+        }
+        .sony-section-actions {
+            display: flex;
+            gap: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Header -->
+        <header class="sony-header">
+            <div class="sony-header-content">
+                <div class="sony-header-left">
+                    <h1 class="sony-logo">上茚工厂管理系统</h1>
+                </div>
+                <div class="sony-header-right">
+                    <div class="sony-header-info">
+                        <span>当前时间：{{ currentTime }}</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="sony-container">
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn" :class="{ active: activeTab === 'employees' }" @click="activeTab = 'employees'">
+                    <i class="fas fa-user"></i> 员工管理
+                </button>
+
+                <button class="tab-btn" :class="{ active: activeTab === 'processes' }" @click="activeTab = 'processes'">
+                    <i class="fas fa-cogs"></i> 工序管理
+                </button>
+                <button class="tab-btn" :class="{ active: activeTab === 'productTypes' }" @click="activeTab = 'productTypes'">
+                    <i class="fas fa-boxes"></i> 产品类型管理
+                </button>
+                <button class="tab-btn" :class="{ active: activeTab === 'contracts' }" @click="activeTab = 'contracts'">
+                    <i class="fas fa-file-contract"></i> 合同管理
+                </button>
+            </div>
+
+            <!-- 工序管理 -->
+            <!-- 员工管理 -->
+            <section v-show="activeTab === 'employees'" class="sony-section">
+                <div class="sony-section-header">
+                    <div>
+                        <h1 class="sony-section-title">员工管理</h1>
+                        <p class="sony-section-subtitle">管理员工信息并为员工分配工序</p>
+                    </div>
+                    <div class="sony-section-actions">
+                        <button class="sony-button sony-button-primary" @click="showCreateEmployeeModal = true">
+                            <i class="fas fa-plus"></i> 新增员工
+                        </button>
+                        <button class="sony-button sony-button-secondary" @click="loadEmployees">
+                            <i class="fas fa-refresh"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sony-card">
+                    <div class="sony-table-container">
+                        <table class="sony-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>姓名</th>
+                                    <th>员工编码</th>
+                                    <th>可承担工序</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="employee in employees" :key="employee.id">
+                                    <td>{{ employee.id }}</td>
+                                    <td class="sony-table-primary">{{ employee.name }}</td>
+                                    <td>{{ employee.code || '-' }}</td>
+                                    <td>
+                                        <span v-if="employee.processes && employee.processes.length" class="sony-badge sony-badge-info">
+                                            {{ employee.processes.length }} 个
+                                        </span>
+                                        <span v-else class="sony-badge sony-badge-warning">未设置</span>
+                                    </td>
+                                    <td>
+                                        <span :class="['sony-badge', employee.status === 'active' ? 'sony-badge-success' : 'sony-badge-warning']">
+                                            {{ employee.status === 'active' ? '在职' : '停用' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ formatDateTime(employee.createdAt) }}</td>
+                                    <td>
+                                        <div class="sony-table-actions">
+                                            <button class="sony-button-icon" @click="openAssignProcessesModal(employee)">
+                                                <i class="fas fa-cogs"></i>
+                                            </button>
+                                            <button class="sony-button-icon" @click="openEditEmployee(employee)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="sony-button-icon sony-button-danger" @click="deleteEmployee(employee.id)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="employees.length === 0">
+                                    <td colspan="7" class="sony-table-empty">暂无员工数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 工序管理 -->
+            <section v-show="activeTab === 'processes'" class="sony-section">
+                <div class="sony-section-header">
+                    <div>
+                        <h1 class="sony-section-title">工序管理</h1>
+                        <p class="sony-section-subtitle">管理生产工序和绩效工资</p>
+                    </div>
+                    <div class="sony-section-actions">
+                        <button class="sony-button sony-button-primary" @click="showCreateProcessModal = true">
+                            <i class="fas fa-plus"></i> 新增工序
+                        </button>
+                        <button class="sony-button sony-button-secondary" @click="loadProcesses">
+                            <i class="fas fa-refresh"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sony-card">
+                    <div class="sony-table-container">
+                        <table class="sony-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>工序名称</th>
+                                    <th>工序编码</th>
+                                    <th>描述</th>
+                                    <th>绩效工资</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="process in processes" :key="process.id">
+                                    <td>{{ process.id }}</td>
+                                    <td class="sony-table-primary">{{ process.name }}</td>
+                                    <td>{{ process.code }}</td>
+                                    <td>{{ process.description || '-' }}</td>
+                                    <td>
+                                        <span class="sony-badge sony-badge-info">
+                                            {{ process.payRate || 0 }} 元/{{ process.payRateUnit === 'perHour' ? '小时' : '件' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span :class="['sony-badge', process.status === 'active' ? 'sony-badge-success' : 'sony-badge-warning']">
+                                            {{ process.status === 'active' ? '启用' : '禁用' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ formatDateTime(process.createdAt) }}</td>
+                                    <td>
+                                        <div class="sony-table-actions">
+                                            <button class="sony-button-icon" @click="editProcess(process)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="sony-button-icon sony-button-danger" @click="deleteProcess(process.id)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="processes.length === 0">
+                                    <td colspan="8" class="sony-table-empty">暂无工序数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 产品类型管理 -->
+            <section v-show="activeTab === 'productTypes'" class="sony-section">
+                <div class="sony-section-header">
+                    <div>
+                        <h1 class="sony-section-title">产品类型管理</h1>
+                        <p class="sony-section-subtitle">管理产品类型及对应的工序流程</p>
+                    </div>
+                    <div class="sony-section-actions">
+                        <button class="sony-button sony-button-primary" @click="showCreateProductTypeModal = true">
+                            <i class="fas fa-plus"></i> 新增产品类型
+                        </button>
+                        <button class="sony-button sony-button-secondary" @click="loadProductTypes">
+                            <i class="fas fa-refresh"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sony-card">
+                    <div class="sony-table-container">
+                        <table class="sony-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>产品类型名称</th>
+                                    <th>产品编码</th>
+                                    <th>关联工序</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="productType in productTypes" :key="productType.id">
+                                    <td>{{ productType.id }}</td>
+                                    <td class="sony-table-primary">{{ productType.name }}</td>
+                                    <td>{{ productType.code }}</td>
+                                    <td>
+                                        <span v-if="productType.processCount > 0" class="sony-badge sony-badge-info">
+                                            {{ productType.processCount }} 个工序
+                                        </span>
+                                        <span v-else class="sony-badge sony-badge-warning">
+                                            未设置工序
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span :class="['sony-badge', productType.status === 'active' ? 'sony-badge-success' : 'sony-badge-warning']">
+                                            {{ productType.status === 'active' ? '启用' : '禁用' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ formatDateTime(productType.createdAt) }}</td>
+                                    <td>
+                                        <div class="sony-table-actions">
+                                            <button class="sony-button-icon" @click="manageProductTypeProcesses(productType)">
+                                                <i class="fas fa-cogs"></i>
+                                            </button>
+                                            <button class="sony-button-icon" @click="editProductType(productType)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="sony-button-icon sony-button-danger" @click="deleteProductType(productType.id)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="productTypes.length === 0">
+                                    <td colspan="7" class="sony-table-empty">暂无产品类型数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 合同管理 -->
+            <section v-show="activeTab === 'contracts'" class="sony-section">
+                <div class="sony-section-header">
+                    <div>
+                        <h1 class="sony-section-title">合同管理</h1>
+                        <p class="sony-section-subtitle">管理合同信息和产品明细</p>
+                    </div>
+                    <div class="sony-section-actions">
+                        <button class="sony-button sony-button-primary" @click="showCreateContractModal = true">
+                            <i class="fas fa-plus"></i> 新增合同
+                        </button>
+                        <button class="sony-button sony-button-secondary" @click="loadContracts">
+                            <i class="fas fa-refresh"></i> 刷新
+                        </button>
+                    </div>
+                </div>
+
+                <div class="sony-card">
+                    <div class="sony-table-container">
+                        <table class="sony-table">
+                            <thead>
+                                <tr>
+                                    <th>合同编号</th>
+                                    <th>甲方名称</th>
+                                    <th>乙方名称</th>
+                                    <th>签订日期</th>
+                                    <th>产品数量</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="contract in contracts" :key="contract.id">
+                                    <td class="sony-table-primary">{{ contract.contractNumber }}</td>
+                                    <td>{{ contract.partyAName || '-' }}</td>
+                                    <td>{{ contract.partyBName || '-' }}</td>
+                                    <td>{{ contract.signedDate || '-' }}</td>
+                                    <td>
+                                        <span class="sony-badge sony-badge-info">
+                                            {{ contract.productCount || 0 }} 个产品
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="sony-badge sony-badge-success">
+                                            {{ contract.status || '有效' }}
+                                        </span>
+                                    </td>
+                                    <td>{{ formatDateTime(contract.createdAt) }}</td>
+                                    <td>
+                                        <div class="sony-table-actions">
+                                            <button class="sony-button-icon" @click="viewContractDetails(contract)">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button class="sony-button-icon" @click="editContract(contract)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="sony-button-icon sony-button-danger" @click="deleteContract(contract.id)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr v-if="contracts.length === 0">
+                                    <td colspan="8" class="sony-table-empty">暂无合同数据</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+        <!-- 员工新增模态框 -->
+        <div v-if="showCreateEmployeeModal" class="sony-modal-overlay" @click="showCreateEmployeeModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>新增员工</h3>
+                    <button class="sony-modal-close" @click="showCreateEmployeeModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="createEmployee">
+                        <div class="sony-form-group">
+                            <label>姓名 *</label>
+                            <input type="text" v-model="newEmployee.name" required class="sony-input" placeholder="请输入员工姓名">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>员工编码（可选）</label>
+                            <input type="text" v-model="newEmployee.code" class="sony-input" placeholder="不填则自动生成">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>状态 *</label>
+                            <select v-model="newEmployee.status" class="sony-input">
+                                <option value="active">在职</option>
+                                <option value="inactive">停用</option>
+                            </select>
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showCreateEmployeeModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 员工编辑模态框 -->
+        <div v-if="showEditEmployeeModal" class="sony-modal-overlay" @click="showEditEmployeeModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>编辑员工 - {{ editEmployeeData.name }}</h3>
+                    <button class="sony-modal-close" @click="showEditEmployeeModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="updateEmployee">
+                        <div class="sony-form-group">
+                            <label>姓名 *</label>
+                            <input type="text" v-model="editEmployeeData.name" required class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>员工编码</label>
+                            <input type="text" v-model="editEmployeeData.code" class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>状态 *</label>
+                            <select v-model="editEmployeeData.status" class="sony-input">
+                                <option value="active">在职</option>
+                                <option value="inactive">停用</option>
+                            </select>
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showEditEmployeeModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 员工工序分配模态框 -->
+        <div v-if="showAssignProcessesModal" class="sony-modal-overlay" @click="showAssignProcessesModal = false">
+            <div class="sony-modal sony-modal-large" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>为员工分配工序 - {{ assignTargetEmployee?.name }}</h3>
+                    <button class="sony-modal-close" @click="showAssignProcessesModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <div>
+                            <h4>可用工序</h4>
+                            <div style="border:1px solid #ddd; border-radius:4px; max-height:360px; overflow:auto;">
+                                <div v-for="p in assignAvailableProcesses" :key="p.id" style="padding:12px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee;">
+                                    <div>
+                                        <strong>{{ p.name }}</strong><br>
+                                        <small class="text-muted">{{ p.payRate }} 元/{{ p.payRateUnit === 'perHour' ? '小时' : '件' }}</small>
+                                    </div>
+                                    <button class="sony-button-icon" @click="addAssignProcess(p)"><i class="fas fa-plus"></i></button>
+                                </div>
+                                <div v-if="assignAvailableProcesses.length === 0" style="padding:20px; text-align:center; color:#666;">暂无可用工序</div>
+                            </div>
+                        </div>
+                        <div>
+                            <h4>已分配工序 (可拖拽排序)</h4>
+                            <div id="assign-selected-list" style="border:1px solid #ddd; border-radius:4px; min-height:360px; max-height:360px; overflow:auto;">
+                                <div v-for="(p, idx) in assignSelectedProcesses" :key="p.id" class="process-item">
+                                    <div class="process-order">{{ idx + 1 }}</div>
+                                    <div class="process-info">
+                                        <strong>{{ p.name }}</strong><br>
+                                        <small class="text-muted">{{ p.payRate }} 元/{{ p.payRateUnit === 'perHour' ? '小时' : '件' }}</small>
+                                    </div>
+                                    <button class="sony-button-icon sony-button-danger sony-button-sm" @click="removeAssignProcess(p.id)"><i class="fas fa-times"></i></button>
+                                </div>
+                                <div v-if="assignSelectedProcesses.length === 0" style="padding:24px; text-align:center; color:#666;">未分配工序</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sony-modal-actions">
+                        <button type="button" class="sony-button" @click="showAssignProcessesModal = false">取消</button>
+                        <button type="button" class="sony-button sony-button-primary" @click="saveAssignProcesses">保存分配</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 工序新增模态框 -->
+        <div v-if="showCreateProcessModal" class="sony-modal-overlay" @click="showCreateProcessModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>新增工序</h3>
+                    <button class="sony-modal-close" @click="showCreateProcessModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="createProcess">
+                        <div class="sony-form-group">
+                            <label>工序名称 *</label>
+                            <input type="text" v-model="newProcess.name" required class="sony-input" placeholder="请输入工序名称">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>工序描述</label>
+                            <textarea v-model="newProcess.description" class="sony-input" placeholder="请输入工序描述"></textarea>
+                        </div>
+                        <div class="sony-form-group">
+                            <label>绩效单位 *</label>
+                            <select v-model="newProcess.payRateUnit" required class="sony-input">
+                                <option value="perItem">元/件</option>
+                                <option value="perHour">元/小时</option>
+                            </select>
+                        </div>
+                        <div class="sony-form-group">
+                            <label>绩效工资 *</label>
+                            <input type="number" v-model.number="newProcess.payRate" required class="sony-input" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showCreateProcessModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 工序编辑模态框 -->
+        <div v-if="showEditProcessModal" class="sony-modal-overlay" @click="showEditProcessModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>编辑工序</h3>
+                    <button class="sony-modal-close" @click="showEditProcessModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="updateProcess">
+                        <div class="sony-form-group">
+                            <label>工序名称 *</label>
+                            <input type="text" v-model="editProcessData.name" required class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>工序描述</label>
+                            <textarea v-model="editProcessData.description" class="sony-input"></textarea>
+                        </div>
+                        <div class="sony-form-group">
+                            <label>绩效单位 *</label>
+                            <select v-model="editProcessData.payRateUnit" required class="sony-input">
+                                <option value="perItem">元/件</option>
+                                <option value="perHour">元/小时</option>
+                            </select>
+                        </div>
+                        <div class="sony-form-group">
+                            <label>绩效工资 *</label>
+                            <input type="number" v-model.number="editProcessData.payRate" required class="sony-input" step="0.01">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>状态 *</label>
+                            <select v-model="editProcessData.status" required class="sony-input">
+                                <option value="active">启用</option>
+                                <option value="inactive">禁用</option>
+                            </select>
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showEditProcessModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 产品类型新增模态框 -->
+        <div v-if="showCreateProductTypeModal" class="sony-modal-overlay" @click="showCreateProductTypeModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>新增产品类型</h3>
+                    <button class="sony-modal-close" @click="showCreateProductTypeModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="createProductType">
+                        <div class="sony-form-group">
+                            <label>产品类型名称 *</label>
+                            <input type="text" v-model="newProductType.name" required class="sony-input" placeholder="请输入产品类型名称">
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showCreateProductTypeModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 产品类型编辑模态框 -->
+        <div v-if="showEditProductTypeModal" class="sony-modal-overlay" @click="showEditProductTypeModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>编辑产品类型</h3>
+                    <button class="sony-modal-close" @click="showEditProductTypeModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="updateProductType">
+                        <div class="sony-form-group">
+                            <label>产品类型名称 *</label>
+                            <input type="text" v-model="editProductTypeData.name" required class="sony-input">
+                        </div>
+                        <div class="sony-form-group">
+                            <label>状态 *</label>
+                            <select v-model="editProductTypeData.status" required class="sony-input">
+                                <option value="active">启用</option>
+                                <option value="inactive">禁用</option>
+                            </select>
+                        </div>
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showEditProductTypeModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 产品类型工序管理模态框 -->
+        <div v-if="showProcessManagementModal" class="sony-modal-overlay" @click="showProcessManagementModal = false">
+            <div class="sony-modal sony-modal-large" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>工序流程管理 - {{ currentProductType.name }}</h3>
+                    <button class="sony-modal-close" @click="showProcessManagementModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                        <!-- 可用工序 -->
+                        <div>
+                            <h4>可用工序</h4>
+                            <div style="border: 1px solid #ddd; border-radius: 4px; max-height: 300px; overflow-y: auto;">
+                                <div v-for="process in availableProcesses" :key="process.id" 
+                                     style="padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center;"
+                                     @click="addProcessToProductType(process)">
+                                    <div>
+                                        <strong>{{ process.name }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ process.payRate }} 元/{{ process.payRateUnit === 'perHour' ? '小时' : '件' }}</small>
+                                    </div>
+                                    <button class="sony-button-icon sony-button-sm">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                                <div v-if="availableProcesses.length === 0" style="padding: 24px; text-align: center; color: #666;">
+                                    暂无可用工序
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 已选工序 -->
+                        <div>
+                            <h4>工序流程 (可拖拽排序)</h4>
+                            <div id="sortable-processes" style="border: 1px solid #ddd; border-radius: 4px; min-height: 300px; max-height: 300px; overflow-y: auto;">
+                                <div v-for="(item, index) in selectedProcesses" :key="item.id" 
+                                     class="process-item" 
+                                     :data-id="item.ProductTypeProcess.id">
+                                    <div class="process-order">{{ index + 1 }}</div>
+                                    <div class="process-info">
+                                        <strong>{{ item.name }}</strong>
+                                        <br>
+                                        <small>{{ item.payRate }} 元/{{ item.payRateUnit === 'perHour' ? '小时' : '件' }}</small>
+                                    </div>
+                                    <button class="sony-button-icon sony-button-danger sony-button-sm" @click="removeProcessFromProductType(item.ProductTypeProcess.id)">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div v-if="selectedProcesses.length === 0" style="padding: 24px; text-align: center; color: #666;">
+                                    暂无工序，请从左侧添加
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sony-modal-actions">
+                        <button type="button" class="sony-button" @click="showProcessManagementModal = false">关闭</button>
+                        <button type="button" class="sony-button sony-button-primary" @click="saveProcessOrder">保存排序</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合同新增模态框 -->
+        <div v-if="showCreateContractModal" class="sony-modal-overlay" @click="showCreateContractModal = false">
+            <div class="sony-modal sony-modal-large" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>新增合同</h3>
+                    <button class="sony-modal-close" @click="showCreateContractModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <form @submit.prevent="createContract">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div class="sony-form-group">
+                                <label>合同编号 *</label>
+                                <input type="text" v-model="newContract.contractNumber" required class="sony-input" placeholder="请输入合同编号">
+                            </div>
+                            <div class="sony-form-group">
+                                <label>签订日期</label>
+                                <input type="text" v-model="newContract.signedDate" class="sony-input" placeholder="请输入签订日期">
+                            </div>
+                            <div class="sony-form-group">
+                                <label>甲方名称</label>
+                                <input type="text" v-model="newContract.partyAName" class="sony-input" placeholder="请输入甲方名称">
+                            </div>
+                            <div class="sony-form-group">
+                                <label>乙方名称</label>
+                                <input type="text" v-model="newContract.partyBName" class="sony-input" placeholder="请输入乙方名称">
+                            </div>
+                            <div class="sony-form-group">
+                                <label>签订地点</label>
+                                <input type="text" v-model="newContract.signedLocation" class="sony-input" placeholder="请输入签订地点">
+                            </div>
+                            <div class="sony-form-group">
+                                <label>合同状态</label>
+                                <input type="text" v-model="newContract.status" class="sony-input" placeholder="请输入合同状态">
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin-top: 24px; margin-bottom: 16px;">合同产品</h4>
+                        <div v-for="(product, index) in newContract.products" :key="index" class="contract-products" style="background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 16px; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                                <h5>产品 {{ index + 1 }}</h5>
+                                <button type="button" class="sony-button-icon sony-button-danger" @click="removeProduct(index)" v-if="newContract.products.length > 1">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+                                <div class="sony-form-group">
+                                    <label>产品编号</label>
+                                    <input type="text" v-model="product.productCode" class="sony-input" placeholder="产品编号">
+                                </div>
+                                <div class="sony-form-group">
+                                    <label>产品名称</label>
+                                    <input type="text" v-model="product.productName" class="sony-input" placeholder="产品名称">
+                                </div>
+                                <div class="sony-form-group">
+                                    <label>产品类型</label>
+                                    <select v-model="product.productTypeId" class="sony-input">
+                                        <option value="">请选择产品类型</option>
+                                        <option v-for="type in productTypes" :key="type.id" :value="type.id">
+                                            {{ type.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="sony-form-group">
+                                    <label>数量</label>
+                                    <input type="number" v-model.number="product.quantity" class="sony-input" placeholder="0">
+                                </div>
+                                <div class="sony-form-group">
+                                    <label>单价</label>
+                                    <input type="number" v-model.number="product.unitPrice" class="sony-input" step="0.01" placeholder="0.00">
+                                </div>
+                                <div class="sony-form-group">
+                                    <label>规格</label>
+                                    <input type="text" v-model="product.specification" class="sony-input" placeholder="规格">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 16px;">
+                            <button type="button" class="sony-button sony-button-secondary" @click="addProduct">
+                                <i class="fas fa-plus"></i> 添加产品
+                            </button>
+                        </div>
+
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showCreateContractModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">保存合同</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合同详情模态框 -->
+        <div v-if="showContractDetailModal" class="sony-modal-overlay" @click="showContractDetailModal = false">
+            <div class="sony-modal sony-modal-large" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>合同详情 - {{ contractDetail.contractNumber }}</h3>
+                    <button class="sony-modal-close" @click="showContractDetailModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+                        <div>
+                            <h4>合同基本信息</h4>
+                            <table class="sony-table">
+                                <tr><td><strong>合同编号</strong></td><td>{{ contractDetail.contractNumber }}</td></tr>
+                                <tr><td><strong>甲方名称</strong></td><td>{{ contractDetail.partyAName || '-' }}</td></tr>
+                                <tr><td><strong>乙方名称</strong></td><td>{{ contractDetail.partyBName || '-' }}</td></tr>
+                                <tr><td><strong>签订日期</strong></td><td>{{ contractDetail.signedDate || '-' }}</td></tr>
+                                <tr><td><strong>签订地点</strong></td><td>{{ contractDetail.signedLocation || '-' }}</td></tr>
+                                <tr><td><strong>合同状态</strong></td><td>{{ contractDetail.status || '-' }}</td></tr>
+                            </table>
+                        </div>
+                        <div>
+                            <h4>统计信息</h4>
+                            <div class="sony-cards-grid" style="grid-template-columns: 1fr 1fr;">
+                                <div class="sony-card sony-card-stats">
+                                    <div class="sony-card-content">
+                                        <div class="sony-stat-number">{{ contractDetail.products?.length || 0 }}</div>
+                                        <div class="sony-stat-label">产品数量</div>
+                                    </div>
+                                </div>
+                                <div class="sony-card sony-card-stats">
+                                    <div class="sony-card-content">
+                                        <div class="sony-stat-number">{{ calculateTotalAmount(contractDetail.products) }}</div>
+                                        <div class="sony-stat-label">合同总额</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4>产品明细</h4>
+                    <div class="sony-table-container">
+                        <table class="sony-table">
+                            <thead>
+                                <tr>
+                                    <th>产品编号</th>
+                                    <th>产品名称</th>
+                                    <th>产品类型</th>
+                                    <th>数量</th>
+                                    <th>单价</th>
+                                    <th>总价</th>
+                                    <th>规格</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="product in contractDetail.products" :key="product.id">
+                                    <td>{{ product.productCode || '-' }}</td>
+                                    <td class="sony-table-primary">{{ product.productName || '-' }}</td>
+                                    <td>{{ product.productTypeName || '-' }}</td>
+                                    <td>{{ product.quantity || 0 }}</td>
+                                    <td>¥{{ product.unitPrice || 0 }}</td>
+                                    <td>¥{{ (product.quantity * product.unitPrice) || 0 }}</td>
+                                    <td>{{ product.specification || '-' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="sony-modal-actions">
+                        <button type="button" class="sony-button" @click="showContractDetailModal = false">关闭</button>
+                        <button type="button" class="sony-button sony-button-primary" @click="editContract(contractDetail)">编辑合同</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 合同编辑模态框 -->
+        <div v-if="showEditContractModal" class="sony-modal-overlay" @click="showEditContractModal = false">
+            <div class="sony-modal" @click.stop>
+                <div class="sony-modal-header">
+                    <h3>编辑合同 - {{ editContractData.contractNumber }}</h3>
+                    <button class="sony-modal-close" @click="showEditContractModal = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sony-modal-body" style="max-height: 70vh; overflow-y: auto;">
+                    <form @submit.prevent="updateContract">
+                        <div class="sony-form-grid" style="grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="sony-form-group">
+                                <label>合同编号</label>
+                                <input type="text" v-model="editContractData.contractNumber" class="sony-input" placeholder="请输入合同编号" required>
+                            </div>
+                            <div class="sony-form-group">
+                                <label>签订日期</label>
+                                <input type="date" v-model="editContractData.signedDate" class="sony-input" placeholder="请输入签订日期">
+                            </div>
+                            <div class="sony-form-group">
+                                <label>甲方名称</label>
+                                <input type="text" v-model="editContractData.partyAName" class="sony-input" placeholder="请输入甲方名称">
+                            </div>
+                            <div class="sony-form-group">
+                                <label>乙方名称</label>
+                                <input type="text" v-model="editContractData.partyBName" class="sony-input" placeholder="请输入乙方名称">
+                            </div>
+                            <div class="sony-form-group">
+                                <label>签订地点</label>
+                                <input type="text" v-model="editContractData.signedLocation" class="sony-input" placeholder="请输入签订地点">
+                            </div>
+                            <div class="sony-form-group">
+                                <label>合同状态</label>
+                                <select v-model="editContractData.status" class="sony-input" required>
+                                    <option value="">请选择状态</option>
+                                    <option value="草稿">草稿</option>
+                                    <option value="生效">生效</option>
+                                    <option value="完成">完成</option>
+                                    <option value="终止">终止</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h4>产品信息</h4>
+                        <div v-for="(product, index) in editContractData.products" :key="index" class="sony-card" style="margin-bottom: 15px; background-color: #f8f9fa; border: 1px solid #e9ecef;">
+                            <div class="sony-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <h5>产品 {{ index + 1 }}</h5>
+                                <button type="button" class="sony-button sony-button-danger sony-button-sm" @click="removeEditProduct(index)" v-if="editContractData.products.length > 1">
+                                    <i class="fas fa-trash"></i> 删除
+                                </button>
+                            </div>
+                            <div class="sony-card-content">
+                                <div class="sony-form-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                                    <div class="sony-form-group">
+                                        <label>产品编号</label>
+                                        <input type="text" v-model="product.productCode" class="sony-input" placeholder="请输入产品编号" required>
+                                    </div>
+                                    <div class="sony-form-group">
+                                        <label>产品名称</label>
+                                        <input type="text" v-model="product.productName" class="sony-input" placeholder="请输入产品名称" required>
+                                    </div>
+                                    <div class="sony-form-group">
+                                        <label>产品类型</label>
+                                        <select v-model="product.productTypeId" class="sony-input">
+                                            <option value="">请选择产品类型</option>
+                                            <option v-for="productType in productTypes" :key="productType.id" :value="productType.id">
+                                                {{ productType.name }}
+                                            </option>
+                                        </select>
+                                    </div>
+                                    <div class="sony-form-group">
+                                        <label>数量</label>
+                                        <input type="number" v-model="product.quantity" class="sony-input" placeholder="请输入数量" min="0" required>
+                                    </div>
+                                    <div class="sony-form-group">
+                                        <label>单价</label>
+                                        <input type="number" step="0.01" v-model="product.unitPrice" class="sony-input" placeholder="请输入单价" min="0" required>
+                                    </div>
+                                    <div class="sony-form-group">
+                                        <label>规格说明</label>
+                                        <input type="text" v-model="product.specification" class="sony-input" placeholder="请输入规格说明">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="sony-form-actions" style="margin-bottom: 20px;">
+                            <button type="button" class="sony-button sony-button-secondary" @click="addEditProduct">
+                                <i class="fas fa-plus"></i> 添加产品
+                            </button>
+                        </div>
+
+                        <div class="sony-modal-actions">
+                            <button type="button" class="sony-button" @click="showEditContractModal = false">取消</button>
+                            <button type="submit" class="sony-button sony-button-primary">更新合同</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // 员工管理
+                    employees: [],
+                    showCreateEmployeeModal: false,
+                    showEditEmployeeModal: false,
+                    newEmployee: {
+                        name: '',
+                        code: '',
+                        status: 'active',
+                        processes: []
+                    },
+                    editEmployeeData: {
+                        id: null,
+                        name: '',
+                        code: '',
+                        status: 'active',
+                        processes: []
+                    },
+                    // 工序分配模态
+                    showAssignProcessesModal: false,
+                    assignTargetEmployee: null,
+                    assignAvailableProcesses: [],
+                    assignSelectedProcesses: [],
+                    activeTab: 'processes',
+                    currentTime: '',
+                    
+                    // 工序数据
+                    processes: [],
+                    showCreateProcessModal: false,
+                    showEditProcessModal: false,
+                    newProcess: {
+                        name: '',
+                        description: '',
+                        payRate: 0,
+                        payRateUnit: 'perItem'
+                    },
+                    editProcessData: {},
+                    
+                    // 产品类型数据
+                    productTypes: [],
+                    showCreateProductTypeModal: false,
+                    showEditProductTypeModal: false,
+                    showProcessManagementModal: false,
+                    newProductType: {
+                        name: ''
+                    },
+                    editProductTypeData: {},
+                    currentProductType: {},
+                    selectedProcesses: [],
+                    availableProcesses: [],
+                    
+                    // 合同数据
+                    contracts: [],
+                    showCreateContractModal: false,
+                    showContractDetailModal: false,
+                    showEditContractModal: false,
+                    newContract: {
+                        contractNumber: '',
+                        partyAName: '',
+                        partyBName: '',
+                        signedDate: '',
+                        signedLocation: '',
+                        status: '',
+                        products: [{
+                            productCode: '',
+                            productName: '',
+                            productTypeId: null,
+                            quantity: 0,
+                            unitPrice: 0,
+                            specification: ''
+                        }]
+                    },
+                    editContractData: {
+                        id: null,
+                        contractNumber: '',
+                        partyAName: '',
+                        partyBName: '',
+                        signedDate: '',
+                        signedLocation: '',
+                        status: '',
+                        products: []
+                    },
+                    contractDetail: {}
+                };
+            },
+            mounted() {
+                this.updateTime();
+                setInterval(this.updateTime, 1000);
+                this.loadProcesses();
+                this.loadProductTypes();
+                this.loadContracts();
+                // 加载员工列表
+                this.loadEmployees();
+            },
+            methods: {
+                updateTime() {
+                    this.currentTime = new Date().toLocaleString('zh-CN');
+                },
+                
+                // API基础方法
+                async apiRequest(method, url, data = null) {
+                    try {
+                        const config = {
+                            method,
+                            url: `http://localhost:3000/shangyin${url}`,
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        };
+                        if (data) {
+                            config.data = data;
+                        }
+                        const response = await axios(config);
+                        return response.data;
+                    } catch (error) {
+                        console.error('API请求失败:', error);
+                        alert('操作失败: ' + (error.response?.data?.message || error.message));
+                        throw error;
+                    }
+                },
+                
+                // 工序管理方法
+                async loadProcesses() {
+                    try {
+                        const result = await this.apiRequest('GET', '/processes');
+                        this.processes = result.data?.processes || [];
+                    } catch (error) {
+                        console.error('加载工序失败:', error);
+                    }
+                },
+
+                // 员工管理方法
+                async loadEmployees() {
+                    try {
+                        const result = await this.apiRequest('GET', '/employees');
+                        this.employees = result.data?.employees || [];
+                    } catch (error) {
+                        console.error('加载员工失败:', error);
+                    }
+                },
+
+                async createEmployee() {
+                    try {
+                        const payload = {
+                            name: this.newEmployee.name,
+                            code: this.newEmployee.code || undefined,
+                            status: this.newEmployee.status,
+                            processes: this.newEmployee.processes || []
+                        };
+                        await this.apiRequest('POST', '/employees', payload);
+                        this.showCreateEmployeeModal = false;
+                        this.newEmployee = { name: '', code: '', status: 'active', processes: [] };
+                        await this.loadEmployees();
+                        alert('员工创建成功');
+                    } catch (error) {
+                        console.error('创建员工失败:', error);
+                    }
+                },
+
+                openEditEmployee(employee) {
+                    this.editEmployeeData = {
+                        id: employee.id,
+                        name: employee.name || '',
+                        code: employee.code || '',
+                        status: employee.status || 'active',
+                        processes: (employee.processes || []).map(p => p.id)
+                    };
+                    this.showEditEmployeeModal = true;
+                },
+
+                async updateEmployee() {
+                    try {
+                        const payload = {
+                            name: this.editEmployeeData.name,
+                            code: this.editEmployeeData.code,
+                            status: this.editEmployeeData.status
+                        };
+                        await this.apiRequest('PUT', `/employees/${this.editEmployeeData.id}`, payload);
+                        this.showEditEmployeeModal = false;
+                        await this.loadEmployees();
+                        alert('员工更新成功');
+                    } catch (error) {
+                        console.error('更新员工失败:', error);
+                    }
+                },
+
+                async deleteEmployee(id) {
+                    if (!confirm('确定要停用该员工吗？')) return;
+                    try {
+                        await this.apiRequest('DELETE', `/employees/${id}`);
+                        await this.loadEmployees();
+                        alert('员工已停用');
+                    } catch (error) {
+                        console.error('停用员工失败:', error);
+                    }
+                },
+
+                // 工序分配
+                async openAssignProcessesModal(employee) {
+                    this.assignTargetEmployee = employee;
+                    this.showAssignProcessesModal = true;
+                    try {
+                        // load all processes
+                        const all = await this.apiRequest('GET', '/processes');
+                        const allProcesses = all.data?.processes || [];
+
+                        // load employee detail to get assigned processes
+                        const emp = await this.apiRequest('GET', `/employees/${employee.id}`);
+                        const assigned = emp.data?.employee?.processes || [];
+
+                        const assignedIds = assigned.map(p => p.id);
+                        this.assignAvailableProcesses = allProcesses.filter(p => !assignedIds.includes(p.id));
+                        // keep selected as full objects
+                        this.assignSelectedProcesses = assigned.slice();
+                        this.$nextTick(() => {
+                            // init draggable if needed
+                            const el = document.getElementById('assign-selected-list');
+                            if (el && typeof Sortable !== 'undefined') {
+                                Sortable.create(el, { animation: 150, ghostClass: 'sortable-ghost' });
+                            }
+                        });
+                    } catch (error) {
+                        console.error('加载工序用于分配失败:', error);
+                    }
+                },
+
+                addAssignProcess(process) {
+                    // move from available to selected
+                    this.assignSelectedProcesses.push(process);
+                    this.assignAvailableProcesses = this.assignAvailableProcesses.filter(p => p.id !== process.id);
+                },
+
+                removeAssignProcess(processId) {
+                    const idx = this.assignSelectedProcesses.findIndex(p => p.id === processId);
+                    if (idx !== -1) {
+                        const [removed] = this.assignSelectedProcesses.splice(idx, 1);
+                        this.assignAvailableProcesses.push(removed);
+                    }
+                },
+
+                async saveAssignProcesses() {
+                    if (!this.assignTargetEmployee) return;
+                    try {
+                        const processIds = this.assignSelectedProcesses.map(p => p.id);
+                        await this.apiRequest('POST', `/employees/${this.assignTargetEmployee.id}/processes`, { processIds });
+                        this.showAssignProcessesModal = false;
+                        await this.loadEmployees();
+                        alert('工序分配成功');
+                    } catch (error) {
+                        console.error('保存员工工序失败:', error);
+                    }
+                },
+                
+                async createProcess() {
+                    try {
+                        await this.apiRequest('POST', '/processes', this.newProcess);
+                        this.showCreateProcessModal = false;
+                        this.newProcess = {
+                            name: '',
+                            description: '',
+                            payRate: 0,
+                            payRateUnit: 'perItem'
+                        };
+                        await this.loadProcesses();
+                        alert('工序创建成功');
+                    } catch (error) {
+                        console.error('创建工序失败:', error);
+                    }
+                },
+                
+                editProcess(process) {
+                    this.editProcessData = { ...process };
+                    this.showEditProcessModal = true;
+                },
+                
+                async updateProcess() {
+                    try {
+                        await this.apiRequest('PUT', `/processes/${this.editProcessData.id}`, this.editProcessData);
+                        this.showEditProcessModal = false;
+                        await this.loadProcesses();
+                        alert('工序更新成功');
+                    } catch (error) {
+                        console.error('更新工序失败:', error);
+                    }
+                },
+                
+                async deleteProcess(id) {
+                    if (!confirm('确定要删除这个工序吗？')) return;
+                    try {
+                        await this.apiRequest('DELETE', `/processes/${id}`);
+                        await this.loadProcesses();
+                        alert('工序删除成功');
+                    } catch (error) {
+                        console.error('删除工序失败:', error);
+                    }
+                },
+                
+                // 产品类型管理方法
+                async loadProductTypes() {
+                    try {
+                        const result = await this.apiRequest('GET', '/product-types');
+                        this.productTypes = result.data?.productTypes || [];
+                        
+                        // 为每个产品类型加载工序数量
+                        for (let productType of this.productTypes) {
+                            try {
+                                const processResult = await this.apiRequest('GET', `/product-types/${productType.id}/processes`);
+                                productType.processCount = processResult.data?.processes?.length || 0;
+                            } catch (error) {
+                                productType.processCount = 0;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('加载产品类型失败:', error);
+                    }
+                },
+                
+                async createProductType() {
+                    try {
+                        await this.apiRequest('POST', '/product-types', this.newProductType);
+                        this.showCreateProductTypeModal = false;
+                        this.newProductType = { name: '' };
+                        await this.loadProductTypes();
+                        alert('产品类型创建成功');
+                    } catch (error) {
+                        console.error('创建产品类型失败:', error);
+                    }
+                },
+                
+                editProductType(productType) {
+                    this.editProductTypeData = { ...productType };
+                    this.showEditProductTypeModal = true;
+                },
+                
+                async updateProductType() {
+                    try {
+                        await this.apiRequest('PUT', `/product-types/${this.editProductTypeData.id}`, this.editProductTypeData);
+                        this.showEditProductTypeModal = false;
+                        await this.loadProductTypes();
+                        alert('产品类型更新成功');
+                    } catch (error) {
+                        console.error('更新产品类型失败:', error);
+                    }
+                },
+                
+                async deleteProductType(id) {
+                    if (!confirm('确定要删除这个产品类型吗？')) return;
+                    try {
+                        await this.apiRequest('DELETE', `/product-types/${id}`);
+                        await this.loadProductTypes();
+                        alert('产品类型删除成功');
+                    } catch (error) {
+                        console.error('删除产品类型失败:', error);
+                    }
+                },
+                
+                async manageProductTypeProcesses(productType) {
+                    this.currentProductType = productType;
+                    this.showProcessManagementModal = true;
+                    
+                    try {
+                        // 加载已选的工序
+                        const selectedResult = await this.apiRequest('GET', `/product-types/${productType.id}/processes`);
+                        this.selectedProcesses = selectedResult.data?.processes || [];
+                        
+                        // 加载所有工序
+                        const allProcessesResult = await this.apiRequest('GET', '/processes');
+                        const allProcesses = allProcessesResult.data?.processes || [];
+                        
+                        // 计算可用工序（排除已选的）
+                        const selectedProcessIds = this.selectedProcesses.map(sp => sp.id);
+                        this.availableProcesses = allProcesses.filter(p => !selectedProcessIds.includes(p.id));
+                        
+                        // 初始化拖拽排序
+                        this.$nextTick(() => {
+                            this.initSortable();
+                        });
+                    } catch (error) {
+                        console.error('加载工序关系失败:', error);
+                    }
+                },
+                
+                initSortable() {
+                    const el = document.getElementById('sortable-processes');
+                    if (el) {
+                        Sortable.create(el, {
+                            animation: 150,
+                            ghostClass: 'sortable-ghost',
+                            onEnd: (evt) => {
+                                // 更新本地数据顺序
+                                const item = this.selectedProcesses.splice(evt.oldIndex, 1)[0];
+                                this.selectedProcesses.splice(evt.newIndex, 0, item);
+                            }
+                        });
+                    }
+                },
+                
+                async addProcessToProductType(process) {
+                    try {
+                        const sequenceOrder = this.selectedProcesses.length + 1;
+                        await this.apiRequest('POST', `/product-types/${this.currentProductType.id}/processes`, {
+                            processId: process.id,
+                            sequenceOrder
+                        });
+                        
+                        // 重新加载数据
+                        await this.manageProductTypeProcesses(this.currentProductType);
+                        
+                    } catch (error) {
+                        console.error('添加工序失败:', error);
+                    }
+                },
+                
+                async removeProcessFromProductType(relationId) {
+                    try {
+                        await this.apiRequest('DELETE', `/product-types/${this.currentProductType.id}/processes/${relationId}`);
+                        
+                        // 重新加载数据
+                        await this.manageProductTypeProcesses(this.currentProductType);
+                        
+                    } catch (error) {
+                        console.error('移除工序失败:', error);
+                    }
+                },
+                
+                async saveProcessOrder() {
+                    try {
+                        // 更新工序顺序
+                        const updates = this.selectedProcesses.map((item, index) => ({
+                            id: item.id,
+                            sequenceOrder: index + 1
+                        }));
+                        
+                        await this.apiRequest('PUT', `/product-types/${this.currentProductType.id}/processes/order`, {
+                            processes: updates
+                        });
+                        
+                        alert('工序顺序保存成功');
+                        await this.loadProductTypes();
+                        
+                    } catch (error) {
+                        console.error('保存工序顺序失败:', error);
+                    }
+                },
+                
+                // 合同管理方法
+                async loadContracts() {
+                    try {
+                        const result = await this.apiRequest('GET', '/contracts');
+                        this.contracts = result.data?.items || [];
+                        
+                        // 设置产品数量（直接从返回的数据中获取）
+                        for (let contract of this.contracts) {
+                            contract.productCount = contract.products?.length || 0;
+                        }
+                    } catch (error) {
+                        console.error('加载合同失败:', error);
+                    }
+                },
+                
+                async createContract() {
+                    try {
+                        await this.apiRequest('POST', '/contracts', this.newContract);
+                        this.showCreateContractModal = false;
+                        this.resetNewContract();
+                        await this.loadContracts();
+                        alert('合同创建成功');
+                    } catch (error) {
+                        console.error('创建合同失败:', error);
+                    }
+                },
+                
+                resetNewContract() {
+                    this.newContract = {
+                        contractNumber: '',
+                        partyAName: '',
+                        partyBName: '',
+                        signedDate: '',
+                        signedLocation: '',
+                        status: '',
+                        products: [{
+                            productCode: '',
+                            productName: '',
+                            productTypeId: null,
+                            quantity: 0,
+                            unitPrice: 0,
+                            specification: ''
+                        }]
+                    };
+                },
+                
+                addProduct() {
+                    this.newContract.products.push({
+                        productCode: '',
+                        productName: '',
+                        productTypeId: null,
+                        quantity: 0,
+                        unitPrice: 0,
+                        specification: ''
+                    });
+                },
+                
+                removeProduct(index) {
+                    if (this.newContract.products.length > 1) {
+                        this.newContract.products.splice(index, 1);
+                    }
+                },
+                
+                async viewContractDetails(contract) {
+                    try {
+                        const result = await this.apiRequest('GET', `/contracts/${contract.id}`);
+                        this.contractDetail = result.data?.contract || {};
+                        this.contractDetail.products = this.contractDetail.products || [];
+                        this.showContractDetailModal = true;
+                    } catch (error) {
+                        console.error('加载合同详情失败:', error);
+                    }
+                },
+                
+                editContract(contract) {
+                    // 复制合同数据到编辑状态
+                    this.editContractData = {
+                        id: contract.id,
+                        contractNumber: contract.contractNumber || '',
+                        partyAName: contract.partyAName || '',
+                        partyBName: contract.partyBName || '',
+                        signedDate: contract.signedDate || '',
+                        signedLocation: contract.signedLocation || '',
+                        status: contract.status || '',
+                        products: contract.products ? contract.products.map(p => ({
+                            id: p.id,
+                            productCode: p.productCode || '',
+                            productName: p.productName || '',
+                            productTypeId: p.productTypeId || null,
+                            quantity: parseInt(p.quantity) || 0,
+                            unitPrice: parseFloat(p.unitPrice) || 0,
+                            specification: p.specification || ''
+                        })) : [{
+                            productCode: '',
+                            productName: '',
+                            productTypeId: null,
+                            quantity: 0,
+                            unitPrice: 0,
+                            specification: ''
+                        }]
+                    };
+                    this.showContractDetailModal = false;
+                    this.showEditContractModal = true;
+                },
+                
+                async updateContract() {
+                    try {
+                        await this.apiRequest('PUT', `/contracts/${this.editContractData.id}`, {
+                            contractNumber: this.editContractData.contractNumber,
+                            partyAName: this.editContractData.partyAName,
+                            partyBName: this.editContractData.partyBName,
+                            signedDate: this.editContractData.signedDate,
+                            signedLocation: this.editContractData.signedLocation,
+                            status: this.editContractData.status,
+                            products: this.editContractData.products
+                        });
+                        this.showEditContractModal = false;
+                        await this.loadContracts();
+                        alert('合同更新成功');
+                    } catch (error) {
+                        console.error('更新合同失败:', error);
+                        alert('更新合同失败: ' + (error.message || '未知错误'));
+                    }
+                },
+                
+                addEditProduct() {
+                    this.editContractData.products.push({
+                        productCode: '',
+                        productName: '',
+                        productTypeId: null,
+                        quantity: 0,
+                        unitPrice: 0,
+                        specification: ''
+                    });
+                },
+                
+                removeEditProduct(index) {
+                    if (this.editContractData.products.length > 1) {
+                        this.editContractData.products.splice(index, 1);
+                    }
+                },
+                
+                async deleteContract(id) {
+                    if (!confirm('确定要删除这个合同吗？')) return;
+                    try {
+                        await this.apiRequest('DELETE', `/contracts/${id}`);
+                        await this.loadContracts();
+                        alert('合同删除成功');
+                    } catch (error) {
+                        console.error('删除合同失败:', error);
+                    }
+                },
+                
+                // 工具方法
+                formatDateTime(dateStr) {
+                    if (!dateStr) return '-';
+                    return new Date(dateStr).toLocaleString('zh-CN');
+                },
+                
+                calculateTotalAmount(products) {
+                    if (!products || !Array.isArray(products)) return '¥0.00';
+                    const total = products.reduce((sum, product) => {
+                        return sum + (product.quantity * product.unitPrice || 0);
+                    }, 0);
+                    return `¥${total.toFixed(2)}`;
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -319,6 +319,205 @@ exports.updateProductType = async (req, res) => {
   }
 };
 
+// 获取产品类型的工序列表
+exports.getProductTypeProcesses = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID参数无效'
+      });
+    }
+
+    const productType = await ProductType.findByPk(id, {
+      include: [{
+        model: Process,
+        as: 'processes',
+        through: { 
+          attributes: ['sequenceOrder', 'id'],
+          as: 'ProductTypeProcess'
+        },
+        attributes: ['id', 'name', 'description', 'payRate', 'payRateUnit', 'status']
+      }]
+    });
+
+    if (!productType) {
+      return res.status(404).json({
+        success: false,
+        message: '产品类型不存在'
+      });
+    }
+
+    // 按sequenceOrder排序
+    const processes = productType.processes.sort((a, b) => 
+      a.ProductTypeProcess.sequenceOrder - b.ProductTypeProcess.sequenceOrder
+    );
+
+    res.json({
+      success: true,
+      data: { processes },
+      message: '获取工序列表成功'
+    });
+  } catch (error) {
+    console.error('Get product type processes error:', error);
+    res.status(500).json({
+      success: false,
+      message: '获取工序列表失败'
+    });
+  }
+};
+
+// 添加工序到产品类型
+exports.addProcessToProductType = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { processId, sequenceOrder } = req.body;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID参数无效'
+      });
+    }
+
+    if (!processId || !sequenceOrder) {
+      return res.status(400).json({
+        success: false,
+        message: '工序ID和顺序不能为空'
+      });
+    }
+
+    const productType = await ProductType.findByPk(id);
+    if (!productType) {
+      return res.status(404).json({
+        success: false,
+        message: '产品类型不存在'
+      });
+    }
+
+    const process = await Process.findByPk(processId);
+    if (!process) {
+      return res.status(404).json({
+        success: false,
+        message: '工序不存在'
+      });
+    }
+
+    // 检查是否已存在
+    const existingRelation = await ProductTypeProcess.findOne({
+      where: { productTypeId: id, processId }
+    });
+
+    if (existingRelation) {
+      return res.status(400).json({
+        success: false,
+        message: '该工序已添加到产品类型中'
+      });
+    }
+
+    // 添加关联
+    await ProductTypeProcess.create({
+      productTypeId: id,
+      processId,
+      sequenceOrder
+    });
+
+    res.json({
+      success: true,
+      message: '工序添加成功'
+    });
+  } catch (error) {
+    console.error('Add process to product type error:', error);
+    res.status(500).json({
+      success: false,
+      message: '添加工序失败'
+    });
+  }
+};
+
+// 从产品类型中移除工序
+exports.removeProcessFromProductType = async (req, res) => {
+  try {
+    const { id, relationId } = req.params;
+
+    if (!id || isNaN(id) || !relationId || isNaN(relationId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID参数无效'
+      });
+    }
+
+    const relation = await ProductTypeProcess.findOne({
+      where: { id: relationId, productTypeId: id }
+    });
+
+    if (!relation) {
+      return res.status(404).json({
+        success: false,
+        message: '工序关联不存在'
+      });
+    }
+
+    await relation.destroy();
+
+    res.json({
+      success: true,
+      message: '工序移除成功'
+    });
+  } catch (error) {
+    console.error('Remove process from product type error:', error);
+    res.status(500).json({
+      success: false,
+      message: '移除工序失败'
+    });
+  }
+};
+
+// 更新产品类型工序顺序
+exports.updateProcessOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { processes } = req.body;
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID参数无效'
+      });
+    }
+
+    if (!processes || !Array.isArray(processes)) {
+      return res.status(400).json({
+        success: false,
+        message: '工序列表格式无效'
+      });
+    }
+
+    // 批量更新顺序
+    const updatePromises = processes.map(({ id: relationId, sequenceOrder }) => 
+      ProductTypeProcess.update(
+        { sequenceOrder },
+        { where: { id: relationId, productTypeId: id } }
+      )
+    );
+
+    await Promise.all(updatePromises);
+
+    res.json({
+      success: true,
+      message: '工序顺序更新成功'
+    });
+  } catch (error) {
+    console.error('Update process order error:', error);
+    res.status(500).json({
+      success: false,
+      message: '更新工序顺序失败'
+    });
+  }
+};
+
 // 删除产品类型
 exports.deleteProductType = async (req, res) => {
   try {

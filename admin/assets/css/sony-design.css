@@ -686,3 +686,36 @@ body {
         opacity: 1;
     }
 }
+
+/* Apple 风格可拖拽列表 */
+.apple-draggable-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--sony-spacing-sm) 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--sony-gray-300);
+  border-radius: var(--sony-radius-md);
+  background: var(--sony-gray-50);
+}
+.apple-draggable-list li {
+  display: flex;
+  align-items: center;
+  padding: var(--sony-spacing-sm) var(--sony-spacing-md);
+  background: white;
+  border-bottom: 1px solid var(--sony-gray-200);
+  cursor: grab;
+  transition: background var(--sony-transition);
+}
+.apple-draggable-list li:last-child {
+  border-bottom: none;
+}
+.apple-draggable-list li.dragging {
+  opacity: 0.6;
+  background: var(--sony-primary-light);
+}
+.drag-handle {
+  margin-right: var(--sony-spacing-md);
+  cursor: grab;
+  font-size: var(--sony-font-size-base);
+}

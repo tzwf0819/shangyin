@@ -1,0 +1,10 @@
+# backend ignores
+node_modules/
+*.db
+.env
+.env.*
+npm-debug.log*
+logs/
+coverage/
+/.idea/
+/.vscode/

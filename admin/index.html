@@ -15,39 +15,6 @@
         <!-- Sony Design Header -->
         <header class="sony-header">
             <div class="sony-header-content">
-                <div class="sony-brand">
-                    <div class="sony-logo">
-                        <div class="sony-logo-icon">SY</div>
-                        <div class="sony-logo-text">
-                            <div class="sony-brand-name">上茚工厂</div>
-                            <div class="sony-brand-subtitle">管理系统</div>
-                        </div>
-                    </div>
-                </div>
-                <nav class="sony-nav">
-                    <button 
-                        v-for="tab in tabs" 
-                        :key="tab.id"
-                        :class="['sony-nav-item', { active: activeTab === tab.id }]"
-                        @click="setActiveTab(tab.id)"
-                    >
-                        <i :class="tab.icon"></i>
-                        <span>{{ tab.name }}</span>
-                    </button>
-                </nav>
-                <div class="sony-header-actions">
-                    <div class="sony-status-indicator">
-                        <div class="sony-connection-status" :class="{ connected: isConnected }">
-                            <i class="fas fa-circle"></i>
-                            <span>{{ isConnected ? '已连接' : '未连接' }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Sony Design Main Content -->
-        <main class="sony-main">
             <!-- Dashboard Section -->
             <section v-show="activeTab === 'dashboard'" class="sony-section">
                 <div class="sony-section-header">
@@ -61,10 +28,10 @@
                     <div class="sony-card sony-card-stats">
                         <div class="sony-card-header">
                             <i class="fas fa-users sony-card-icon"></i>
-                            <div class="sony-card-title">员工总数</div>
+                            <div class="sony-card-title">活跃员工</div>
                         </div>
                         <div class="sony-card-content">
-                            <div class="sony-stat-number">{{ dashboardStats.totalEmployees || 0 }}</div>
+                            <div class="sony-stat-number">{{ dashboardStats.activeEmployees || 0 }}</div>
                             <div class="sony-stat-label">活跃员工</div>
                         </div>
                     </div>
@@ -76,29 +43,29 @@
                         </div>
                         <div class="sony-card-content">
                             <div class="sony-stat-number">{{ dashboardStats.totalContracts || 0 }}</div>
-                            <div class="sony-stat-label">进行中合同</div>
+                            <div class="sony-stat-label">合同总数</div>
                         </div>
                     </div>
 
                     <div class="sony-card sony-card-stats">
                         <div class="sony-card-header">
                             <i class="fas fa-box sony-card-icon"></i>
-                            <div class="sony-card-title">产品总数</div>
+                            <div class="sony-card-title">产品类型总数</div>
                         </div>
                         <div class="sony-card-content">
-                            <div class="sony-stat-number">{{ dashboardStats.totalProducts || 0 }}</div>
-                            <div class="sony-stat-label">生产中产品</div>
+                            <div class="sony-stat-number">{{ dashboardStats.totalProductTypes || 0 }}</div>
+                            <div class="sony-stat-label">类型总数</div>
                         </div>
                     </div>
 
                     <div class="sony-card sony-card-stats">
                         <div class="sony-card-header">
                             <i class="fas fa-chart-line sony-card-icon"></i>
-                            <div class="sony-card-title">生产进度</div>
+                            <div class="sony-card-title">工序总数</div>
                         </div>
                         <div class="sony-card-content">
-                            <div class="sony-stat-number">{{ (dashboardStats.productionProgress || 0).toFixed(1) }}%</div>
-                            <div class="sony-stat-label">整体完成度</div>
+                            <div class="sony-stat-number">{{ dashboardStats.totalProcesses || 0 }}</div>
+                            <div class="sony-stat-label">流程总数</div>
                         </div>
                     </div>
                 </div>
@@ -136,6 +103,9 @@
                     <div class="sony-section-actions">
                         <button class="sony-button sony-button-primary" @click="testCreateProductType()">
                             <i class="fas fa-plus"></i> 新增产品类型
+                        </button>
+                        <button class="sony-button sony-button-secondary" @click="testEditProductType()">
+                            <i class="fas fa-edit"></i> 编辑产品类型
                         </button>
                     </div>
                 </div>
@@ -196,6 +166,9 @@
                         <button class="sony-button sony-button-primary" @click="testCreateProcess()">
                             <i class="fas fa-plus"></i> 新增工序
                         </button>
+                        <button class="sony-button sony-button-secondary" @click="testCreateTimedProcess()">
+                            <i class="fas fa-clock"></i> 新增计时工序
+                        </button>
                     </div>
                 </div>
 
@@ -207,6 +180,7 @@
                                     <th>ID</th>
                                     <th>工序名称</th>
                                     <th>描述</th>
+                                    <th>绩效工资</th>
                                     <th>状态</th>
                                     <th>创建时间</th>
                                     <th>操作</th>
@@ -217,6 +191,9 @@
                                     <td>{{ process.id }}</td>
                                     <td class="sony-table-primary">{{ process.name }}</td>
                                     <td>{{ process.description || '-' }}</td>
+                                    <td>
+                                        {{ process.payRate != null ? process.payRate.toFixed(2) : '0.00' }} 元/{{ process.payRateUnit === 'perHour' ? '小时' : '件' }}
+                                    </td>
                                     <td>
                                         <span :class="['sony-badge', process.status === 'active' ? 'sony-badge-success' : 'sony-badge-warning']">
                                             {{ process.status === 'active' ? '启用' : '禁用' }}
@@ -235,7 +212,7 @@
                                     </td>
                                 </tr>
                                 <tr v-if="processes.length === 0">
-                                    <td colspan="6" class="sony-table-empty">暂无数据</td>
+                                    <td colspan="7" class="sony-table-empty">暂无数据</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -467,56 +444,14 @@
                             </select>
                             <div v-if="employeePerformance" style="margin-top: var(--sony-spacing-md); padding: var(--sony-spacing-md); background: var(--sony-gray-50); border-radius: var(--sony-radius-md);">
                                 <div style="display: flex; justify-content: space-between; margin-bottom: var(--sony-spacing-xs); font-size: var(--sony-font-size-sm);">
-                                    <span>当月记录:</span>
-                                    <span>{{ employeePerformance.currentMonth.records }}</span>
-                                </div>
-                                <div style="display: flex; justify-content: space-between; margin-bottom: var(--sony-spacing-xs); font-size: var(--sony-font-size-sm);">
-                                    <span>当月工资:</span>
-                                    <span>¥{{ formatCurrency(employeePerformance.currentMonth.wage) }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-        </main>
-
-        <!-- Sony Design Loading -->
-        <div v-if="loading" class="sony-loading-overlay">
-            <div class="sony-loading-spinner">
-                <div class="sony-spinner"></div>
-                <div class="sony-loading-text">加载中...</div>
-            </div>
-        </div>
-
-        <!-- Sony Design Toast -->
-        <div v-if="toast.show" :class="['sony-toast', 'sony-toast-' + toast.type]">
-            <i :class="['fas', toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle']"></i>
-            <span>{{ toast.message }}</span>
-        </div>
-
-
-
-
-        <!-- 工序新增模态框 -->
-        <div v-if="showCreateProcessModal" class="sony-modal-overlay" @click="showCreateProcessModal = false">
-            <div class="sony-modal" @click.stop>
-                <div class="sony-modal-header">
-                    <h3>新增工序</h3>
-                    <button class="sony-modal-close" @click="showCreateProcessModal = false">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="sony-modal-body">
-                    <form @submit.prevent="createProcess">
-                        <div class="sony-form-group">
-                            <label>工序名称 *</label>
-                            <input type="text" v-model="newProcess.name" required class="sony-input">
-                        </div>
-                        <div class="sony-form-group">
+                                    <div>
+                                            <h1 class="sony-section-title">系统概览</h1>
                             <label>描述</label>
                             <textarea v-model="newProcess.description" class="sony-input"></textarea>
+                        </div>
+                        <div class="sony-form-group">
+                            <label>绩效工资 (元/{{ newProcess.payRateUnit === 'perHour' ? '小时' : '件' }})</label>
+                            <input type="number" v-model.number="newProcess.payRate" required class="sony-input" step="0.01">
                         </div>
                         <div class="sony-modal-actions">
                             <button type="button" class="sony-button" @click="showCreateProcessModal = false">取消</button>
@@ -526,6 +461,38 @@
                 </div>
             </div>
         </div>
+
+                <!-- 工序编辑模态框 -->
+                <div v-if="showEditProcessModal" class="sony-modal-overlay" @click="showEditProcessModal = false">
+                    <div class="sony-modal" @click.stop>
+                        <div class="sony-modal-header">
+                            <h3>编辑工序</h3>
+                            <button class="sony-modal-close" @click="showEditProcessModal = false">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="sony-modal-body">
+                            <form @submit.prevent="confirmEditProcess">
+                                <div class="sony-form-group">
+                                    <label>工序名称 *</label>
+                                    <input type="text" v-model="editProcessData.name" required class="sony-input">
+                                </div>
+                                <div class="sony-form-group">
+                                    <label>描述</label>
+                                    <textarea v-model="editProcessData.description" class="sony-input"></textarea>
+                                </div>
+                                <div class="sony-form-group">
+                                    <label>绩效工资 (元/{{ editProcessData.payRateUnit === 'perHour' ? '小时' : '件' }})</label>
+                                    <input type="number" v-model.number="editProcessData.payRate" required class="sony-input" step="0.01">
+                                </div>
+                                <div class="sony-modal-actions">
+                                    <button type="button" class="sony-button" @click="showEditProcessModal = false">取消</button>
+                                    <button type="submit" class="sony-button sony-button-primary">保存</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
 
         <!-- 员工新增模态框 -->
         <div v-if="showCreateEmployeeModal" class="sony-modal-overlay" @click="showCreateEmployeeModal = false">
@@ -600,43 +567,57 @@
         </div>
 
         <!-- 产品类型新增模态框 -->
-        <div v-if="showCreateProductTypeModal" class="sony-modal-overlay" @click="showCreateProductTypeModal = false">
-            <div class="sony-modal" @click.stop>
-                <div class="sony-modal-header">
-                    <h3>新增产品类型</h3>
-                    <button class="sony-modal-close" @click="showCreateProductTypeModal = false">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="sony-modal-body">
-                    <form @submit.prevent="createProductType">
-                        <div class="sony-form-group">
-                            <label>产品名称 *</label>
-                            <input type="text" v-model="newProductType.name" required class="sony-input" placeholder="请输入产品名称">
-                        </div>
-                        <div class="sony-form-group">
-                            <label>描述</label>
-                            <textarea v-model="newProductType.description" class="sony-input" placeholder="请输入产品描述（可选）" rows="3"></textarea>
-                        </div>
-                        <div class="sony-form-group">
-                            <label>单位</label>
-                            <input type="text" v-model="newProductType.unit" class="sony-input" placeholder="个">
-                        </div>
-                        <div class="sony-modal-actions">
-                            <button type="button" class="sony-button" @click="showCreateProductTypeModal = false">取消</button>
-                            <button type="submit" class="sony-button sony-button-primary" :disabled="loading">
-                                <i class="fas fa-save"></i> {{ loading ? "保存中..." : "保存" }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+        <!-- BEGIN REPLACE CREATE MODAL -->
+        <!-- 旧模态框移除 -->
+        <!-- END REPLACE CREATE MODAL -->
+
+        <!-- BEGIN NEW CREATE MODAL -->
+        <!-- END NEW CREATE MODAL -->
+
+                <!-- 产品类型编辑模态框 -->
+                <div v-if="showEditProductTypeModal" class="sony-modal-overlay apple-modal" @click="showEditProductTypeModal=false">
+  <div class="sony-modal apple-modal-container" @click.stop>
+    <div class="sony-modal-header">
+      <h3>{{ editProductTypeData.id ? '编辑产品类型' : '新增产品类型' }}</h3>
+      <button class="sony-modal-close" @click="showEditProductTypeModal=false"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="sony-modal-body apple-modal-body">
+      <div class="form-row">
+        <label>产品名称</label>
+        <input type="text" v-model="editProductTypeData.name" class="sony-input" placeholder="请输入产品名称" />
+      </div>
+      <div class="form-row">
+        <label>描述</label>
+        <textarea v-model="editProductTypeData.description" class="sony-input" rows="2" placeholder="请输入产品描述（可选）"></textarea>
+      </div>
+      <div class="form-row">
+        <label>单位</label>
+        <input type="text" v-model="editProductTypeData.unit" class="sony-input" placeholder="个" />
+      </div>
+      <div class="process-list">
+        <label>关联工序顺序</label>
+        <ul class="apple-draggable-list">
+          <li v-for="(p, idx) in editProductTypeData.processesSelected" :key="p.id" draggable="true"
+              @dragstart.prevent="onDragStartEdit($event, idx)"
+              @dragover.prevent
+              @drop.prevent="onDropEdit($event, idx)">
+            <i class="fas fa-grip-vertical drag-handle"></i>
+            <span class="process-name">{{ p.name }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="sony-modal-actions apple-modal-actions">
+      <button class="sony-button" @click="showEditProductTypeModal=false">取消</button>
+      <button class="sony-button sony-button-primary" @click="confirmEditProductType">保存</button>
+    </div>
+  </div>
+</div>
     </div>
 
     <!-- Scripts -->
     <script src="./assets/lib/vue.global.js"></script>
     <script src="./assets/lib/axios.min.js"></script>
-    <script src="./assets/js/sony-admin.js?v=20250924"></script>
+    <script src="./assets/js/sony-admin.js?v=20250925"></script>
 </body>
 </html>

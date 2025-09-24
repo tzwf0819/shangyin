@@ -12,6 +12,12 @@ module.exports = (sequelize) => {
       allowNull: false,
       comment: '工序名称'
     },
+    // 工序描述
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: '工序描述'
+    },
     code: {
       type: DataTypes.STRING,
       allowNull: false,
@@ -22,6 +28,18 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM('active', 'inactive'),
       defaultValue: 'active',
       comment: '状态'
+    },
+    // 绩效工资
+    payRate: {
+      type: DataTypes.DECIMAL(10,2),
+      defaultValue: 0,
+      comment: '绩效工资'
+    },
+    // 绩效单位：perItem 每件；perHour 每小时
+    payRateUnit: {
+      type: DataTypes.ENUM('perItem', 'perHour'),
+      defaultValue: 'perItem',
+      comment: '绩效单位'
     }
   }, {
     tableName: 'processes',

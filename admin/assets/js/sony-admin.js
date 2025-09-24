@@ -30,7 +30,15 @@ createApp({
       // 数据状态
       dashboardStats: {},
       productTypes: [],
+      // 全部工序列表
+      allProcesses: [],
       processes: [],
+      // 选中待添加的工序ID
+      selectedProcessToAdd: null,
+      selectedProcessToEdit: null,
+      // 拖拽排序索引
+      draggingProcessIndexNew: null,
+      draggingProcessIndexEdit: null,
       employees: [],
       contracts: [],
       productionList: [],
@@ -40,9 +48,20 @@ createApp({
       
       // 模态框状态
       showCreateProductTypeModal: false,
+      showEditProductTypeModal: false,
       showCreateProcessModal: false,
+      showEditProcessModal: false,
       showCreateEmployeeModal: false,
       showCreateContractModal: false,
+      
+      // 新增表单数据
+      newProductType: { name: '', description: '', unit: '', processesSelected: [] },
+      editProductTypeData: { id: null, name: '', description: '', unit: '', processesSelected: [] },
+      newProcess: { name: '', description: '', payRate: 0, payRateUnit: 'perItem' },
+      newEmployee: { name: '', department: '', position: '', phone: '' },
+      newContract: { contractNumber: '', partyAName: '', signDate: '', totalAmount: null },
+      // 编辑工序数据
+      editProcessData: { id: null, name: '', description: '', payRate: 0, payRateUnit: 'perItem' },
       
       // Toast 通知
       toast: {
@@ -91,6 +110,8 @@ createApp({
           break;
         case 'productTypes':
           await this.loadProductTypes();
+          // 同时加载工序列表以供关联选择
+          await this.loadProcesses();
           break;
         case 'processes':
           await this.loadProcesses();
@@ -110,6 +131,110 @@ createApp({
       }
     },
     
+    // 新增按钮触发：打开对应创建模态框
+    testCreateProductType() {
+      this.newProductType = { name: '', description: '', unit: '', processesSelected: [] };
+      this.showCreateProductTypeModal = true;
+    },
+    testCreateProcess() {
+      // 新增普通工序，绩效单位为元/件
+      this.newProcess = { name: '', description: '', payRate: 0, payRateUnit: 'perItem' };
+      this.showCreateProcessModal = true;
+    },
+    testCreateTimedProcess() {
+      // 新增计时工序，绩效单位为元/小时
+      this.newProcess = { name: '', description: '', payRate: 0, payRateUnit: 'perHour' };
+      this.showCreateProcessModal = true;
+    },
+    testCreateEmployee() {
+      this.newEmployee = { name: '', department: '', position: '', phone: '' };
+      this.showCreateEmployeeModal = true;
+    },
+    testCreateContract() {
+      this.newContract = { contractNumber: '', partyAName: '', signDate: '', totalAmount: null };
+      this.showCreateContractModal = true;
+    },
+    // 创建产品类型
+    async createProductType() {
+      this.loading = true;
+      try {
+        // 提交时映射工序ID和顺序
+        const payload = {
+          ...this.newProductType,
+          processes: this.newProductType.processesSelected.map((p, i) => ({ id: p.id }))
+        };
+        const response = await axios.post(`${API_BASE}/product-types`, payload);
+        if (response.data.success) {
+          this.showToast('创建产品类型成功', 'success');
+          this.showCreateProductTypeModal = false;
+          await this.loadProductTypes();
+        } else {
+          this.showToast(response.data.message || '创建失败', 'error');
+        }
+      } catch (error) {
+        console.error('创建产品类型失败:', error);
+        this.showToast('创建失败', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+    // 创建工序
+    async createProcess() {
+      this.loading = true;
+      try {
+        const response = await axios.post(`${API_BASE}/processes`, this.newProcess);
+        if (response.data.success) {
+          this.showToast('创建工序成功', 'success');
+          this.showCreateProcessModal = false;
+          await this.loadProcesses();
+        } else {
+          this.showToast(response.data.message || '创建失败', 'error');
+        }
+      } catch (error) {
+        console.error('创建工序失败:', error);
+        this.showToast('创建失败', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+    // 创建员工
+    async createEmployee() {
+      this.loading = true;
+      try {
+        const response = await axios.post(`${API_BASE}/employees`, this.newEmployee);
+        if (response.data.success) {
+          this.showToast('创建员工成功', 'success');
+          this.showCreateEmployeeModal = false;
+          await this.loadEmployees();
+        } else {
+          this.showToast(response.data.message || '创建失败', 'error');
+        }
+      } catch (error) {
+        console.error('创建员工失败:', error);
+        this.showToast('创建失败', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
+    // 创建合同
+    async createContract() {
+      this.loading = true;
+      try {
+        const response = await axios.post(`${API_BASE}/contracts`, this.newContract);
+        if (response.data.success) {
+          this.showToast('创建合同成功', 'success');
+          this.showCreateContractModal = false;
+          await this.loadContracts();
+        } else {
+          this.showToast(response.data.message || '创建失败', 'error');
+        }
+      } catch (error) {
+        console.error('创建合同失败:', error);
+        this.showToast('创建失败', 'error');
+      } finally {
+        this.loading = false;
+      }
+    },
     // 加载仪表盘数据
     async loadDashboardData() {
       this.loading = true;
@@ -249,9 +374,44 @@ createApp({
       }
     },
     
-    // 编辑产品类型
+    // 编辑产品类型：打开编辑模态框
     editProductType(productType) {
-      this.showToast('编辑功能开发中', 'error');
+      this.editProductTypeData = {
+        id: productType.id,
+        name: productType.name,
+        description: productType.description || '',
+        unit: productType.unit || '',
+        processesSelected: productType.processes ? productType.processes.map(p => ({ id: p.id, name: p.name })) : []
+      };
+      this.showEditProductTypeModal = true;
+    },
+    // 确认编辑产品类型
+    async confirmEditProductType() {
+      this.loading = true;
+      try {
+        const payload = {
+          name: this.editProductTypeData.name,
+          description: this.editProductTypeData.description,
+          unit: this.editProductTypeData.unit,
+          processes: this.editProductTypeData.processesSelected.map((p, i) => ({ id: p.id }))
+        };
+        const response = await axios.put(
+          `${API_BASE}/product-types/${this.editProductTypeData.id}`,
+          payload
+        );
+        if (response.data.success) {
+          this.showToast('更新产品类型成功', 'success');
+          this.showEditProductTypeModal = false;
+          await this.loadProductTypes();
+        } else {
+          this.showToast(response.data.message || '更新失败', 'error');
+        }
+      } catch (error) {
+        console.error('更新产品类型失败:', error);
+        this.showToast('更新失败', 'error');
+      } finally {
+        this.loading = false;
+      }
     },
     
     // 删除产品类型
@@ -279,7 +439,38 @@ createApp({
     
     // 编辑工序
     editProcess(process) {
-      this.showToast('编辑功能开发中', 'error');
+      // 填充编辑数据并打开模态框
+      this.editProcessData = {
+        id: process.id,
+        name: process.name,
+        description: process.description || '',
+        payRate: process.payRate || 0,
+        payRateUnit: process.payRateUnit || 'perItem'
+      };
+      this.showEditProcessModal = true;
+    },
+    // 确认编辑工序
+    async confirmEditProcess() {
+      this.loading = true;
+      try {
+        const { id, name, description, payRate, payRateUnit } = this.editProcessData;
+        const response = await axios.put(
+          `${API_BASE}/processes/${id}`,
+          { name, description, payRate, payRateUnit }
+        );
+        if (response.data.success) {
+          this.showToast('编辑工序成功', 'success');
+          this.showEditProcessModal = false;
+          await this.loadProcesses();
+        } else {
+          this.showToast(response.data.message || '编辑失败', 'error');
+        }
+      } catch (error) {
+        console.error('编辑工序失败:', error);
+        this.showToast('编辑失败', 'error');
+      } finally {
+        this.loading = false;
+      }
     },
     
     // 删除工序
@@ -404,7 +595,68 @@ createApp({
       setTimeout(() => {
         this.toast.show = false;
       }, 3000);
-    }
+    },
+
+    // 新增产品类型中添加工序
+    addProcessToNew() {
+      const pid = this.selectedProcessToAdd;
+      const proc = this.processes.find(p => p.id === pid);
+      if (proc && !this.newProductType.processesSelected.some(p => p.id === pid)) {
+        this.newProductType.processesSelected.push(proc);
+      }
+      this.selectedProcessToAdd = null;
+    },
+    // 新增产品类型中移除工序
+    removeProcessFromNew(index) {
+      this.newProductType.processesSelected.splice(index, 1);
+    },
+    // 新增产品类型中移动工序
+    moveProcessInNew(index, direction) {
+      const arr = this.newProductType.processesSelected;
+      const item = arr.splice(index, 1)[0];
+      arr.splice(index + direction, 0, item);
+    },
+    // 编辑产品类型中添加工序
+    addProcessToEdit() {
+      const pid = this.selectedProcessToEdit;
+      const proc = this.processes.find(p => p.id === pid);
+      if (proc && !this.editProductTypeData.processesSelected.some(p => p.id === pid)) {
+        this.editProductTypeData.processesSelected.push(proc);
+      }
+      this.selectedProcessToEdit = null;
+    },
+    // 编辑产品类型中移除工序
+    removeProcessFromEdit(index) {
+      this.editProductTypeData.processesSelected.splice(index, 1);
+    },
+    // 编辑产品类型中移动工序
+    moveProcessInEdit(index, direction) {
+      const arr = this.editProductTypeData.processesSelected;
+      const item = arr.splice(index, 1)[0];
+      arr.splice(index + direction, 0, item);
+    },
+    // 拖拽开始（新增）
+    onDragStartNew(event, index) {
+      this.draggingProcessIndexNew = index;
+    },
+    // 拖拽放下（新增）
+    onDropNew(event, index) {
+      const arr = this.newProductType.processesSelected;
+      const item = arr.splice(this.draggingProcessIndexNew, 1)[0];
+      arr.splice(index, 0, item);
+      this.draggingProcessIndexNew = null;
+    },
+    // 拖拽开始（编辑）
+    onDragStartEdit(event, index) {
+      this.draggingProcessIndexEdit = index;
+    },
+    // 拖拽放下（编辑）
+    onDropEdit(event, index) {
+      const arr = this.editProductTypeData.processesSelected;
+      const item = arr.splice(this.draggingProcessIndexEdit, 1)[0];
+      arr.splice(index, 0, item);
+      this.draggingProcessIndexEdit = null;
+    },
   }
 }).mount('#app');
 

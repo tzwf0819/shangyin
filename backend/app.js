@@ -80,7 +80,8 @@ sequelize
   .authenticate()
   .then(() => {
     console.log('Database connected successfully');
-    return sequelize.sync({ alter: true });
+    // 使用更安全的同步选项，避免alter时的约束冲突
+    return sequelize.sync({ force: false });
   })
   .then(() => {
     console.log('Database tables synchronized');

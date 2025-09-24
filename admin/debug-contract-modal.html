@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合同创建调试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        button {
+            background: #007cba;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        button:hover {
+            background: #005a8b;
+        }
+        
+        .debug-info {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        
+        .result {
+            background: #e7f5e7;
+            border: 1px solid #4caf50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        
+        .error {
+            background: #ffebee;
+            border: 1px solid #f44336;
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <h1>合同创建功能调试</h1>
+    
+    <form id="contractForm">
+        <div class="form-group">
+            <label for="contractNumber">合同编号:</label>
+            <input type="text" id="contractNumber" value="DEBUG001" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="partyAName">甲方名称:</label>
+            <input type="text" id="partyAName" value="调试甲方" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="partyBName">乙方名称:</label>
+            <input type="text" id="partyBName" value="调试乙方" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="signedDate">签署日期:</label>
+            <input type="date" id="signedDate" value="2025-09-24" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="signedLocation">签署地点:</label>
+            <input type="text" id="signedLocation" value="上海" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="status">状态:</label>
+            <select id="status" required>
+                <option value="">请选择状态</option>
+                <option value="草稿" selected>草稿</option>
+                <option value="生效">生效</option>
+                <option value="完成">完成</option>
+                <option value="终止">终止</option>
+            </select>
+        </div>
+        
+        <h3>产品信息</h3>
+        <div id="productsContainer">
+            <div class="product-item">
+                <div class="form-group">
+                    <label>产品编号:</label>
+                    <input type="text" name="productCode" value="DEBUG_PROD001" required>
+                </div>
+                <div class="form-group">
+                    <label>产品名称:</label>
+                    <input type="text" name="productName" value="调试产品" required>
+                </div>
+                <div class="form-group">
+                    <label>产品类型ID:</label>
+                    <input type="number" name="productTypeId" value="1">
+                </div>
+                <div class="form-group">
+                    <label>数量:</label>
+                    <input type="number" name="quantity" value="10" required>
+                </div>
+                <div class="form-group">
+                    <label>单价:</label>
+                    <input type="number" name="unitPrice" step="0.01" value="99.99" required>
+                </div>
+                <div class="form-group">
+                    <label>规格:</label>
+                    <input type="text" name="specification" value="调试规格">
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit">创建合同</button>
+        <button type="button" onclick="testApiDirectly()">直接测试API</button>
+        <button type="button" onclick="clearResults()">清空结果</button>
+    </form>
+    
+    <div id="debugInfo" class="debug-info" style="display: none;"></div>
+    <div id="result" class="result" style="display: none;"></div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000/shangyin';
+        
+        // API请求函数
+        async function apiRequest(method, endpoint, data = null) {
+            const url = API_BASE_URL + endpoint;
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            };
+            
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+            
+            console.log(`发送${method}请求到: ${url}`);
+            if (data) {
+                console.log('请求数据:', data);
+            }
+            
+            const response = await fetch(url, options);
+            const result = await response.json();
+            
+            console.log('响应状态:', response.status);
+            console.log('响应数据:', result);
+            
+            if (!response.ok) {
+                throw new Error(result.message || '请求失败');
+            }
+            
+            return result;
+        }
+        
+        // 收集表单数据
+        function collectFormData() {
+            const form = document.getElementById('contractForm');
+            const formData = new FormData(form);
+            
+            // 基本信息
+            const contractData = {
+                contractNumber: document.getElementById('contractNumber').value,
+                partyAName: document.getElementById('partyAName').value,
+                partyBName: document.getElementById('partyBName').value,
+                signedDate: document.getElementById('signedDate').value,
+                signedLocation: document.getElementById('signedLocation').value,
+                status: document.getElementById('status').value,
+                products: []
+            };
+            
+            // 产品信息
+            const productItems = document.querySelectorAll('.product-item');
+            productItems.forEach(item => {
+                const product = {
+                    productCode: item.querySelector('[name="productCode"]').value,
+                    productName: item.querySelector('[name="productName"]').value,
+                    productTypeId: parseInt(item.querySelector('[name="productTypeId"]').value) || null,
+                    quantity: parseInt(item.querySelector('[name="quantity"]').value) || 0,
+                    unitPrice: parseFloat(item.querySelector('[name="unitPrice"]').value) || 0,
+                    specification: item.querySelector('[name="specification"]').value
+                };
+                contractData.products.push(product);
+            });
+            
+            return contractData;
+        }
+        
+        // 表单提交处理
+        document.getElementById('contractForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const contractData = collectFormData();
+                
+                // 显示调试信息
+                document.getElementById('debugInfo').style.display = 'block';
+                document.getElementById('debugInfo').textContent = '准备发送的数据:\n' + JSON.stringify(contractData, null, 2);
+                
+                // 发送请求
+                const result = await apiRequest('POST', '/contracts', contractData);
+                
+                // 显示成功结果
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').className = 'result';
+                document.getElementById('result').innerHTML = '<h3>✅ 创建成功!</h3><pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                
+            } catch (error) {
+                console.error('创建合同失败:', error);
+                
+                // 显示错误结果
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').className = 'result error';
+                document.getElementById('result').innerHTML = '<h3>❌ 创建失败!</h3><p>' + error.message + '</p>';
+            }
+        });
+        
+        // 直接测试API
+        async function testApiDirectly() {
+            try {
+                const testData = {
+                    contractNumber: 'DIRECT_TEST001',
+                    partyAName: '直接测试甲方',
+                    partyBName: '直接测试乙方',
+                    signedDate: '2025-09-24',
+                    signedLocation: '北京',
+                    status: '测试',
+                    products: [{
+                        productCode: 'DIRECT_PROD001',
+                        productName: '直接测试产品',
+                        productTypeId: 1,
+                        quantity: 5,
+                        unitPrice: 199.99,
+                        specification: '直接测试规格'
+                    }]
+                };
+                
+                // 显示调试信息
+                document.getElementById('debugInfo').style.display = 'block';
+                document.getElementById('debugInfo').textContent = '直接API测试数据:\n' + JSON.stringify(testData, null, 2);
+                
+                const result = await apiRequest('POST', '/contracts', testData);
+                
+                // 显示成功结果
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').className = 'result';
+                document.getElementById('result').innerHTML = '<h3>✅ 直接API测试成功!</h3><pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                
+            } catch (error) {
+                console.error('直接API测试失败:', error);
+                
+                // 显示错误结果
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').className = 'result error';
+                document.getElementById('result').innerHTML = '<h3>❌ 直接API测试失败!</h3><p>' + error.message + '</p>';
+            }
+        }
+        
+        // 清空结果
+        function clearResults() {
+            document.getElementById('debugInfo').style.display = 'none';
+            document.getElementById('result').style.display = 'none';
+        }
+        
+        console.log('合同创建调试页面已加载');
+        console.log('API基础URL:', API_BASE_URL);
+    </script>
+</body>
+</html>

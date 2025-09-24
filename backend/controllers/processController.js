@@ -105,10 +105,17 @@ exports.getProcessById = async (req, res) => {
 // 创建工序
 exports.createProcess = async (req, res) => {
   try {
-    const { name, status = 'active' } = req.body;
+  const { name, status = 'active', description = '', payRate = 0, payRateUnit = 'perItem' } = req.body;
 
     // 验证输入数据
     const validationErrors = validateProcessData({ name, status });
+    // 验证绩效工资和单位
+    if (isNaN(payRate) || Number(payRate) < 0) {
+      validationErrors.push('绩效工资格式无效');
+    }
+    if (!['perItem', 'perHour'].includes(payRateUnit)) {
+      validationErrors.push('绩效单位无效');
+    }
     if (validationErrors.length > 0) {
       return res.status(400).json({
         success: false,
@@ -151,8 +158,11 @@ exports.createProcess = async (req, res) => {
 
     const process = await Process.create({
       name: name.trim(),
+      description: description || null,
       code,
-      status
+      status,
+      payRate,
+      payRateUnit
     });
 
     res.status(201).json({
@@ -172,8 +182,8 @@ exports.createProcess = async (req, res) => {
 // 更新工序
 exports.updateProcess = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { name, status } = req.body;
+  const { id } = req.params;
+  const { name, status, description, payRate, payRateUnit } = req.body;
 
     if (!id || isNaN(id)) {
       return res.status(400).json({
@@ -184,6 +194,16 @@ exports.updateProcess = async (req, res) => {
 
     // 验证输入数据
     const validationErrors = validateProcessData({ name, status });
+    if (payRate !== undefined) {
+      if (isNaN(payRate) || Number(payRate) < 0) {
+        validationErrors.push('绩效工资格式无效');
+      }
+    }
+    if (payRateUnit !== undefined) {
+      if (!['perItem', 'perHour'].includes(payRateUnit)) {
+        validationErrors.push('绩效单位无效');
+      }
+    }
     if (validationErrors.length > 0) {
       return res.status(400).json({
         success: false,
@@ -217,9 +237,12 @@ exports.updateProcess = async (req, res) => {
     }
 
     // 更新数据
-    const updateData = {};
-    if (name) updateData.name = name.trim();
-    if (status) updateData.status = status;
+  const updateData = {};
+  if (name) updateData.name = name.trim();
+  if (description !== undefined) updateData.description = description;
+  if (status) updateData.status = status;
+  if (payRate !== undefined) updateData.payRate = payRate;
+  if (payRateUnit !== undefined) updateData.payRateUnit = payRateUnit;
 
     await process.update(updateData);
 
