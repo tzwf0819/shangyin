@@ -282,23 +282,13 @@ exports.deleteProcess = async (req, res) => {
       });
     }
 
-    // 检查是否有关联的产品类型（代码层验证）
-    const associations = await ProductTypeProcess.findAll({
-      where: { processId: id }
-    });
-
-    if (associations.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: '该工序已被产品类型使用，无法删除'
-      });
-    }
-
+    // 删除前清理关联（放开限制，满足“工序可删除”需求）
+    await ProductTypeProcess.destroy({ where: { processId: id } });
     await process.destroy();
 
     res.json({
       success: true,
-      message: '工序删除成功'
+      message: '工序删除成功（已自动解除关联）'
     });
   } catch (error) {
     console.error('Delete process error:', error);

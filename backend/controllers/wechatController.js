@@ -1,80 +1,40 @@
 // controllers/wechatController.js
 const { Employee, Process, EmployeeProcess } = require('../models');
+const { Op } = require('sequelize');
 
-// 微信登录
+// 微信登录（仅使用 unionId 作为唯一标识；openId 仅存储不用于匹配）
 exports.wechatLogin = async (req, res) => {
   try {
     const { openId, unionId } = req.body;
-    
-    // 验证必需参数
-    if (!openId) {
-      return res.status(400).json({
-        success: false,
-        message: 'openId不能为空'
-      });
+    if (!unionId) {
+      return res.status(400).json({ success:false, message:'unionId不能为空(需在小程序端通过云函数或后端换取 unionId)' });
     }
-
-    // 查找是否已注册的员工
-    const whereClause = { wxOpenId: openId };
-    if (unionId) {
-      whereClause.wxUnionId = unionId;
-    }
-
-    let employee = await Employee.findOne({
-      where: whereClause,
+    // 仅按 unionId 匹配
+    const employee = await Employee.findOne({
+      where: { wxUnionId: unionId },
       include: [{
         model: Process,
         as: 'processes',
-        through: { 
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
-        },
-        required: false
+        through: { attributes:['assignedAt','status'], where:{ status:'active' } },
+        required:false
       }]
     });
-
     if (employee) {
-      // 已注册用户，直接返回员工信息
-      res.json({
-        success: true,
-        data: {
-          isRegistered: true,
-          employee: employee
-        },
-        message: '登录成功'
-      });
-    } else {
-      // 未注册用户，需要输入员工名
-      res.json({
-        success: true,
-        data: {
-          isRegistered: false,
-          openId,
-          unionId
-        },
-        message: '首次登录，请输入员工姓名完成注册'
-      });
+      return res.json({ success:true, data:{ isRegistered:true, employee }, message:'登录成功' });
     }
+    return res.json({ success:true, data:{ isRegistered:false, unionId, openId }, message:'未注册，请完善姓名后调用 /register' });
   } catch (error) {
     console.error('WeChat login error:', error);
-    res.status(500).json({
-      success: false,
-      message: '微信登录失败'
-    });
+    res.status(500).json({ success:false, message:'微信登录失败' });
   }
 };
 
-// 微信注册员工
+// 微信注册员工（unionId 必须；如果 unionId 已存在则阻止重复）
 exports.registerEmployee = async (req, res) => {
   try {
     const { openId, unionId, name } = req.body;
-    
-    // 验证必需参数
-    if (!openId || !name) {
-      return res.status(400).json({
-        success: false,
-        message: 'openId和员工姓名不能为空'
-      });
+    if (!unionId || !name) {
+      return res.status(400).json({ success:false, message:'unionId和姓名不能为空' });
     }
 
     if (typeof name !== 'string' || name.trim() === '') {
@@ -91,16 +51,10 @@ exports.registerEmployee = async (req, res) => {
       });
     }
 
-    // 检查微信账号是否已绑定
-    const existingWechatUser = await Employee.findOne({
-      where: { wxOpenId: openId }
-    });
-
-    if (existingWechatUser) {
-      return res.status(409).json({
-        success: false,
-        message: '该微信账号已绑定其他员工'
-      });
+    // 检查 unionId 是否已绑定
+    const existingUnion = await Employee.findOne({ where: { wxUnionId: unionId } });
+    if (existingUnion) {
+      return res.status(409).json({ success:false, message:'该 unionId 已注册' });
     }
 
     // 生成员工编码
@@ -134,7 +88,7 @@ exports.registerEmployee = async (req, res) => {
     const employee = await Employee.create({
       name: name.trim(),
       code,
-      wxOpenId: openId,
+      wxOpenId: openId || null,
       wxUnionId: unionId,
       status: 'active'
     });
@@ -257,5 +211,30 @@ exports.getEmployeeProcesses = async (req, res) => {
       success: false,
       message: '获取员工工序失败'
     });
+  }
+};
+
+// 管理端：列出已绑定微信的员工
+exports.listWechatEmployees = async (req, res) => {
+  try {
+    const { page=1, limit=50, keyword } = req.query;
+    const where = { wxUnionId: { [Op.ne]: null } };
+    if (keyword) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${keyword}%` } },
+        { code: { [Op.like]: `%${keyword}%` } }
+      ];
+    }
+    const offset = (parseInt(page)-1) * parseInt(limit);
+    const { count, rows } = await Employee.findAndCountAll({
+      where,
+      limit: parseInt(limit),
+      offset,
+      order: [['id','DESC']]
+    });
+    res.json({ success:true, data:{ total:count, page:parseInt(page), limit:parseInt(limit), employees: rows } });
+  } catch (e) {
+    console.error('List wechat employees error:', e);
+    res.status(500).json({ success:false, message:'获取微信员工列表失败' });
   }
 };

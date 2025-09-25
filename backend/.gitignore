@@ -6,5 +6,8 @@ node_modules/
 npm-debug.log*
 logs/
 coverage/
-/.idea/
-/.vscode/
+dist/
+build/
+.vite-cache/
+.idea/
+.vscode/

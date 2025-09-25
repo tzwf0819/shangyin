@@ -55,6 +55,12 @@ exports.getAllProductTypes = async (req, res) => {
       }]
     });
 
+      // 对每个产品类型的 processes 按 sequenceOrder 排序（避免前端看到未排序）
+      productTypes.rows.forEach(pt => {
+        if (pt.processes && Array.isArray(pt.processes)) {
+          pt.processes.sort((a,b)=> (a.ProductTypeProcess?.sequenceOrder||0) - (b.ProductTypeProcess?.sequenceOrder||0));
+        }
+      });
     res.json({
       success: true,
       data: {
@@ -93,6 +99,9 @@ exports.getProductTypeById = async (req, res) => {
       }]
     });
 
+      if (productType?.processes) {
+        productType.processes.sort((a,b)=> (a.ProductTypeProcess?.sequenceOrder||0) - (b.ProductTypeProcess?.sequenceOrder||0));
+      }
     if (!productType) {
       return res.status(404).json({
         success: false,
@@ -167,30 +176,37 @@ exports.createProductType = async (req, res) => {
       status
     });
 
-    // 处理工序关联
+    // 处理工序关联（支持携带 sequenceOrder）
     if (processes.length > 0) {
-      // 验证工序是否存在
-      const processIds = processes.map(p => p.id);
-      const validProcesses = await Process.findAll({
-        where: { id: processIds }
-      });
-      
+      const normalized = processes.map((p, idx) => ({
+        id: p.id,
+        sequenceOrder: Number(p.sequenceOrder) > 0 ? Number(p.sequenceOrder) : (idx + 1)
+      }));
+      const processIds = normalized.map(p => p.id);
+      const validProcesses = await Process.findAll({ where: { id: processIds } });
       if (validProcesses.length !== processIds.length) {
-        return res.status(400).json({
-          success: false,
-          message: '存在无效的工序ID'
-        });
+        return res.status(400).json({ success:false, message:'存在无效的工序ID' });
       }
-      
-      // 使用Sequelize的关联方法
-      await productType.setProcesses(validProcesses, {
-        through: processes.reduce((acc, process, index) => {
-          acc[process.id] = { sequenceOrder: index + 1 };
-          return acc;
-        }, {})
-      });
+      // 去重、防止 sequenceOrder 冲突（按值排序后重新 1..n 归一化）
+      const sorted = [...normalized]
+        .filter((v,i,a)=> a.findIndex(x=>x.id===v.id)===i)
+        .sort((a,b)=> a.sequenceOrder - b.sequenceOrder)
+        .map((p,i)=> ({ ...p, sequenceOrder: i+1 }));
+      // 需使用包含 ProductTypeProcess 属性的数组形式让 Sequelize 写入 through 字段
+      // 直接批量写入中间表，保证 sequenceOrder 正确保存
+      const bulkRows = sorted.map(s => ({
+        productTypeId: productType.id,
+        processId: s.id,
+        sequenceOrder: s.sequenceOrder
+      }));
+      await ProductTypeProcess.bulkCreate(bulkRows);
     }
 
+      // 返回完整数据（排序）
+      const createdPT = await ProductType.findByPk(productType.id, {
+        include: [{ model: Process, as: 'processes', through: { attributes: ['sequenceOrder'] } }]
+      });
+      if (createdPT?.processes) createdPT.processes.sort((a,b)=> (a.ProductTypeProcess?.sequenceOrder||0) - (b.ProductTypeProcess?.sequenceOrder||0));
     // 返回完整数据
     const createdProductType = await ProductType.findByPk(productType.id, {
       include: [{
@@ -268,34 +284,49 @@ exports.updateProductType = async (req, res) => {
 
     await productType.update(updateData);
 
-    // 更新工序关联
-    if (processes.length >= 0) {
-      if (processes.length > 0) {
-        const processIds = processes.map(p => p.id);
-        const validProcesses = await Process.findAll({
-          where: { id: processIds }
-        });
-        
-        if (validProcesses.length !== processIds.length) {
-          return res.status(400).json({
-            success: false,
-            message: '存在无效的工序ID'
-          });
-        }
-        
-        // 使用Sequelize的关联方法更新
-        await productType.setProcesses(validProcesses, {
-          through: processes.reduce((acc, process, index) => {
-            acc[process.id] = { sequenceOrder: index + 1 };
-            return acc;
-          }, {})
-        });
-      } else {
-        // 清除所有关联
-        await productType.setProcesses([]);
-      }
+    // 兼容多种格式的工序顺序更新：
+    // 1) processes: [{id, sequenceOrder}] (推荐)
+    // 2) processes: [{id}] 仅包含 id，按数组顺序重建
+    // 3) processIds: [id1,id2,...] 使用该数组顺序
+    const { processIds } = req.body;
+    let incomingOrder = [];
+    if (Array.isArray(processes) && processes.length) {
+      // 对象数组
+      incomingOrder = processes.map((p, idx) => ({
+        id: p.id || p.processId || p,
+        sequenceOrder: Number(p.sequenceOrder) > 0 ? Number(p.sequenceOrder) : (idx + 1)
+      }));
+    } else if (Array.isArray(processIds) && processIds.length) {
+      incomingOrder = processIds.map((pid, idx) => ({ id: pid, sequenceOrder: idx + 1 }));
+    } else if (Array.isArray(processes) && processes.length === 0) {
+      // 明确清空
+      await productType.setProcesses([]);
     }
 
+    if (incomingOrder.length > 0) {
+      // 校验及去重归一化
+      const unique = incomingOrder.filter((v,i,a)=> a.findIndex(x=>x.id===v.id)===i);
+      const processIdsAll = unique.map(p=>p.id);
+      const validProcesses = await Process.findAll({ where: { id: processIdsAll } });
+      if (validProcesses.length !== processIdsAll.length) {
+        return res.status(400).json({ success:false, message:'存在无效的工序ID' });
+      }
+      const sorted = [...unique]
+        .sort((a,b)=> a.sequenceOrder - b.sequenceOrder)
+        .map((p,i)=> ({ ...p, sequenceOrder: i+1 }));
+      // 清理旧关联后重建
+      await ProductTypeProcess.destroy({ where: { productTypeId: id } });
+      const bulkRows2 = sorted.map(s => ({
+        productTypeId: id,
+        processId: s.id,
+        sequenceOrder: s.sequenceOrder
+      }));
+      await ProductTypeProcess.bulkCreate(bulkRows2);
+    }
+
+      // 返回更新后的数据（排序）
+      const updatedPT = await ProductType.findByPk(id, { include: [{ model: Process, as: 'processes', through: { attributes: ['sequenceOrder'] } }] });
+      if (updatedPT?.processes) updatedPT.processes.sort((a,b)=> (a.ProductTypeProcess?.sequenceOrder||0) - (b.ProductTypeProcess?.sequenceOrder||0));
     // 返回更新后的数据
     const updatedProductType = await ProductType.findByPk(id, {
       include: [{
@@ -304,6 +335,9 @@ exports.updateProductType = async (req, res) => {
         through: { attributes: ['sequenceOrder'] }
       }]
     });
+    if (updatedProductType?.processes) {
+      updatedProductType.processes.sort((a,b)=> (a.ProductTypeProcess?.sequenceOrder||0) - (b.ProductTypeProcess?.sequenceOrder||0));
+    }
 
     res.json({
       success: true,
@@ -538,12 +572,13 @@ exports.deleteProductType = async (req, res) => {
       });
     }
 
-    // 删除产品类型（关联会自动删除）
-    await productType.destroy();
+  // 删除前清理关联，避免外键残留
+  await ProductTypeProcess.destroy({ where: { productTypeId: id } });
+  await productType.destroy();
 
     res.json({
       success: true,
-      message: '产品类型删除成功'
+      message: '产品类型删除成功（已自动解除关联）'
     });
   } catch (error) {
     console.error('Delete product type error:', error);

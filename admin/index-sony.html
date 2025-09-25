@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上茚工厂管理系统 - Sony Design</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/img/favicon.svg">
+    <link rel="icon" type="image/png" href="./assets/img/favicon.png">
+    <link rel="apple-touch-icon" href="./assets/img/favicon.png">
+    <link rel="stylesheet" href="./assets/css/sony-design.css">
+    <link rel="stylesheet" href="./assets/lib/fontawesome-local.css">
+</head>
+<body>
+    <div id="app" v-cloak>
+        <!-- Sony Design Header -->
+        <header class="sony-header">
+            <div class="sony-header-content" style="display:flex;align-items:center;justify-content:space-between;gap:32px;">
+                <div class="sony-header-left" style="display:flex;align-items:center;gap:16px;">
+                    <h1 class="sony-logo" style="margin:0;font-size:20px;">上茚工厂管理系统</h1>
+                </div>
+                <nav class="sony-header-nav" style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="sony-button" :class="{ 'sony-button-primary': activeTab==='dashboard' }" @click="activeTab='dashboard'">概览</button>
+                    <button class="sony-button" :class="{ 'sony-button-primary': activeTab==='productTypes' }" @click="activeTab='productTypes'">产品类型</button>
+                    <button class="sony-button" :class="{ 'sony-button-primary': activeTab==='processes' }" @click="activeTab='processes'">工序</button>
+                    <button class="sony-button" :class="{ 'sony-button-primary': activeTab==='employees' }" @click="activeTab='employees'">员工</button>
+                    <button class="sony-button" :class="{ 'sony-button-primary': activeTab==='contracts' }" @click="activeTab='contracts'">合同</button>
+                    <button class="sony-button" :class="{ 'sony-button-primary': activeTab==='production' }" @click="activeTab='production'">生产</button>
+                    <button class="sony-button" :class="{ 'sony-button-primary': activeTab==='performance' }" @click="activeTab='performance'">绩效</button>
+                </nav>
+                <div class="sony-header-right" style="font-size:12px;color:var(--sony-gray-600);">
+                    <span>{{ lastUpdated ? ('最后刷新: ' + lastUpdated) : '' }}</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="sony-container" style="padding-top:24px;">
+            <!-- （原 Sony 版本主体内容保留在备份文件中） -->
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="./assets/lib/vue.global.js"></script>
+    <script src="./assets/lib/axios.min.js"></script>
+    <script src="./assets/js/sony-admin.js?v=20250925"></script>
+</body>
+</html>

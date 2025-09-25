@@ -87,6 +87,17 @@ ContractProduct.belongsTo(Contract, {
   constraints: false,
 });
 
+
+// 生产记录关联
+ProcessRecord.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
+Employee.hasMany(ProcessRecord, { foreignKey: 'employeeId', as: 'processRecords' });
+ProcessRecord.belongsTo(Contract, { foreignKey: 'contractId', as: 'contract' });
+Contract.hasMany(ProcessRecord, { foreignKey: 'contractId', as: 'processRecords' });
+ProcessRecord.belongsTo(ContractProduct, { foreignKey: 'contractProductId', as: 'contractProduct' });
+ContractProduct.hasMany(ProcessRecord, { foreignKey: 'contractProductId', as: 'processRecords' });
+ProcessRecord.belongsTo(Process, { foreignKey: 'processId', as: 'process' });
+Process.hasMany(ProcessRecord, { foreignKey: 'processId', as: 'processRecords' });
+
 const models = {
   User,
   Employee,

@@ -5,7 +5,8 @@ const {
   wechatLogin,
   registerEmployee,
   getEmployeeProcesses,
-  getEmployeeInfo
+  getEmployeeInfo,
+  listWechatEmployees
 } = require('../controllers/wechatController');
 
 // 微信小程序登录
@@ -19,5 +20,8 @@ router.get('/employee/:openId/processes', getEmployeeProcesses);
 
 // 获取员工基本信息
 router.get('/employee/:openId', getEmployeeInfo);
+
+// 管理端：获取绑定微信员工列表
+router.get('/employees', listWechatEmployees);
 
 module.exports = router;
