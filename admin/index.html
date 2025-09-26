@@ -18,7 +18,7 @@
   </head>
   <body>
     <div id="app"></div>
-    <!-- 仅使用 Vite ESM 入口，删除旧时代脚本 -->
+    <!-- 保持为根路径入口，Vite 在 build 时会使用 vite.config.js 的 base 生成正确的生产资源路径 -->
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
