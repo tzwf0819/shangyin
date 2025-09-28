@@ -1,77 +1,128 @@
-// controllers/authController.js
+﻿// controllers/authController.js
 const jwt = require('jsonwebtoken');
 const { User, Employee } = require('../models');
+const {
+  exchangeCodeForSession,
+  isMockMode,
+} = require('../services/wechatAuthService');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'default_secret_key_for_development';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 exports.login = async (req, res) => {
   try {
     const { code } = req.body;
-    
+
     if (!code) {
-      return res.status(400).json({ 
-        success: false, 
-        message: '缺少微信授权码' 
+      return res.status(400).json({
+        success: false,
+        message: 'Missing WeChat login code',
       });
     }
 
-    // TODO: 使用微信 SDK 换取 openid
-    // 目前使用模拟数据进行开发测试
-    const openid = 'mock_openid_' + code;
-    const nickname = 'Test User ' + code;
-    
-    // 查找或创建用户
-    let user = await User.findOne({ 
-      where: { wechatOpenid: openid },
-      include: [{
+    let sessionData;
+    try {
+      sessionData = await exchangeCodeForSession(code);
+    } catch (error) {
+      console.error('WeChat code2session failed:', error);
+      return res.status(502).json({
+        success: false,
+        message: error.message || 'Unable to validate WeChat login credential',
+      });
+    }
+
+    const openid = sessionData.openid;
+    const unionid = sessionData.unionid;
+
+    if (!openid) {
+      return res.status(502).json({
+        success: false,
+        message: 'WeChat did not return openId',
+      });
+    }
+
+    const include = [
+      {
         model: Employee,
-        as: 'employee'
-      }]
-    });
-    
-    if (!user) {
-      // 创建新用户
-      user = await User.create({
-        wechatOpenid: openid,
-        nickname: nickname,
-        status: 'active',
-        lastLoginAt: new Date()
+        as: 'employee',
+      },
+    ];
+
+    let user = null;
+
+    if (unionid) {
+      user = await User.findOne({
+        where: { wechatUnionid: unionid },
+        include,
       });
-    } else {
-      // 更新最后登录时间
-      await user.update({ lastLoginAt: new Date() });
     }
 
-    // 生成 JWT token
-    const token = jwt.sign(
-      { 
-        id: user.id, 
-        openid: user.wechatOpenid,
-        isEmployee: !!user.employee
-      }, 
-      process.env.JWT_SECRET || 'default_secret_key_for_development', 
-      { expiresIn: '7d' }
-    );
+    if (!user) {
+      user = await User.findOne({
+        where: { wechatOpenid: openid },
+        include,
+      });
+    }
 
-    res.json({ 
-      success: true, 
+    if (!user) {
+      const nickname = `WeChat User ${openid.slice(-6)}`;
+      const newUser = await User.create({
+        wechatOpenid: openid,
+        wechatUnionid: unionid,
+        nickname,
+        status: 'active',
+        lastLoginAt: new Date(),
+      });
+      user = await User.findByPk(newUser.id, { include });
+    } else {
+      const updates = { lastLoginAt: new Date() };
+      if (!user.wechatOpenid || user.wechatOpenid !== openid) {
+        updates.wechatOpenid = openid;
+      }
+      if (unionid && !user.wechatUnionid) {
+        updates.wechatUnionid = unionid;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await user.update(updates);
+        await user.reload({ include });
+      }
+    }
+
+    const tokenPayload = {
+      id: user.id,
+      openid: user.wechatOpenid,
+      unionid: user.wechatUnionid || null,
+      isEmployee: !!user.employee,
+    };
+
+    const token = jwt.sign(tokenPayload, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    res.json({
+      success: true,
       data: {
         token,
+        expiresIn: JWT_EXPIRES_IN,
+        sessionKey: sessionData.session_key,
         userInfo: {
           id: user.id,
           openId: user.wechatOpenid,
+          unionId: user.wechatUnionid || null,
           nickname: user.nickname,
           avatarUrl: user.avatarUrl,
           isEmployee: !!user.employee,
-          employee: user.employee
+          employee: user.employee || null,
         },
-        expiresIn: 604800
-      }
+        mock: sessionData.isMock || isMockMode(),
+      },
     });
-
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: '登录失败，请重试' 
+    res.status(500).json({
+      success: false,
+      message: 'Login failed, please try again later',
     });
   }
 };
