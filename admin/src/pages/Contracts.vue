@@ -108,7 +108,17 @@
                 <button type="button" class="danger" @click="removeProduct(index)">移除</button>
               </header>
               <div class="grid">
-                <label>产品类型<input v-model="product.productType" /></label>
+                <label>
+                  产品类型
+                  <select v-model="product.productTypeId" @change="onProductTypeSelected(product)" :disabled="!productTypes.length">
+                    <option value="">请选择产品类型</option>
+                    <option v-for="type in productTypes" :key="type.id" :value="type.id">
+                      {{ type.name }}{{ type.code ? '（' + type.code + '）' : '' }}
+                    </option>
+                  </select>
+                  <small v-if="!productTypes.length" class="muted">暂无产品类型，请先到“产品类型”页面创建。</small>
+                  <small v-else-if="product.productType && !product.productTypeId" class="muted">当前合同记录的类型“{{ product.productType }}”未匹配，请重新选择。</small>
+                </label>
                 <label>产品编号<input v-model="product.productCode" /></label>
                 <label>产品名称<input v-model="product.productName" required /></label>
                 <label>规格<input v-model="product.specification" /></label>
@@ -191,12 +201,17 @@ clauseFields.forEach((field, index) => {
 
 const productImportMap = {
   '产品类型': 'productType',
+  '产品类型名称': 'productTypeName',
+  '产品类型ID': 'productTypeId',
+  '产品类型编码': 'productTypeCode',
+  '类型编码': 'productTypeCode',
   '产品编号': 'productCode',
   '产品名称': 'productName',
   '规格': 'specification',
   '雕宽': 'carveWidth',
   '网型': 'meshType',
   '线数': 'lineCount',
+  '容积比': 'volumeRatio',
   '容积率': 'volumeRatio',
   '数量': 'quantity',
   '单价': 'unitPrice',
@@ -230,6 +245,12 @@ const mapImportedContract = (raw) => {
       const mappedKey = productImportMap[key] || key;
       target[mappedKey] = product[key];
     });
+    if (target.productType && !target.productTypeName) {
+      target.productTypeName = target.productType;
+    }
+    if (target.productTypeName && !target.productType) {
+      target.productType = target.productTypeName;
+    }
     return target;
   });
   return mapped;
@@ -267,7 +288,10 @@ const defaultContract = () => ({
 });
 
 const defaultProduct = () => ({
+  productTypeId: '',
   productType: '',
+  productTypeName: '',
+  productTypeCode: '',
   productCode: '',
   productName: '',
   specification: '',
@@ -288,6 +312,77 @@ const dlgEdit = ref();
 const dlgImport = ref();
 const importText = ref('{\n  "contracts": [\n    {\n      "合同编号": "HT-001",\n      "甲方": "甲方公司",\n      "乙方": "乙方公司",\n      "是否新木箱": true,\n      "条款一": "双方共同遵守...",\n      "products": [\n        { "产品名称": "产品A", "产品类型": "类型A", "数量": "10" }\n      ]\n    }\n  ]\n}');
 
+const productTypes = ref([]);
+let productTypesLoaded = false;
+
+const applyProductTypeSelection = (product) => {
+  if (!product) return;
+  const matched = productTypes.value.find((type) => String(type.id) === String(product.productTypeId));
+  if (matched) {
+    product.productTypeId = String(matched.id);
+    product.productType = matched.name || '';
+    product.productTypeName = matched.name || '';
+    product.productTypeCode = matched.code || '';
+    return;
+  }
+
+  if (product.productType) {
+    const fallback = productTypes.value.find((type) =>
+      type.name === product.productType ||
+      type.code === product.productType ||
+      (product.productTypeCode && type.code === product.productTypeCode)
+    );
+    if (fallback) {
+      product.productTypeId = String(fallback.id);
+      product.productType = fallback.name || '';
+      product.productTypeName = fallback.name || '';
+      product.productTypeCode = fallback.code || '';
+      return;
+    }
+  }
+
+  if (product.productTypeName && !product.productType) {
+    product.productType = product.productTypeName;
+  }
+
+  if (!product.productTypeId && !product.productType) {
+    product.productTypeName = '';
+    product.productTypeCode = '';
+  }
+  if (product.productTypeId && Number.isNaN(Number(product.productTypeId))) {
+    product.productTypeId = '';
+  }
+};
+
+const applyProductTypeSelections = (products = []) => {
+  (products || []).forEach((item) => applyProductTypeSelection(item));
+};
+
+const loadProductTypes = async (force = false) => {
+  if (productTypesLoaded && !force) {
+    applyProductTypeSelections(form.products);
+    return;
+  }
+  try {
+    const response = await listProductTypes({ page: 1, limit: 500, status: 'active' });
+    if (response.success) {
+      productTypes.value = response.data?.productTypes || [];
+      productTypesLoaded = true;
+    } else {
+      productTypesLoaded = false;
+    }
+  } catch (error) {
+    console.error('加载产品类型失败:', error);
+    productTypesLoaded = false;
+  } finally {
+    applyProductTypeSelections(form.products);
+  }
+};
+
+const onProductTypeSelected = (product) => {
+  applyProductTypeSelection(product);
+};
+
 const load = async () => {
   const response = await listContracts(query);
   if (response.success) {
@@ -295,7 +390,8 @@ const load = async () => {
   }
 };
 
-const openEdit = (contract = null) => {
+const openEdit = async (contract = null) => {
+  await loadProductTypes();
   Object.assign(form, defaultContract());
   if (contract) {
     Object.assign(form, JSON.parse(JSON.stringify(contract)));
@@ -312,6 +408,7 @@ const openEdit = (contract = null) => {
   if (!form.products.length) {
     form.products.push(defaultProduct());
   }
+  applyProductTypeSelections(form.products);
   dlgEdit.value.showModal();
 };
 
@@ -336,7 +433,11 @@ const removeProduct = (index) => {
 
 const normalisePayload = () => {
   const payload = { ...form };
-  payload.products = (form.products || []).map((product) => ({ ...product }));
+  payload.products = (form.products || []).map((product) => {
+    const copy = { ...product };
+    applyProductTypeSelection(copy);
+    return copy;
+  });
   return payload;
 };
 
@@ -389,7 +490,10 @@ const doImport = async () => {
   }
 };
 
-onMounted(load);
+onMounted(() => {
+  load();
+  loadProductTypes();
+});
 </script>
 
 <style scoped>

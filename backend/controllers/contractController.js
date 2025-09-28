@@ -496,7 +496,7 @@ exports.listContracts = async (req, res) => {
       where: Object.keys(whereClause).length ? whereClause : undefined,
       limit,
       offset,
-      order: ORDER_WITH_PRODUCTS,
+      order: [['createdAt', 'DESC'], [{ model: ContractProduct, as: 'products' }, 'id', 'ASC']],
       include: [{ model: ContractProduct, as: 'products' }],
     });
 
