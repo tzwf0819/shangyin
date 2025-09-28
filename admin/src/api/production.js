@@ -4,4 +4,7 @@ export const createRecord = (data) => http.post('/shangyin/production/record', d
 export const updateRecord = (id,data) => http.put(`/shangyin/production/record/${id}`, data);
 export const deleteRecord = (id) => http.delete(`/shangyin/production/record/${id}`);
 export const listProgress = (params={}) => http.get('/shangyin/production/progress', { params });
+export const getProductProgressRecords = (productId, params={}) => http.get(`/shangyin/production/progress/${productId}/records`, { params });
+export const getPerformanceSummary = (params={}) => http.get('/shangyin/production/performance/summary', { params });
+export const getEmployeePerformanceRecords = (employeeId, params={}) => http.get(`/shangyin/production/performance/${employeeId}/records`, { params });
 export const listPerformance = (params={}) => http.get('/shangyin/production/performance', { params });

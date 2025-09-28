@@ -1,116 +1,143 @@
-ï»¿<template>
+<template>
   <div>
     <div class="filters">
-      <select v-model="filters.employeeId">
-        <option value="">æ‰€æœ‰å‘˜å·¥</option>
-        <option v-for="employee in employees" :key="employee.id" :value="employee.id">
-          {{ employee.name }}
-        </option>
-      </select>
-      <input type="date" v-model="filters.startDate" />
-      <input type="date" v-model="filters.endDate" />
-      <button class="primary" @click="search">æœç´¢</button>
+      <input type="date" v-model="summaryFilters.startDate" />
+      <input type="date" v-model="summaryFilters.endDate" />
+      <button class="primary" @click="loadSummary" :disabled="loading">ËÑË÷</button>
     </div>
 
-    <div class="table-wrapper" v-if="items.length">
+    <div class="table-wrapper" v-if="employees.length">
       <table>
         <thead>
           <tr>
-            <th>æ—¶é—´</th>
-            <th>å‘˜å·¥</th>
-            <th>åˆåŒç¼–å·</th>
-            <th>äº§å“</th>
-            <th>å·¥åº</th>
-            <th>æ•°é‡</th>
-            <th>å·¥æ—¶(åˆ†é’Ÿ)</th>
-            <th>ç»©æ•ˆé‡‘é¢</th>
-            <th>å¤‡æ³¨</th>
+            <th>Ô±¹¤ĞÕÃû</th>
+            <th>Ô±¹¤±àºÅ</th>
+            <th>×´Ì¬</th>
+            <th>Éú²ú¼ÇÂ¼Êı</th>
+            <th>ÀÛ¼ÆÊıÁ¿</th>
+            <th>ÀÛ¼Æ¼¨Ğ§</th>
+            <th>×î½ü¼ÇÂ¼Ê±¼ä</th>
+            <th>²Ù×÷</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="record in items" :key="record.id">
-            <td>{{ formatDate(record.createdAt) }}</td>
-            <td>{{ record.employeeName || '-' }}</td>
-            <td>{{ record.contractNumber || '-' }}</td>
-            <td>{{ record.productName || '-' }}</td>
-            <td>{{ record.processName || '-' }}</td>
-            <td>{{ record.quantity }}</td>
-            <td>{{ record.actualTimeMinutes }}</td>
-            <td>{{ record.payAmount.toFixed(2) }}</td>
-            <td>{{ record.notes || '-' }}</td>
-          </tr>
-          <tr class="summary">
-            <td colspan="7">åˆè®¡</td>
-            <td>{{ totalPayAmount.toFixed(2) }}</td>
-            <td>-</td>
+          <tr v-for="emp in employees" :key="emp.id">
+            <td>{{ emp.name }}</td>
+            <td>{{ emp.code || '-' }}</td>
+            <td>{{ renderStatus(emp.status) }}</td>
+            <td>{{ emp.recordCount }}</td>
+            <td>{{ emp.totalQuantity }}</td>
+            <td>{{ formatCurrency(emp.totalPayAmount) }}</td>
+            <td>{{ formatDate(emp.latestRecordAt) }}</td>
+            <td><button @click="openDetail(emp)" :disabled="detailLoading">ÏêÇé</button></td>
           </tr>
         </tbody>
       </table>
     </div>
-    <div v-else class="empty">æš‚æ— è®°å½•</div>
+    <div class="empty" v-else>ÔİÎŞÔ±¹¤¼¨Ğ§Êı¾İ</div>
 
-    <div class="pagination">
-      <button :disabled="page <= 1" @click="changePage(page - 1)">ä¸Šä¸€é¡µ</button>
-      <span>ç¬¬ {{ page }} é¡µ</span>
-      <button :disabled="items.length < limit" @click="changePage(page + 1)">ä¸‹ä¸€é¡µ</button>
-    </div>
+    <dialog ref="dlgDetail" class="dialog-large">
+      <form method="dialog" @submit.prevent>
+        <div class="modal-header">Ô±¹¤Éú²ú¼ÇÂ¼</div>
+        <div class="modal-body">
+          <section v-if="detailEmployee" class="employee-overview">
+            <div><strong>ĞÕÃû£º</strong>{{ detailEmployee.name }}</div>
+            <div><strong>±àºÅ£º</strong>{{ detailEmployee.code || '-' }}</div>
+            <div><strong>×´Ì¬£º</strong>{{ renderStatus(detailEmployee.status) }}</div>
+            <div><strong>Í³¼ÆÖÜÆÚ£º</strong>{{ detailFilters.startDate }} ~ {{ detailFilters.endDate }}</div>
+          </section>
+
+          <section class="detail-filters">
+            <label>¿ªÊ¼ÈÕÆÚ<input type="date" v-model="detailFilters.startDate" /></label>
+            <label>½áÊøÈÕÆÚ<input type="date" v-model="detailFilters.endDate" /></label>
+            <button type="button" class="primary" @click="searchDetail" :disabled="detailLoading">ËÑË÷</button>
+          </section>
+
+          <section class="records-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ê±¼ä</th>
+                  <th>ºÏÍ¬±àºÅ</th>
+                  <th>²úÆ·</th>
+                  <th>¹¤Ğò</th>
+                  <th>ÊıÁ¿</th>
+                  <th>ÓÃÊ±(·Ö)</th>
+                  <th>¼¨Ğ§</th>
+                  <th>±¸×¢</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="detailLoading">
+                  <td colspan="8" class="muted">¼ÓÔØÖĞ...</td>
+                </tr>
+                <tr v-else-if="!detailRecords.length">
+                  <td colspan="8" class="muted">ÔİÎŞÉú²ú¼ÇÂ¼</td>
+                </tr>
+                <tr v-else v-for="record in detailRecords" :key="record.id">
+                  <td>{{ formatDate(record.createdAt) }}</td>
+                  <td>{{ record.contractNumber || '-' }}</td>
+                  <td>{{ record.productName || '-' }}</td>
+                  <td>{{ record.processName || '-' }}</td>
+                  <td>{{ record.quantity === null || record.quantity === undefined ? '-' : record.quantity }}</td>
+                  <td>{{ record.actualTimeMinutes === null || record.actualTimeMinutes === undefined ? '-' : record.actualTimeMinutes }}</td>
+                  <td>{{ record.payAmount === null || record.payAmount === undefined ? '-' : formatCurrency(record.payAmount) }}</td>
+                  <td>{{ record.notes || '-' }}</td>
+                </tr>
+                <tr v-if="detailRecords.length">
+                  <td colspan="6" class="summary-label">ºÏ¼Æ¼¨Ğ§</td>
+                  <td class="summary-value">{{ formatCurrency(detailTotalPay) }}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        </div>
+        <div class="modal-footer">
+          <button type="button" @click="closeDetail">¹Ø±Õ</button>
+        </div>
+      </form>
+    </dialog>
   </div>
 </template>
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue';
-import { listPerformance } from '../api/production';
-import { listEmployees } from '../api/employees';
+import { getPerformanceSummary, getEmployeePerformanceRecords } from '../api/production';
+
+const buildDateString = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 const today = new Date();
-const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10);
-const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().slice(0, 10);
+const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-const filters = reactive({ employeeId: '', startDate: firstDay, endDate: lastDay });
+const summaryFilters = reactive({
+  startDate: buildDateString(firstDay),
+  endDate: buildDateString(lastDay),
+});
+
+const detailFilters = reactive({
+  startDate: buildDateString(firstDay),
+  endDate: buildDateString(lastDay),
+});
+
 const employees = ref([]);
-const items = ref([]);
-const totalPayAmount = ref(0);
-const page = ref(1);
-const limit = 20;
+const loading = ref(false);
 
-const loadEmployees = async () => {
-  const response = await listEmployees({ limit: 500 });
-  if (response.success) {
-    employees.value = response.data.employees || response.data.items || [];
-  }
-};
+const detailEmployee = ref(null);
+const detailRecords = ref([]);
+const detailTotalPay = ref(0);
+const detailLoading = ref(false);
+const dlgDetail = ref(null);
 
-const buildParams = () => {
-  const params = {
-    page: page.value,
-    limit,
-    startDate: filters.startDate,
-    endDate: filters.endDate,
-  };
-  const id = Number(filters.employeeId);
-  if (!Number.isNaN(id) && id > 0) {
-    params.employeeId = id;
-  }
-  return params;
-};
-
-const load = async () => {
-  const response = await listPerformance(buildParams());
-  if (response.success) {
-    items.value = response.data.items || [];
-    totalPayAmount.value = response.data.totalPayAmount || 0;
-  }
-};
-
-const search = () => {
-  page.value = 1;
-  load();
-};
-
-const changePage = (nextPage) => {
-  if (nextPage <= 0) return;
-  page.value = nextPage;
-  load();
+const formatCurrency = (value) => {
+  const num = Number(value || 0);
+  return num.toFixed(2);
 };
 
 const formatDate = (value) => {
@@ -120,9 +147,94 @@ const formatDate = (value) => {
   return date.toLocaleString();
 };
 
-onMounted(async () => {
-  await loadEmployees();
-  await load();
+const renderStatus = (status) => {
+  if (!status) return '-';
+  return status === 'active' ? 'ÔÚÖ°' : 'ÀëÖ°';
+};
+
+const loadSummary = async () => {
+  loading.value = true;
+  try {
+    const response = await getPerformanceSummary({
+      startDate: summaryFilters.startDate,
+      endDate: summaryFilters.endDate,
+    });
+    if (response.success) {
+      employees.value = response.data?.items || [];
+    } else {
+      employees.value = [];
+    }
+  } catch (error) {
+    console.error('¼ÓÔØ¼¨Ğ§»ã×ÜÊ§°Ü:', error);
+    alert('¼ÓÔØ¼¨Ğ§»ã×ÜÊ§°Ü');
+    employees.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+const fetchEmployeeRecords = async (employeeId) => {
+  detailLoading.value = true;
+  try {
+    const response = await getEmployeePerformanceRecords(employeeId, {
+      startDate: detailFilters.startDate,
+      endDate: detailFilters.endDate,
+    });
+    if (!response.success) {
+      throw new Error(response.message || '»ñÈ¡Ô±¹¤Éú²ú¼ÇÂ¼Ê§°Ü');
+    }
+    const data = response.data || {};
+    if (data.employee) {
+      detailEmployee.value = data.employee;
+    }
+    detailRecords.value = (data.items || []).map((item) => ({
+      ...item,
+      payAmount: item.payAmount === null || item.payAmount === undefined ? null : Number(item.payAmount),
+    }));
+    detailTotalPay.value = Number(data.totalPayAmount || 0);
+  } catch (error) {
+    console.error('¼ÓÔØÔ±¹¤¼ÇÂ¼Ê§°Ü:', error);
+    alert(error?.message || '»ñÈ¡Ô±¹¤Éú²ú¼ÇÂ¼Ê§°Ü');
+    detailRecords.value = [];
+    detailTotalPay.value = 0;
+  } finally {
+    detailLoading.value = false;
+  }
+};
+
+const openDetail = async (employee) => {
+  detailEmployee.value = employee;
+  detailFilters.startDate = summaryFilters.startDate;
+  detailFilters.endDate = summaryFilters.endDate;
+  detailRecords.value = [];
+  detailTotalPay.value = 0;
+  if (dlgDetail.value?.showModal) {
+    try {
+      dlgDetail.value.showModal();
+    } catch (error) {
+      console.warn('show dialog failed', error);
+    }
+  }
+  await fetchEmployeeRecords(employee.id);
+};
+
+const closeDetail = () => {
+  if (dlgDetail.value) {
+    try {
+      dlgDetail.value.close();
+    } catch (error) {
+      console.warn('close dialog failed', error);
+    }
+  }
+};
+
+const searchDetail = () => {
+  if (!detailEmployee.value) return;
+  fetchEmployeeRecords(detailEmployee.value.id);
+};
+
+onMounted(() => {
+  loadSummary();
 });
 </script>
 
@@ -149,14 +261,6 @@ td {
   font-size: 13px;
   text-align: left;
 }
-.summary {
-  font-weight: 600;
-  background: #f8fafc;
-}
-.empty {
-  color: #64748b;
-  font-size: 13px;
-}
 .primary {
   background: #2563eb;
   color: #fff;
@@ -165,10 +269,69 @@ td {
   border-radius: 6px;
   cursor: pointer;
 }
-.pagination {
+.empty {
+  color: #64748b;
+  font-size: 13px;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.dialog-large {
+  width: min(760px, 95%);
+}
+.modal-header {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.modal-body {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
   margin-top: 16px;
+}
+.employee-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.detail-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.detail-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.records-table table {
+  width: 100%;
+}
+.muted {
+  color: #6b7280;
+  text-align: center;
+  font-size: 13px;
+}
+.summary-label {
+  text-align: right;
+  font-weight: 600;
+}
+.summary-value {
+  font-weight: 600;
 }
 </style>
