@@ -16,7 +16,15 @@ function isMockMode() {
   return placeholders.has(appId) || placeholders.has(secret);
 }
 
-async function exchangeCodeForSession(code) {
+function normalizeMockIds(codeHash, options = {}) {
+  const preferredOpenId = typeof options.preferredOpenId === 'string' ? options.preferredOpenId.trim() : '';
+  const preferredUnionId = typeof options.preferredUnionId === 'string' ? options.preferredUnionId.trim() : '';
+  const openid = preferredOpenId || `mock_openid_${codeHash}`;
+  const unionid = preferredUnionId || (preferredOpenId ? `mock_union_${preferredOpenId}` : `mock_union_${codeHash}`);
+  return { openid, unionid };
+}
+
+async function exchangeCodeForSession(code, options = {}) {
   if (!code || typeof code !== 'string') {
     throw new Error('Missing js_code when requesting WeChat session');
   }
@@ -26,9 +34,10 @@ async function exchangeCodeForSession(code) {
 
   if (isMockMode()) {
     const hash = crypto.createHash('md5').update(code).digest('hex');
+    const ids = normalizeMockIds(hash, options);
     return {
-      openid: `mock_openid_${hash}`,
-      unionid: `mock_union_${hash}`,
+      openid: ids.openid,
+      unionid: ids.unionid,
       session_key: `mock_session_${hash.slice(0, 24)}`,
       isMock: true,
     };

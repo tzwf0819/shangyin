@@ -11,7 +11,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 exports.login = async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code, preferredOpenId, preferredUnionId } = req.body;
 
     if (!code) {
       return res.status(400).json({
@@ -22,7 +22,10 @@ exports.login = async (req, res) => {
 
     let sessionData;
     try {
-      sessionData = await exchangeCodeForSession(code);
+      sessionData = await exchangeCodeForSession(code, {
+        preferredOpenId,
+        preferredUnionId,
+      });
     } catch (error) {
       console.error('WeChat code2session failed:', error);
       return res.status(502).json({
@@ -79,7 +82,7 @@ exports.login = async (req, res) => {
       if (!user.wechatOpenid || user.wechatOpenid !== openid) {
         updates.wechatOpenid = openid;
       }
-      if (unionid && !user.wechatUnionid) {
+      if (unionid && (!user.wechatUnionid || user.wechatUnionid !== unionid)) {
         updates.wechatUnionid = unionid;
       }
 
