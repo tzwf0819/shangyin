@@ -89,8 +89,8 @@ ContractProduct.belongsTo(Contract, {
 
 
 // 生产记录关联
-ProcessRecord.belongsTo(Employee, { foreignKey: 'employeeId', as: 'employee' });
-Employee.hasMany(ProcessRecord, { foreignKey: 'employeeId', as: 'processRecords' });
+ProcessRecord.belongsTo(Employee, { foreignKey: { name: 'employeeId', allowNull: true }, as: 'employee', constraints: false });
+Employee.hasMany(ProcessRecord, { foreignKey: { name: 'employeeId', allowNull: true }, as: 'processRecords', constraints: false });
 ProcessRecord.belongsTo(Contract, { foreignKey: 'contractId', as: 'contract' });
 Contract.hasMany(ProcessRecord, { foreignKey: 'contractId', as: 'processRecords' });
 ProcessRecord.belongsTo(ContractProduct, { foreignKey: 'contractProductId', as: 'contractProduct' });

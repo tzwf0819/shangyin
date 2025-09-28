@@ -6,16 +6,17 @@
     </div>
     <div class="table-wrapper" v-if="items.length">
       <table>
-        <thead><tr><th>ID</th><th>姓名</th><th>编码</th><th>UnionId</th><th>OpenId</th><th>状态</th><th>创建时间</th></tr></thead>
+        <thead><tr><th>ID</th><th>姓名</th><th>编码</th><th>UnionId</th><th>OpenId</th><th>状态</th><th>创建时间</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="e in items" :key="e.id">
             <td>{{ e.id }}</td>
             <td>{{ e.name }}</td>
             <td>{{ e.code }}</td>
-            <td class="mono">{{ e.wxUnionId }}</td>
+            <td class="mono">{{ e.wxUnionId || '-' }}</td>
             <td class="mono">{{ e.wxOpenId || '-' }}</td>
             <td>{{ e.status }}</td>
             <td>{{ format(e.createdAt) }}</td>
+            <td><button class="danger" @click="remove(e)">删除</button></td>
           </tr>
         </tbody>
       </table>
@@ -25,11 +26,23 @@
 </template>
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { listWechatEmployees } from '../api/wechat';
+import { listWechatEmployees, deleteWechatEmployee } from '../api/wechat';
 const query = reactive({ page:1, limit:50, keyword:'' });
 const items = ref([]);
 const load = async ()=>{ const r = await listWechatEmployees(query); if(r.success){ items.value = r.data.employees; } };
 const format = (s)=> new Date(s).toLocaleString();
+const remove = async (employee) => {
+  if (!employee || !employee.id) return;
+  if (!confirm('确认删除该员工？删除后将无法恢复。')) return;
+  try {
+    await deleteWechatEmployee(employee.id);
+    await load();
+  } catch (error) {
+    const message = error && error.response && error.response.data && error.response.data.message ? error.response.data.message : '删除失败';
+    alert(message);
+  }
+};
+
 onMounted(load);
 </script>
 <style scoped>

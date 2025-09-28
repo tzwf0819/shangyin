@@ -70,11 +70,36 @@ const openCreate = () => { Object.assign(form,{ id:null, name:'', status:'active
 const edit = (e) => { Object.assign(form,e); selectedProcessIds.value=(e.processes||[]).map(p=>p.id); dlg.value.showModal(); };
 const close = () => dlg.value.close();
 const save = async () => {
-  if(form.id){ await updateEmployee(form.id,{ name:form.name, status:form.status }); await assignEmployeeProcesses(form.id, selectedProcessIds.value); }
-  else { const r = await createEmployee({ name:form.name, status:form.status, processes:selectedProcessIds.value.map(id=>({id})) }); if(r.data?.employee){ form.id = r.data.employee.id; } }
-  close(); load();
+  try {
+    const payload = { name: form.name, status: form.status };
+    const processIds = [...selectedProcessIds.value];
+    if (form.id) {
+      await updateEmployee(form.id, payload);
+      await assignEmployeeProcesses(form.id, processIds);
+    } else {
+      payload.processIds = processIds;
+      const response = await createEmployee(payload);
+      if (response?.data?.employee) {
+        form.id = response.data.employee.id;
+      }
+    }
+    close();
+    await load();
+  } catch (error) {
+    const message = error && error.response && error.response.data && error.response.data.message ? error.response.data.message : '保存失败';
+    alert(message);
+  }
 };
-const remove = async (id) => { if(!confirm('确认删除?')) return; await deleteEmployee(id); load(); };
+const remove = async (id) => {
+  if(!confirm('确认删除该员工？删除后将无法恢复。')) return;
+  try {
+    await deleteEmployee(id);
+    await load();
+  } catch (error) {
+    const message = error && error.response && error.response.data && error.response.data.message ? error.response.data.message : '删除失败';
+    alert(message);
+  }
+};
 
 onMounted(()=>{ load(); loadProcesses(); });
 </script>

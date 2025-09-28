@@ -1,5 +1,6 @@
 ﻿// controllers/wechatController.js
 const { Employee, Process, User } = require('../models');
+const { hardDeleteEmployeeById } = require('./employeeController');
 const { Op } = require('sequelize');
 
 function buildEmployeeInclude() {
@@ -35,34 +36,28 @@ exports.wechatLogin = async (req, res) => {
     if (!openId) {
       return res.status(400).json({
         success: false,
-        message: 'openId is required',
+        message: 'openId is required'
       });
     }
 
-    const identifiers = [];
-    if (unionId) {
-      identifiers.push({ wxUnionId: unionId });
-    }
-    identifiers.push({ wxOpenId: openId });
+    const include = buildEmployeeInclude();
+    let employee = await Employee.findOne({ where: { wxOpenId: openId }, include });
 
-    let employee = await Employee.findOne({
-      where: { [Op.or]: identifiers },
-      include: buildEmployeeInclude(),
-    });
+    if (!employee && unionId) {
+      employee = await Employee.findOne({ where: { wxUnionId: unionId }, include });
+    }
 
     if (employee) {
       const updates = {};
-      if (openId && !employee.wxOpenId) {
+      if (!employee.wxOpenId) {
         updates.wxOpenId = openId;
       }
-      if (unionId && !employee.wxUnionId) {
+      if (unionId && employee.wxUnionId !== unionId) {
         updates.wxUnionId = unionId;
       }
-      if (Object.keys(updates).length > 0) {
+      if (Object.keys(updates).length) {
         await employee.update(updates);
-        employee = await Employee.findByPk(employee.id, {
-          include: buildEmployeeInclude(),
-        });
+        employee = await Employee.findByPk(employee.id, { include });
       }
 
       return res.json({
@@ -71,9 +66,9 @@ exports.wechatLogin = async (req, res) => {
           isRegistered: true,
           needRegister: false,
           employee,
-          openId: employee.wxOpenId || openId,
-          unionId: employee.wxUnionId || unionId || null,
-        },
+          openId: employee.wxOpenId,
+          unionId: employee.wxUnionId || null
+        }
       });
     }
 
@@ -83,8 +78,8 @@ exports.wechatLogin = async (req, res) => {
         isRegistered: false,
         needRegister: true,
         openId,
-        unionId: unionId || null,
-      },
+        unionId: unionId || null
+      }
     });
   } catch (error) {
     console.error('WeChat login error:', error);
@@ -96,63 +91,87 @@ exports.registerEmployee = async (req, res) => {
   try {
     const { openId, unionId, name } = req.body || {};
 
+    const trimmedOpenId = typeof openId === 'string' ? openId.trim() : '';
+    const trimmedUnionId = typeof unionId === 'string' ? unionId.trim() : '';
     const normalizedName = sanitizeName(name);
 
     if (!normalizedName) {
       return res.status(400).json({
         success: false,
-        message: 'Employee name is required',
+        message: '员工姓名不能为空'
       });
     }
 
-    if (!openId && !unionId) {
+    if (!trimmedOpenId) {
       return res.status(400).json({
         success: false,
-        message: 'Either openId or unionId must be provided',
-      });
-    }
-
-    if (normalizedName.length > 100) {
-      return res.status(400).json({
-        success: false,
-        message: 'Employee name is too long',
+        message: 'openId is required'
       });
     }
 
     const include = buildEmployeeInclude();
-    const identifiers = [];
-    if (unionId) {
-      identifiers.push({ wxUnionId: unionId });
-    }
-    if (openId) {
-      identifiers.push({ wxOpenId: openId });
+    let employee = await Employee.findOne({ where: { wxOpenId: trimmedOpenId }, include });
+
+    if (!employee && trimmedUnionId) {
+      employee = await Employee.findOne({ where: { wxUnionId: trimmedUnionId }, include });
     }
 
-    let existing = null;
-    if (identifiers.length > 0) {
-      existing = await Employee.findOne({
-        where: { [Op.or]: identifiers },
-        include,
+    if (employee) {
+      if (normalizedName !== employee.name) {
+        const duplicate = await Employee.findOne({
+          where: {
+            name: normalizedName,
+            id: { [Op.ne]: employee.id }
+          }
+        });
+        if (duplicate) {
+          return res.status(409).json({
+            success: false,
+            message: '该姓名已存在，请修改后再试'
+          });
+        }
+      }
+
+      await employee.update({
+        name: normalizedName,
+        wxOpenId: trimmedOpenId,
+        wxUnionId: trimmedUnionId || employee.wxUnionId || null,
+        status: 'active'
+      });
+      const refreshed = await Employee.findByPk(employee.id, { include });
+      return res.json({
+        success: true,
+        data: {
+          employee: refreshed,
+          reused: true
+        },
+        message: '员工资料已更新'
       });
     }
 
-    if (existing) {
-      const updates = { name: normalizedName };
-      if (openId && !existing.wxOpenId) {
-        updates.wxOpenId = openId;
+    const matchedByName = await Employee.findOne({ where: { name: normalizedName }, include });
+    if (matchedByName) {
+      if (matchedByName.wxOpenId && matchedByName.wxOpenId !== trimmedOpenId) {
+        return res.status(409).json({
+          success: false,
+          message: '该姓名已绑定其它微信账号，请联系管理员处理'
+        });
       }
-      if (unionId && !existing.wxUnionId) {
-        updates.wxUnionId = unionId;
-      }
-      await existing.update(updates);
-      const refreshed = await Employee.findByPk(existing.id, { include });
+
+      await matchedByName.update({
+        wxOpenId: trimmedOpenId,
+        wxUnionId: trimmedUnionId || matchedByName.wxUnionId || null,
+        status: 'active'
+      });
+      const refreshed = await Employee.findByPk(matchedByName.id, { include });
       return res.json({
         success: true,
         data: {
           employee: refreshed,
           reused: true,
+          matchedByName: true
         },
-        message: 'Employee profile updated',
+        message: '员工资料已更新'
       });
     }
 
@@ -180,49 +199,42 @@ exports.registerEmployee = async (req, res) => {
     if (!isUnique) {
       return res.status(500).json({
         success: false,
-        message: 'Failed to generate unique employee code',
+        message: '生成唯一编码失败'
       });
     }
 
-    let boundUserId = null;
-    const matchedUser = await User.findOne({ where: { nickname: normalizedName } });
-    if (matchedUser) {
-      const existingBinding = await Employee.findOne({ where: { userId: matchedUser.id } });
-      if (!existingBinding) {
-        boundUserId = matchedUser.id;
-      }
-    }
-
-    const employee = await Employee.create({
+    const employeeCreated = await Employee.create({
       name: normalizedName,
       code,
-      wxOpenId: openId || null,
-      wxUnionId: unionId || null,
       status: 'active',
-      userId: boundUserId,
+      wxOpenId: trimmedOpenId,
+      wxUnionId: trimmedUnionId || null
     });
 
-    const fullEmployee = await Employee.findByPk(employee.id, { include });
+    const fullEmployee = await Employee.findByPk(employeeCreated.id, { include });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: {
         employee: fullEmployee,
-        reused: false,
-        autoBound: Boolean(boundUserId),
-        matchedUserId: boundUserId,
+        reused: false
       },
-      message: 'Employee registered successfully',
+      message: '员工注册成功'
     });
   } catch (error) {
     console.error('Register employee error:', error);
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      return res.status(409).json({
+        success: false,
+        message: '员工姓名已存在'
+      });
+    }
     res.status(500).json({
       success: false,
-      message: 'Failed to register employee',
+      message: 'Failed to register employee'
     });
   }
 };
-
 exports.getEmployeeInfo = async (req, res) => {
   try {
     const { openId } = req.params;
@@ -300,7 +312,7 @@ exports.getEmployeeProcesses = async (req, res) => {
 exports.listWechatEmployees = async (req, res) => {
   try {
     const { page = 1, limit = 50, keyword } = req.query;
-    const where = { wxUnionId: { [Op.ne]: null } };
+    const where = { wxOpenId: { [Op.ne]: null } };
 
     if (keyword) {
       where[Op.or] = [
@@ -341,6 +353,30 @@ exports.listWechatEmployees = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to list WeChat employees',
+    });
+  }
+};
+
+exports.deleteWechatEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const removed = await hardDeleteEmployeeById(id);
+    if (!removed) {
+      return res.status(404).json({
+        success: false,
+        message: '员工不存在'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: '员工已删除'
+    });
+  } catch (error) {
+    console.error('Delete WeChat employee error:', error);
+    res.status(500).json({
+      success: false,
+      message: '删除员工失败'
     });
   }
 };

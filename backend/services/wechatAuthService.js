@@ -20,7 +20,7 @@ function normalizeMockIds(codeHash, options = {}) {
   const preferredOpenId = typeof options.preferredOpenId === 'string' ? options.preferredOpenId.trim() : '';
   const preferredUnionId = typeof options.preferredUnionId === 'string' ? options.preferredUnionId.trim() : '';
   const openid = preferredOpenId || `mock_openid_${codeHash}`;
-  const unionid = preferredUnionId || (preferredOpenId ? `mock_union_${preferredOpenId}` : `mock_union_${codeHash}`);
+  const unionid = preferredUnionId || null;
   return { openid, unionid };
 }
 

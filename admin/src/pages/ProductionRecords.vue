@@ -21,7 +21,7 @@
             <td>{{ r.contract?.contractNumber }}</td>
             <td>{{ r.contractProduct?.productName }}</td>
             <td>{{ r.process?.name }}</td>
-            <td>{{ r.employee?.name }}</td>
+            <td>{{ r.employeeNameSnapshot || r.employee?.name || '-' }}</td>
             <td>{{ r.quantity }}</td>
             <td>{{ r.actualTimeMinutes }}</td>
             <td>￥{{ Number(r.payAmount||0).toFixed(2) }}</td>
@@ -122,7 +122,7 @@ const openCreate = ()=>{
   dlg.value.showModal(); 
 };
 const edit = async (r)=>{ 
-  Object.assign(form,{ id:r.id, employeeId:r.employeeId, contractId:r.contractId, contractProductId:r.contractProductId, processId:r.processId, quantity:r.quantity, actualTimeMinutes:r.actualTimeMinutes, notes:r.notes||'' }); 
+  Object.assign(form,{ id:r.id, employeeId:r.employeeId || '', contractId:r.contractId, contractProductId:r.contractProductId, processId:r.processId, quantity:r.quantity, actualTimeMinutes:r.actualTimeMinutes, notes:r.notes||'' }); 
   await onContractChange(); 
   await onProductChange();
   dlg.value.showModal(); 

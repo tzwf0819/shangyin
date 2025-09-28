@@ -11,6 +11,8 @@ module.exports = (sequelize) => {
     },
     name: {
       type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
       comment: '员工姓名'
     },
     code: {
@@ -27,6 +29,8 @@ module.exports = (sequelize) => {
     },
     status: {
       type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'active',
       comment: '状态：active-在职, inactive-离职'
     },
     userId: {

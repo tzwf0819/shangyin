@@ -27,9 +27,17 @@ router.post('/record', async (req, res) => {
     if (!employeeId || !contractId || !contractProductId || !processId) {
       return res.status(400).json({ success: false, message: '缺少必要参数' });
     }
+    const employee = await Employee.findByPk(employeeId);
+    if (!employee) {
+      return res.status(404).json({ success: false, message: '员工不存在' });
+    }
     const calc = await calcPay({ processId, quantity, actualTimeMinutes });
     const record = await ProcessRecord.create({
-      employeeId, contractId, contractProductId, processId,
+      employeeId,
+      employeeNameSnapshot: employee.name,
+      contractId,
+      contractProductId,
+      processId,
       quantity: quantity || 1,
       actualTimeMinutes: actualTimeMinutes || 0,
       payRateSnapshot: calc.payRateSnapshot,
@@ -50,11 +58,20 @@ router.put('/record/:id', async (req, res) => {
     const { id } = req.params;
     const { employeeId, contractId, contractProductId, processId, quantity, actualTimeMinutes, notes } = req.body;
     const record = await ProcessRecord.findByPk(id);
-    if (!record) return res.status(404).json({ success: false, message: '记录不存在' });
-    // 重新计算工资
+    if (!record) {
+      return res.status(404).json({ success: false, message: '记录不存在' });
+    }
+    const employee = await Employee.findByPk(employeeId);
+    if (!employee) {
+      return res.status(404).json({ success: false, message: '员工不存在' });
+    }
     const calc = await calcPay({ processId, quantity, actualTimeMinutes });
     await record.update({
-      employeeId, contractId, contractProductId, processId,
+      employeeId,
+      employeeNameSnapshot: employee.name,
+      contractId,
+      contractProductId,
+      processId,
       quantity: quantity || 1,
       actualTimeMinutes: actualTimeMinutes || 0,
       payRateSnapshot: calc.payRateSnapshot,

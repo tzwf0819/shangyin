@@ -9,7 +9,7 @@ module.exports = (sequelize) => {
     },
     employeeId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       comment: '员工ID'
     },
     contractId: {
@@ -50,6 +50,12 @@ module.exports = (sequelize) => {
       allowNull: false,
       defaultValue: 'perItem',
       comment: '计价单位快照'
+    },
+    employeeNameSnapshot: {
+      type: DataTypes.STRING(120),
+      allowNull: false,
+      defaultValue: '',
+      comment: '员工姓名快照'
     },
     payAmount: {
       type: DataTypes.DECIMAL(10,2),

@@ -51,18 +51,14 @@ exports.login = async (req, res) => {
       },
     ];
 
-    let user = null;
+    let user = await User.findOne({
+      where: { wechatOpenid: openid },
+      include,
+    });
 
-    if (unionid) {
+    if (!user && unionid) {
       user = await User.findOne({
         where: { wechatUnionid: unionid },
-        include,
-      });
-    }
-
-    if (!user) {
-      user = await User.findOne({
-        where: { wechatOpenid: openid },
         include,
       });
     }
@@ -82,7 +78,7 @@ exports.login = async (req, res) => {
       if (!user.wechatOpenid || user.wechatOpenid !== openid) {
         updates.wechatOpenid = openid;
       }
-      if (unionid && (!user.wechatUnionid || user.wechatUnionid !== unionid)) {
+      if (unionid && user.wechatUnionid !== unionid) {
         updates.wechatUnionid = unionid;
       }
 
