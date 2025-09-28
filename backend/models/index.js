@@ -72,16 +72,18 @@ Process.belongsToMany(Employee, {
 Contract.hasMany(ContractProduct, {
   foreignKey: {
     name: 'contractId',
-    allowNull: true,
+    allowNull: false,
   },
   as: 'products',
   constraints: false,
+  onDelete: 'CASCADE',
+  hooks: true,
 });
 
 ContractProduct.belongsTo(Contract, {
   foreignKey: {
     name: 'contractId',
-    allowNull: true,
+    allowNull: false,
   },
   as: 'contract',
   constraints: false,

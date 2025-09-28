@@ -2,6 +2,16 @@
 const { Employee, Process, EmployeeProcess, User, ProcessRecord, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
+const clearEmployeeWechatBindings = async (employeeId, options = {}) => {
+  const transaction = options.transaction || null;
+  const employee = await Employee.findByPk(employeeId, { transaction });
+  if (!employee) {
+    return null;
+  }
+  await employee.update({ wxOpenId: null, wxUnionId: null }, { transaction });
+  return employee;
+};
+
 // 工具函数：生成员工编码
 const generateEmployeeCode = () => {
   const timestamp = Date.now().toString();
@@ -442,6 +452,7 @@ exports.deleteEmployee = async (req, res) => {
 
 // 为员工分配工序
 exports.hardDeleteEmployeeById = hardDeleteEmployeeById;
+exports.clearEmployeeWechatBindings = clearEmployeeWechatBindings;
 
 exports.assignProcesses = async (req, res) => {
   try {

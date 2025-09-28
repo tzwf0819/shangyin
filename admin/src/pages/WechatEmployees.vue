@@ -16,7 +16,7 @@
             <td class="mono">{{ e.wxOpenId || '-' }}</td>
             <td>{{ e.status }}</td>
             <td>{{ format(e.createdAt) }}</td>
-            <td><button class="danger" @click="remove(e)">删除</button></td>
+            <td><button class="danger" @click="remove(e)">解绑</button></td>
           </tr>
         </tbody>
       </table>
@@ -33,12 +33,12 @@ const load = async ()=>{ const r = await listWechatEmployees(query); if(r.succes
 const format = (s)=> new Date(s).toLocaleString();
 const remove = async (employee) => {
   if (!employee || !employee.id) return;
-  if (!confirm('确认删除该员工？删除后将无法恢复。')) return;
+  if (!confirm('确认解除微信绑定？')) return;
   try {
     await deleteWechatEmployee(employee.id);
     await load();
   } catch (error) {
-    const message = error && error.response && error.response.data && error.response.data.message ? error.response.data.message : '删除失败';
+    const message = error && error.response && error.response.data && error.response.data.message ? error.response.data.message : '解绑失败';
     alert(message);
   }
 };

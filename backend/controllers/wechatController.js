@@ -1,6 +1,6 @@
 ﻿// controllers/wechatController.js
 const { Employee, Process, User } = require('../models');
-const { hardDeleteEmployeeById } = require('./employeeController');
+const { clearEmployeeWechatBindings } = require('./employeeController');
 const { Op } = require('sequelize');
 
 function buildEmployeeInclude() {
@@ -360,8 +360,8 @@ exports.listWechatEmployees = async (req, res) => {
 exports.deleteWechatEmployee = async (req, res) => {
   try {
     const { id } = req.params;
-    const removed = await hardDeleteEmployeeById(id);
-    if (!removed) {
+    const employee = await clearEmployeeWechatBindings(id);
+    if (!employee) {
       return res.status(404).json({
         success: false,
         message: '员工不存在'
@@ -370,13 +370,13 @@ exports.deleteWechatEmployee = async (req, res) => {
 
     res.json({
       success: true,
-      message: '员工已删除'
+      message: '微信绑定已清除'
     });
   } catch (error) {
     console.error('Delete WeChat employee error:', error);
     res.status(500).json({
       success: false,
-      message: '删除员工失败'
+      message: '清除微信绑定失败'
     });
   }
 };
