@@ -6,6 +6,7 @@ const {
   getAllEmployeesAdmin,
   updateEmployeeAdmin,
   deleteEmployeeAdmin,
+  bindWechatEmployee,
   clearWechatBinding,
   batchClearWechatBinding,
   batchDeleteEmployees
@@ -30,6 +31,9 @@ router.put('/employees/:id', updateEmployeeAdmin);
 // 删除单个员工（含微信关联清除）
 router.delete('/employees/:id', deleteEmployeeAdmin);
 
+// 手动绑定或解绑微信员工
+router.put('/employees/:id/binding', bindWechatEmployee);
+
 // 清除单个员工微信关联
 router.delete('/employees/:id/wechat', clearWechatBinding);
 
@@ -48,3 +52,4 @@ router.delete('/contracts/:id', deleteContract);
 router.post('/contracts/import', importContracts);
 
 module.exports = router;
+

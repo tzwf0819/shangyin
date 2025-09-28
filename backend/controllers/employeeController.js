@@ -1,5 +1,5 @@
 // controllers/employeeController.js
-const { Employee, Process, EmployeeProcess } = require('../models');
+const { Employee, Process, EmployeeProcess, User } = require('../models');
 const { Op } = require('sequelize');
 
 // 工具函数：生成员工编码
@@ -48,15 +48,22 @@ exports.getAllEmployees = async (req, res) => {
       limit: parseInt(limit),
       offset: offset,
       order: [['id', 'DESC']],
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: { 
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: { 
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }]
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
 
     res.json({
@@ -169,15 +176,22 @@ exports.createEmployee = async (req, res) => {
 
     // 返回完整数据
     const createdEmployee = await Employee.findByPk(employee.id, {
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: { 
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: { 
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }]
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
 
     res.status(201).json({
@@ -199,15 +213,22 @@ exports.getEmployeeById = async (req, res) => {
   try {
     const { id } = req.params;
     const employee = await Employee.findByPk(id, {
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: { 
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: { 
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }]
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
 
     if (!employee) {
@@ -297,15 +318,22 @@ exports.updateEmployee = async (req, res) => {
 
     // 返回更新后的数据
     const updatedEmployee = await Employee.findByPk(id, {
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: { 
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: { 
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }]
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
 
     res.json({
@@ -392,15 +420,22 @@ exports.assignProcesses = async (req, res) => {
 
     // 返回更新后的员工数据
     const updatedEmployee = await Employee.findByPk(id, {
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: { 
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: { 
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }]
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
 
     res.json({

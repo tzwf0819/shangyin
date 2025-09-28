@@ -1,5 +1,5 @@
 // controllers/wechatController.js
-const { Employee, Process, EmployeeProcess } = require('../models');
+const { Employee, Process, EmployeeProcess, User } = require('../models');
 const { Op } = require('sequelize');
 
 // 微信登录（仅使用 unionId 作为唯一标识；openId 仅存储不用于匹配）
@@ -12,12 +12,19 @@ exports.wechatLogin = async (req, res) => {
     // 仅按 unionId 匹配
     const employee = await Employee.findOne({
       where: { wxUnionId: unionId },
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: { attributes:['assignedAt','status'], where:{ status:'active' } },
-        required:false
-      }]
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: { attributes:['assignedAt','status'], where:{ status:'active' } },
+          required:false
+        },
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
     if (employee) {
       return res.json({ success:true, data:{ isRegistered:true, employee }, message:'登录成功' });
@@ -84,32 +91,53 @@ exports.registerEmployee = async (req, res) => {
       });
     }
 
-    // 创建员工
+    // 创建微信员工记录，并按姓名尝试自动绑定
+    const normalizedName = name.trim();
+    let boundUserId = null;
+
+    const matchedUser = await User.findOne({ where: { nickname: normalizedName } });
+    if (matchedUser) {
+      const existingBinding = await Employee.findOne({ where: { userId: matchedUser.id } });
+      if (!existingBinding) {
+        boundUserId = matchedUser.id;
+      }
+    }
+
     const employee = await Employee.create({
-      name: name.trim(),
+      name: normalizedName,
       code,
       wxOpenId: openId || null,
       wxUnionId: unionId,
-      status: 'active'
+      status: 'active',
+      userId: boundUserId
     });
 
     // 获取完整员工信息
     const fullEmployee = await Employee.findByPk(employee.id, {
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: { 
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: { 
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }]
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
 
     res.status(201).json({
       success: true,
       data: {
-        employee: fullEmployee
+        employee: fullEmployee,
+        autoBound: Boolean(boundUserId),
+        matchedUserId: boundUserId
       },
       message: '员工注册成功'
     });
@@ -136,15 +164,22 @@ exports.getEmployeeInfo = async (req, res) => {
 
     const employee = await Employee.findOne({
       where: { wxOpenId: openId },
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: { 
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: { 
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }]
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
 
     if (!employee) {
@@ -181,15 +216,22 @@ exports.getEmployeeProcesses = async (req, res) => {
 
     const employee = await Employee.findOne({
       where: { wxOpenId: openId },
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: { 
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: { 
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }]
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
 
     if (!employee) {
@@ -230,6 +272,11 @@ exports.listWechatEmployees = async (req, res) => {
       where,
       limit: parseInt(limit),
       offset,
+      include: [{
+        model: User,
+        as: 'boundUser',
+        attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+      }],
       order: [['id','DESC']]
     });
     res.json({ success:true, data:{ total:count, page:parseInt(page), limit:parseInt(limit), employees: rows } });
@@ -238,3 +285,4 @@ exports.listWechatEmployees = async (req, res) => {
     res.status(500).json({ success:false, message:'获取微信员工列表失败' });
   }
 };
+

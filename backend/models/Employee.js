@@ -28,6 +28,11 @@ module.exports = (sequelize) => {
     status: {
       type: DataTypes.STRING(20),
       comment: '状态：active-在职, inactive-离职'
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: '绑定的后台员工ID'
     }
   }, {
     tableName: 'employees',
@@ -37,13 +42,18 @@ module.exports = (sequelize) => {
     comment: '员工表'
   });
 
-  // 简化的关联关系
   Employee.associate = (models) => {
-    // 员工与工序的多对多关系
     if (models.EmployeeProcess) {
       Employee.hasMany(models.EmployeeProcess, {
         foreignKey: 'employeeId',
         as: 'employeeProcesses'
+      });
+    }
+
+    if (models.User) {
+      Employee.belongsTo(models.User, {
+        foreignKey: 'userId',
+        as: 'boundUser'
       });
     }
   };

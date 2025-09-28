@@ -1,5 +1,5 @@
 // controllers/adminController.js
-const { Employee, Process, ProductType, Contract, EmployeeProcess } = require('../models');
+const { Employee, Process, ProductType, Contract, EmployeeProcess, User } = require('../models');
 const { Op } = require('sequelize');
 
 // 获取管理员面板统计数据
@@ -103,15 +103,22 @@ exports.getAllEmployeesAdmin = async (req, res) => {
 
     const employees = await Employee.findAll({
       where: whereClause,
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: {
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: {
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }],
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ],
       limit: parseInt(limit),
       offset: (parseInt(page) - 1) * parseInt(limit),
       order: [['createdAt', 'DESC']]
@@ -225,15 +232,22 @@ exports.updateEmployeeAdmin = async (req, res) => {
     }
 
     const updatedEmployee = await Employee.findByPk(id, {
-      include: [{
-        model: Process,
-        as: 'processes',
-        through: {
-          attributes: ['assignedAt', 'status'],
-          where: { status: 'active' }
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: {
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
         },
-        required: false
-      }]
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
     });
 
     res.json({
@@ -306,6 +320,90 @@ exports.deleteEmployeeAdmin = async (req, res) => {
 };
 
 // Admin专用：清除员工微信关联
+// Admin专用：手动绑定或解绑微信员工
+exports.bindWechatEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body || {};
+
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ success: false, message: 'ID参数无效' });
+    }
+
+    const employee = await Employee.findByPk(id);
+    if (!employee) {
+      return res.status(404).json({ success: false, message: '微信员工不存在' });
+    }
+
+    if (userId === null || userId === undefined || userId === '') {
+      await employee.update({ userId: null });
+      const refreshed = await Employee.findByPk(id, {
+        include: [
+          {
+            model: Process,
+            as: 'processes',
+            through: {
+              attributes: ['assignedAt', 'status'],
+              where: { status: 'active' }
+            },
+            required: false
+          },
+          {
+            model: User,
+            as: 'boundUser',
+            attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+          }
+        ]
+      });
+      return res.json({ success: true, message: '绑定已解除', data: { employee: refreshed } });
+    }
+
+    const parsedUserId = Number(userId);
+    if (Number.isNaN(parsedUserId)) {
+      return res.status(400).json({ success: false, message: 'userId参数无效' });
+    }
+
+    const user = await User.findByPk(parsedUserId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: '目标员工不存在' });
+    }
+
+    const existingBinding = await Employee.findOne({
+      where: { userId: parsedUserId },
+      attributes: ['id', 'name']
+    });
+    if (existingBinding && existingBinding.id !== employee.id) {
+      return res.status(409).json({ success: false, message: '该员工已绑定其他微信账号' });
+    }
+
+    await employee.update({ userId: parsedUserId });
+
+    const refreshed = await Employee.findByPk(id, {
+      include: [
+        {
+          model: Process,
+          as: 'processes',
+          through: {
+            attributes: ['assignedAt', 'status'],
+            where: { status: 'active' }
+          },
+          required: false
+        },
+        {
+          model: User,
+          as: 'boundUser',
+          attributes: ['id', 'nickname', 'phone', 'status', 'lastLoginAt']
+        }
+      ]
+    });
+
+    return res.json({ success: true, message: '绑定关系已更新', data: { employee: refreshed } });
+  } catch (error) {
+    console.error('Bind wechat employee error:', error);
+    return res.status(500).json({ success: false, message: '更新绑定关系失败' });
+  }
+};
+
 exports.clearWechatBinding = async (req, res) => {
   try {
     const { id } = req.params;
@@ -334,13 +432,15 @@ exports.clearWechatBinding = async (req, res) => {
 
     const oldWxInfo = {
       wxOpenId: employee.wxOpenId,
-      wxUnionId: employee.wxUnionId
+      wxUnionId: employee.wxUnionId,
+      boundUserId: employee.userId
     };
 
     // 清除微信关联信息
     await employee.update({
       wxOpenId: null,
-      wxUnionId: null
+      wxUnionId: null,
+      userId: null
     });
 
     res.json({
@@ -350,6 +450,7 @@ exports.clearWechatBinding = async (req, res) => {
         employeeId: employee.id,
         employeeName: employee.name,
         employeeCode: employee.code,
+        clearedBoundUserId: oldWxInfo.boundUserId,
         clearedWxInfo: oldWxInfo
       }
     });
@@ -383,7 +484,7 @@ exports.batchClearWechatBinding = async (req, res) => {
           { wxUnionId: { [Op.not]: null } }
         ]
       },
-      attributes: ['id', 'name', 'code', 'wxOpenId', 'wxUnionId']
+      attributes: ['id', 'name', 'code', 'wxOpenId', 'wxUnionId', 'userId']
     });
 
     if (employees.length === 0) {
@@ -399,12 +500,13 @@ exports.batchClearWechatBinding = async (req, res) => {
       name: emp.name,
       code: emp.code,
       wxOpenId: emp.wxOpenId,
-      wxUnionId: emp.wxUnionId
+      wxUnionId: emp.wxUnionId,
+      userId: emp.userId
     }));
 
     // 批量清除微信关联
     const [updatedCount] = await Employee.update(
-      { wxOpenId: null, wxUnionId: null },
+      { wxOpenId: null, wxUnionId: null, userId: null },
       { where: { id: employeeIds } }
     );
 
@@ -441,7 +543,7 @@ exports.batchDeleteEmployees = async (req, res) => {
     // 获取要删除的员工信息
     const employees = await Employee.findAll({
       where: { id: employeeIds },
-      attributes: ['id', 'name', 'code', 'wxOpenId', 'wxUnionId']
+      attributes: ['id', 'name', 'code', 'wxOpenId', 'wxUnionId', 'userId']
     });
 
     if (employees.length === 0) {
@@ -457,7 +559,8 @@ exports.batchDeleteEmployees = async (req, res) => {
       name: emp.name,
       code: emp.code,
       wxOpenId: emp.wxOpenId,
-      wxUnionId: emp.wxUnionId
+      wxUnionId: emp.wxUnionId,
+      userId: emp.userId
     }));
 
     // 删除关联的工序记录
