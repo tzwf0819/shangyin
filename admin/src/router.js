@@ -1,4 +1,4 @@
-import { createRouter, createWebHashHistory } from 'vue-router';
+﻿import { createRouter, createWebHashHistory } from 'vue-router';
 import Dashboard from './pages/Dashboard.vue';
 import Processes from './pages/Processes.vue';
 import ProductTypes from './pages/ProductTypes.vue';
@@ -7,6 +7,8 @@ import Contracts from './pages/Contracts.vue';
 import Login from './pages/Login.vue';
 import ProductionRecords from './pages/ProductionRecords.vue';
 import WechatEmployees from './pages/WechatEmployees.vue';
+import ProductionProgress from './pages/ProductionProgress.vue';
+import EmployeePerformance from './pages/EmployeePerformance.vue';
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
@@ -17,6 +19,8 @@ const routes = [
   { path: '/employees', component: Employees },
   { path: '/contracts', component: Contracts },
   { path: '/production-records', component: ProductionRecords },
+  { path: '/production-progress', component: ProductionProgress },
+  { path: '/employee-performance', component: EmployeePerformance },
   { path: '/wechat-employees', component: WechatEmployees },
 ];
 

@@ -211,9 +211,21 @@ const mapImportedContract = (raw) => {
     const target = contractImportMap[key] || key;
     mapped[target] = raw[key];
   });
+  ['isNewWoodBox', 'isNewDrawing', 'isDrawingReviewed'].forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(mapped, field)) {
+      const value = mapped[field];
+      if (typeof value === 'boolean') return;
+      if (value === null || value === undefined || value === '') {
+        mapped[field] = false;
+      } else {
+        const text = String(value).trim().toLowerCase();
+        mapped[field] = ['1', 'true', 'yes', 'y', '是', '√', 'checked'].includes(text);
+      }
+    }
+  });
   const products = Array.isArray(raw.products) ? raw.products : [];
   mapped.products = products.map((product) => {
-    const target = {};
+    const target = { ...defaultProduct() };
     Object.keys(product || {}).forEach((key) => {
       const mappedKey = productImportMap[key] || key;
       target[mappedKey] = product[key];
