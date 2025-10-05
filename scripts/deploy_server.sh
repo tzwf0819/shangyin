@@ -35,13 +35,15 @@ sleep 3
 echo "检查Node.js和npm..."
 echo "当前PATH: $PATH"
 
-# 首先尝试重新加载环境变量
+# 安全地重新加载环境变量（避免未绑定变量错误）
+set +u  # 关闭未绑定变量检查
 if [ -f ~/.bashrc ]; then
-    source ~/.bashrc
+    source ~/.bashrc || true
 fi
 if [ -f ~/.profile ]; then
-    source ~/.profile
+    source ~/.profile || true
 fi
+set -u  # 重新开启未绑定变量检查
 
 # 检查npm是否在常见安装路径中
 if ! command -v npm &> /dev/null; then
