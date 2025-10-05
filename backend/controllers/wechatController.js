@@ -255,6 +255,11 @@ exports.getEmployeeInfo = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Employee not found',
+        code: 'WECHAT_EMPLOYEE_NOT_FOUND',
+        data: {
+          needRegister: true,
+          openId,
+        },
       });
     }
 
@@ -291,6 +296,11 @@ exports.getEmployeeProcesses = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Employee not found',
+        code: 'WECHAT_EMPLOYEE_NOT_FOUND',
+        data: {
+          needRegister: true,
+          openId,
+        },
       });
     }
 
@@ -380,3 +390,4 @@ exports.deleteWechatEmployee = async (req, res) => {
     });
   }
 };
+

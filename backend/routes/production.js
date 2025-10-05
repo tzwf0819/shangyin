@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const { ProcessRecord, Employee, Contract, ContractProduct, Process, sequelize } = require('../models');
-// ���ʼ��㸨��
+// 计薪计算函数
 async function calcPay({ processId, quantity, actualTimeMinutes }) {
   const process = await Process.findByPk(processId);
-  if (!process) throw new Error('���򲻴���');
+  if (!process) throw new Error('工序不存在');
   const payRate = Number(process.payRate);
   const payRateUnit = process.payRateUnit;
   let payAmount = 0;
@@ -21,7 +21,7 @@ async function calcPay({ processId, quantity, actualTimeMinutes }) {
   };
 }
 
-// ��������
+// 生产进度
 router.get('/progress', async (req, res) => {
   try {
     const {
@@ -135,7 +135,7 @@ router.get('/progress', async (req, res) => {
     });
   } catch (error) {
     console.error('List production progress error:', error);
-    res.status(500).json({ success: false, message: '��ȡ��������ʧ��' });
+    res.status(500).json({ success: false, message: '获取生产进度失败' });
   }
 });
 
@@ -143,7 +143,7 @@ router.get('/progress/:productId/records', async (req, res) => {
   try {
     const productId = Number(req.params.productId);
     if (Number.isNaN(productId) || productId <= 0) {
-      return res.status(400).json({ success: false, message: '��ͬ��ƷID��Ч' });
+      return res.status(400).json({ success: false, message: '合同产品ID无效' });
     }
 
     const product = await ContractProduct.findByPk(productId, {
@@ -155,7 +155,7 @@ router.get('/progress/:productId/records', async (req, res) => {
     });
 
     if (!product) {
-      return res.status(404).json({ success: false, message: '��ͬ��Ʒ������' });
+      return res.status(404).json({ success: false, message: '合同产品不存在' });
     }
 
     const records = await ProcessRecord.findAll({
@@ -194,12 +194,12 @@ router.get('/progress/:productId/records', async (req, res) => {
         id: 'order-' + product.id,
         type: 'order',
         createdAt: orderDateSource.toISOString(),
-        processName: '�µ�ʱ��',
+        processName: '下单时间',
         employeeName: '',
         quantity: null,
         actualTimeMinutes: null,
         payAmount: null,
-        notes: product.contract?.signedLocation ? 'ǩ���ص㣺' + product.contract.signedLocation : '',
+        notes: product.contract?.signedLocation ? '签订地点：' + product.contract.signedLocation : '',
       });
     }
 
@@ -229,12 +229,12 @@ router.get('/progress/:productId/records', async (req, res) => {
     });
   } catch (error) {
     console.error('Load product progress records error:', error);
-    res.status(500).json({ success: false, message: '��ȡ������¼ʧ��' });
+    res.status(500).json({ success: false, message: '获取生产记录失败' });
   }
 });
 
-// Ա����Ч
-// Ա����Ч
+// 员工绩效
+// 员工绩效
 
 // 员工绩效汇总
 router.get('/performance/summary', async (req, res) => {
@@ -470,20 +470,20 @@ router.get('/performance', async (req, res) => {
     });
   } catch (error) {
     console.error('List employee performance error:', error);
-    res.status(500).json({ success: false, message: '��ȡԱ����Чʧ��' });
+    res.status(500).json({ success: false, message: '获取员工绩效失败' });
   }
 });
 
-// �½�������¼
+// 新建生产记录
 router.post('/record', async (req, res) => {
   try {
     const { employeeId, contractId, contractProductId, processId, quantity, actualTimeMinutes, notes } = req.body;
     if (!employeeId || !contractId || !contractProductId || !processId) {
-      return res.status(400).json({ success: false, message: 'ȱ�ٱ�Ҫ����' });
+      return res.status(400).json({ success: false, message: '缺少必要字段' });
     }
     const employee = await Employee.findByPk(employeeId);
     if (!employee) {
-      return res.status(404).json({ success: false, message: 'Ա��������' });
+      return res.status(404).json({ success: false, message: '员工不存在' });
     }
     const calc = await calcPay({ processId, quantity, actualTimeMinutes });
     const record = await ProcessRecord.create({
@@ -501,21 +501,21 @@ router.post('/record', async (req, res) => {
     });
     res.json({ success: true, data: { record } });
   } catch (error) {
-    console.error('�½�������¼ʧ��:', error);
-    res.status(500).json({ success: false, message: '�½�������¼ʧ��' });
+    console.error('新建生产记录失败:', error);
+    res.status(500).json({ success: false, message: '新建生产记录失败' });
   }
 });
 
-// �༭������¼
+// 编辑生产记录
 router.put('/record/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { employeeId, contractId, contractProductId, processId, quantity, actualTimeMinutes, notes } = req.body;
     const record = await ProcessRecord.findByPk(id);
-    if (!record) return res.status(404).json({ success: false, message: '��¼������' });
+    if (!record) return res.status(404).json({ success: false, message: '记录不存在' });
     const employee = await Employee.findByPk(employeeId);
     if (!employee) {
-      return res.status(404).json({ success: false, message: 'Ա��������' });
+      return res.status(404).json({ success: false, message: '员工不存在' });
     }
     const calc = await calcPay({ processId, quantity, actualTimeMinutes });
     await record.update({
@@ -533,26 +533,26 @@ router.put('/record/:id', async (req, res) => {
     });
     res.json({ success: true, data: { record } });
   } catch (error) {
-    console.error('�༭������¼ʧ��:', error);
-    res.status(500).json({ success: false, message: '�༭������¼ʧ��' });
+    console.error('编辑生产记录失败:', error);
+    res.status(500).json({ success: false, message: '编辑生产记录失败' });
   }
 });
 
-// ɾ��������¼
+// 删除生产记录
 router.delete('/record/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const record = await ProcessRecord.findByPk(id);
-    if (!record) return res.status(404).json({ success: false, message: '��¼������' });
+    if (!record) return res.status(404).json({ success: false, message: '记录不存在' });
     await record.destroy();
     res.json({ success: true });
   } catch (error) {
-    console.error('ɾ��������¼ʧ��:', error);
-    res.status(500).json({ success: false, message: 'ɾ��������¼ʧ��' });
+    console.error('删除生产记录失败:', error);
+    res.status(500).json({ success: false, message: '删除生产记录失败' });
   }
 });
 
-// ��ѯ������¼��֧�ַ�ҳ��������
+// 查询生产记录，支持分页和筛选
 router.get('/record', async (req, res) => {
   try {
     const { employeeId, contractId, contractProductId, processId, page=1, limit=20 } = req.query;
@@ -576,12 +576,12 @@ router.get('/record', async (req, res) => {
     });
     res.json({ success: true, data: { total: count, records: rows } });
   } catch (error) {
-    console.error('��ѯ������¼ʧ��:', error);
-    res.status(500).json({ success: false, message: '��ѯ������¼ʧ��' });
+    console.error('查询生产记录失败:', error);
+    res.status(500).json({ success: false, message: '查询生产记录失败' });
   }
 });
 
-// ��ȡ��ͬ���������б�  
+// 获取合同产品简单列表  
 router.get('/contract-list', async (req, res) => {
   try {
     res.json({
@@ -589,25 +589,25 @@ router.get('/contract-list', async (req, res) => {
       data: []
     });
   } catch (error) {
-    console.error('��ȡ��ͬ���������б�ʧ��:', error);
-    res.status(500).json({ success: false, message: '��ȡ��ͬ���������б�ʧ��' });
+    console.error('获取合同产品简单列表失败:', error);
+    res.status(500).json({ success: false, message: '获取合同产品简单列表失败' });
   }
 });
 
-// ɨ�蹤���ά���¼����
+// 扫码工序二维码录入
 router.post('/scan/process', async (req, res) => {
   try {
     const { qrCode, employeeId, wechatOpenId, duration, notes } = req.body;
     
     res.json({ 
       success: true, 
-      message: '������¼�ɹ�',
-      data: { recordId: 1, totalWage: 10, processName: 'ʾ������' }
+      message: '流程记录成功',
+      data: { recordId: 1, totalWage: 10, processName: '示例工序' }
     });
 
   } catch (error) {
-    console.error('ɨ�蹤��ʧ��:', error);
-    res.status(500).json({ success: false, message: '��¼����ʧ��' });
+    console.error('扫码工序失败:', error);
+    res.status(500).json({ success: false, message: '录入流程失败' });
   }
 });
 
