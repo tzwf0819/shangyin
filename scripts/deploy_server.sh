@@ -31,6 +31,16 @@ sudo pkill -f "node.*app.js" || true
 sudo pkill -f "npm.*run.*dev" || true
 sleep 3
 
+# 检查并安装Node.js和npm
+echo "检查Node.js和npm..."
+if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+    echo "安装Node.js 18..."
+    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+    sudo apt-get install -y nodejs
+    echo "Node.js版本: $(node --version)"
+    echo "npm版本: $(npm --version)"
+fi
+
 # 安装后端依赖
 echo "安装后端依赖..."
 cd "$BACKEND_DIR"
