@@ -132,9 +132,9 @@ jobs:
             # 下载GitHub仓库的zip包
             wget -O latest.zip "https://github.com/${{ github.repository }}/archive/refs/heads/main.zip"
             unzip -o latest.zip -d "$PROJECT_DIR/temp"
-            # 复制shangyin-backend目录内容到目标位置
+            # 复制解压后的目录内容到目标位置
             sudo rm -rf "$PROJECT_DIR/shangyin-backend"
-            sudo cp -r "$PROJECT_DIR/temp/$(basename ${{ github.repository }})-main/shangyin-backend" "$PROJECT_DIR/"
+            sudo cp -r "$PROJECT_DIR/temp/$(basename ${{ github.repository }})-main" "$PROJECT_DIR/shangyin-backend"
             sudo rm -rf "$PROJECT_DIR/temp" "$PROJECT_DIR/latest.zip"
             echo "当前目录: $(pwd)"
             echo "目录内容:"
