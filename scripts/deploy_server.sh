@@ -3,11 +3,13 @@ set -euo pipefail
 
 echo "=== 开始部署商印后端服务 ==="
 
-# 设置变量
-PROJECT_DIR=$(pwd)
+# 设置变量 - 从脚本所在目录向上找到项目根目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$PROJECT_DIR/backend"
 ADMIN_DIR="$PROJECT_DIR/admin"
 
+echo "脚本目录: $SCRIPT_DIR"
 echo "项目目录: $PROJECT_DIR"
 echo "后端目录: $BACKEND_DIR"
 echo "管理端目录: $ADMIN_DIR"

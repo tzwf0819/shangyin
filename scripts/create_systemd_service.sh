@@ -3,13 +3,15 @@ set -euo pipefail
 
 echo "=== 创建Systemd服务 ==="
 
-# 设置变量
-PROJECT_DIR=$(pwd)
+# 设置变量 - 从脚本所在目录向上找到项目根目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BACKEND_DIR="$PROJECT_DIR/backend"
 SERVICE_NAME="shangyin-backend"
 SERVICE_FILE="/etc/systemd/system/$SERVICE_NAME.service"
 USER=$(whoami)
 
+echo "脚本目录: $SCRIPT_DIR"
 echo "项目目录: $PROJECT_DIR"
 echo "服务名称: $SERVICE_NAME"
 echo "服务文件: $SERVICE_FILE"
