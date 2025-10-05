@@ -124,8 +124,10 @@ jobs:
           command_timeout: 20m
           script: |
             set -euo pipefail
-            PROJECT_DIR="/root/shangyin-backend"
+            PROJECT_DIR="${{ secrets.PROJECT_DIR }}"
             echo "设置云端工作目录为: $PROJECT_DIR"
+            # 清空项目目录
+            sudo rm -rf "$PROJECT_DIR"/*
             sudo mkdir -p "$PROJECT_DIR"
             cd "$PROJECT_DIR"
             echo "使用wget下载最新代码..."
@@ -133,15 +135,9 @@ jobs:
             wget -O latest.zip "https://github.com/${{ github.repository }}/archive/refs/heads/main.zip"
             unzip -o latest.zip -d "$PROJECT_DIR/temp"
             # 复制解压后的目录内容到目标位置
-            sudo rm -rf "$PROJECT_DIR/shangyin-backend"
-            sudo cp -r "$PROJECT_DIR/temp/$(basename ${{ github.repository }})-main" "$PROJECT_DIR/shangyin-backend"
+            sudo cp -r "$PROJECT_DIR/temp/$(basename ${{ github.repository }})-main"/* "$PROJECT_DIR/"
             sudo rm -rf "$PROJECT_DIR/temp" "$PROJECT_DIR/latest.zip"
             echo "当前目录: $(pwd)"
-            echo "目录内容:"
-            ls -la
-            echo "进入shangyin-backend目录..."
-            cd shangyin-backend
-            echo "当前在shangyin-backend目录: $(pwd)"
             echo "目录内容:"
             ls -la
             echo "scripts目录内容:"
