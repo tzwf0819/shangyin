@@ -125,18 +125,17 @@ jobs:
           script: |
             set -euo pipefail
             PROJECT_DIR="/root/shangyin-backend"
-            REPO_URL="https://github.com/${{ github.repository }}.git"
-            BRANCH="main"
             echo "设置云端工作目录为: $PROJECT_DIR"
             sudo mkdir -p "$PROJECT_DIR"
-            if [ ! -d "$PROJECT_DIR/.git" ]; then
-              echo "初始化仓库到 $PROJECT_DIR ..."
-              sudo rm -rf "$PROJECT_DIR"
-              sudo mkdir -p "$PROJECT_DIR"
-              sudo chown -R $(whoami):$(whoami) "$PROJECT_DIR"
-              git clone --depth 1 -b "$BRANCH" "$REPO_URL" "$PROJECT_DIR"
-            fi
             cd "$PROJECT_DIR"
+            echo "使用wget下载最新代码..."
+            # 下载GitHub仓库的zip包
+            wget -O latest.zip "https://github.com/${{ github.repository }}/archive/refs/heads/main.zip"
+            unzip -o latest.zip -d "$PROJECT_DIR/temp"
+            # 复制shangyin-backend目录内容到目标位置
+            sudo rm -rf "$PROJECT_DIR/shangyin-backend"
+            sudo cp -r "$PROJECT_DIR/temp/$(basename ${{ github.repository }})-main/shangyin-backend" "$PROJECT_DIR/"
+            sudo rm -rf "$PROJECT_DIR/temp" "$PROJECT_DIR/latest.zip"
             echo "当前目录: $(pwd)"
             echo "目录内容:"
             ls -la
