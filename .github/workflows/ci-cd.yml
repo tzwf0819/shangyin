@@ -135,7 +135,11 @@ jobs:
             wget -O latest.zip "https://github.com/${{ github.repository }}/archive/refs/heads/main.zip"
             unzip -o latest.zip -d "$PROJECT_DIR/temp"
             # 复制解压后的目录内容到目标位置
+            echo "复制文件从临时目录到项目目录..."
+            # 确保复制整个shangyin-main目录的内容，保持正确的目录结构
             sudo cp -r "$PROJECT_DIR/temp/$(basename ${{ github.repository }})-main"/* "$PROJECT_DIR/"
+            sudo cp -r "$PROJECT_DIR/temp/$(basename ${{ github.repository }})-main"/.* "$PROJECT_DIR/" 2>/dev/null || true
+            echo "复制完成，检查文件结构..."
             sudo rm -rf "$PROJECT_DIR/temp" "$PROJECT_DIR/latest.zip"
             echo "当前目录: $(pwd)"
             echo "目录内容:"
