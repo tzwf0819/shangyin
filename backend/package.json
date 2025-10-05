@@ -5,8 +5,12 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
+    "test": "node test-complete.js",
     "test:qrcodes": "node test-qrcodes.js",
-    "test:remote:qrcodes": "node test-remote-qrcodes.js"
+    "test:remote:qrcodes": "node test-remote-qrcodes.js",
+    "test:api": "node test-api.js",
+    "test:production": "node test-production-records.js",
+    "test:producttype": "node test-producttype-processes.js"
   },
   "dependencies": {
     "axios": "^1.5.0",

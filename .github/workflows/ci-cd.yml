@@ -49,7 +49,7 @@ jobs:
         working-directory: backend
         run: npm ci
 
-      - name: Run backend QR code tests
+      - name: Run backend comprehensive tests
         working-directory: backend
         env:
           NODE_ENV: test
@@ -80,8 +80,17 @@ jobs:
             cat backend-test.log
             exit 1
           }
-          echo "Server is ready, running QR code tests..."
+          echo "Server is ready, running comprehensive tests..."
+          echo "1. Running QR code tests..."
           npm run test:qrcodes
+          echo "2. Running API smoke tests..."
+          npm run test:api
+          echo "3. Running production record tests..."
+          npm run test:production
+          echo "4. Running product type process tests..."
+          npm run test:producttype
+          echo "5. Running complete test suite..."
+          npm test
 
       - name: Upload backend test log on failure
         if: failure()
