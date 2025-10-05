@@ -35,10 +35,26 @@ sleep 3
 echo "检查Node.js和npm..."
 if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
     echo "安装Node.js 18..."
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    sudo apt-get install -y nodejs
-    echo "Node.js版本: $(node --version)"
-    echo "npm版本: $(npm --version)"
+    
+    # 检测系统类型并选择合适的安装方式
+    if [ -f /etc/debian_version ]; then
+        echo "检测到Debian/Ubuntu系统"
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+    elif [ -f /etc/redhat-release ] || [ -f /etc/centos-release ]; then
+        echo "检测到CentOS/RHEL系统"
+        curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+        sudo yum install -y nodejs
+    elif [ -f /etc/alpine-release ]; then
+        echo "检测到Alpine Linux系统"
+        sudo apk add --update nodejs npm
+    else
+        echo "未知系统，尝试使用NodeSource通用安装脚本"
+        curl -fsSL https://install-node.now.sh/lts | sudo bash -
+    fi
+    
+    echo "Node.js版本: $(node --version 2>/dev/null || echo '未安装')"
+    echo "npm版本: $(npm --version 2>/dev/null || echo '未安装')"
 fi
 
 # 安装后端依赖
