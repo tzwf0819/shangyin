@@ -40,6 +40,11 @@ jobs:
         working-directory: admin
         run: npm run build --if-present
 
+      - name: Setup SQLite for testing
+        working-directory: backend
+        run: |
+          echo "Using SQLite for testing (no setup required)"
+
       - name: Install Backend deps
         working-directory: backend
         run: npm ci
@@ -48,15 +53,33 @@ jobs:
         working-directory: backend
         env:
           NODE_ENV: test
+          PORT: 3000
+          JWT_SECRET: test_jwt_secret_for_ci
         run: |
           set -euo pipefail
-          echo "Starting backend server..."
+          echo "Installing wait-on package..."
+          npm install -g wait-on@7
+          echo "Starting backend server with test environment..."
           nohup node app.js > backend-test.log 2>&1 &
           BACKEND_PID=$!
           echo "Backend server started with PID: $BACKEND_PID"
-          trap "kill $BACKEND_PID" EXIT
-          echo "Waiting for server to be ready..."
-          npx wait-on@7 http://127.0.0.1:3000/shangyin/ --timeout 30000 --interval 1000
+          sleep 10
+          echo "Checking server status..."
+          if ! ps -p $BACKEND_PID > /dev/null; then
+            echo "Server process died. Log contents:"
+            cat backend-test.log || echo "No log file"
+            exit 1
+          fi
+          echo "Server process is alive, checking logs..."
+          cat backend-test.log || echo "No logs yet"
+          trap "kill $BACKEND_PID 2>/dev/null || true" EXIT
+          echo "Waiting for server to be ready (up to 60 seconds)..."
+          timeout 60 bash -c 'until curl -f http://localhost:3000/shangyin/ >/dev/null 2>&1; do sleep 3; echo "Waiting..."; done' || {
+            echo "Server failed to start within timeout"
+            echo "Current log contents:"
+            cat backend-test.log
+            exit 1
+          }
           echo "Server is ready, running QR code tests..."
           npm run test:qrcodes
 
