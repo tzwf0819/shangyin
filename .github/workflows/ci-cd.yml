@@ -140,13 +140,18 @@ jobs:
             echo "当前目录: $(pwd)"
             echo "目录内容:"
             ls -la
-            echo "检查shangyin-backend目录:"
-            ls -la shangyin-backend/ || echo "shangyin-backend目录不存在"
-            echo "将shangyin-backend内容移动到shangyin目录..."
+            echo "检查根目录结构..."
+            echo "由于Git仓库只管理shangyin-backend文件夹，直接进入该目录..."
+            cd shangyin-backend
+            echo "当前在shangyin-backend目录: $(pwd)"
+            echo "目录内容:"
+            ls -la
+            echo "将当前目录重命名为shangyin..."
+            cd ..
             sudo rm -rf shangyin
             sudo mv shangyin-backend shangyin
             cd shangyin
-            echo "移动后的目录内容:"
+            echo "重命名后的目录内容:"
             ls -la
             echo "scripts目录内容:"
             ls -la scripts/ || echo "scripts目录不存在"
