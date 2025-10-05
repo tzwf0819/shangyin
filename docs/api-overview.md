@@ -173,3 +173,32 @@ cd ..
 3. 依次创建合同、查询详情、验证重复编号、验证成品数量上限。
 
 > 首次更新模型后请删除旧的 `database/shangyin.db` 或执行一次 `node app.js`（内部使用 `sequelize.sync({ alter: true })` 自动调整表结构）。
+## 10. ��ά��ӿ� `/qrcodes`
+
+| Method | Path | ˵�� |
+| ------ | ---- | ---- |
+| GET | `/qrcodes/contract/:id` | ��û�ͬID���ɶ�Ӧ�ľ�ά�룬���Ӧ������������
+| GET | `/qrcodes/contract-product/:id` | ����ͬ��ƷID���ɶ�Ӧ����ť������ڴ洢��Ʒ��Ϣ��
+| GET | `/qrcodes/process/:id` | �����񣬶�ά�������á�processId/processCode��Ϣ��
+
+���еĺ�Ӧ���ش��ṩ:
+
+```json
+{
+  "success": true,
+  "data": {
+    "payload": {
+      "type": "contractProduct",
+      "contractId": 12,
+      "contractProductId": 35,
+      "contractNumber": "HT-2024-001",
+      "productCode": "P-001",
+      "productName": "�����A"
+    },
+    "text": "{\"type\":\"contractProduct\",...}",
+    "dataUrl": "data:image/png;base64,iVBORw0KGgo..."
+  }
+}
+```
+
+ǰ��ɨ�赽�Ժ�, ��ҿ���ֱ��ʹ�� `payload` �е�����ֵ�����������չʾ��Ʒ��Ϣ��
