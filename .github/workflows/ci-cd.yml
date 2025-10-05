@@ -137,6 +137,19 @@ jobs:
               git clone --depth 1 -b "$BRANCH" "$REPO_URL" "$PROJECT_DIR"
             fi
             cd "$PROJECT_DIR"
+            echo "当前目录: $(pwd)"
+            echo "目录内容:"
+            ls -la
+            echo "检查shangyin-backend目录:"
+            ls -la shangyin-backend/ || echo "shangyin-backend目录不存在"
+            echo "将shangyin-backend内容移动到shangyin目录..."
+            sudo rm -rf shangyin
+            sudo mv shangyin-backend shangyin
+            cd shangyin
+            echo "移动后的目录内容:"
+            ls -la
+            echo "scripts目录内容:"
+            ls -la scripts/ || echo "scripts目录不存在"
             chmod +x scripts/deploy_server.sh || true
             chmod +x scripts/create_systemd_service.sh || true
             sudo scripts/deploy_server.sh
