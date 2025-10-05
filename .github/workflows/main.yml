@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     name: Build & Test
-    runs-on: ubuntu-latest
+    runs-on: centos-latest
     timeout-minutes: 25
     env:
       CI: true
