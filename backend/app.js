@@ -85,7 +85,7 @@ app.use('/shangyin/production', require('./routes/production'));
 app.use('/shangyin/qrcodes', require('./routes/qrcode'));
 app.use('/shangyin/performance', require('./routes/performance'));
 
-// 全局错误处理中间�?
+// 全局错误处理中间件
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ success: false, message: 'Internal server error' });
@@ -122,4 +122,3 @@ const startServer = async () => {
 startServer();
 
 module.exports = app;
-

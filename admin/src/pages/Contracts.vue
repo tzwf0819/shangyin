@@ -1,4 +1,4 @@
-﻿<template>
+﻿﻿﻿﻿﻿﻿<template>
   <div>
     <div class="toolbar">
       <input v-model="query.keyword" placeholder="合同编号/甲方/乙方" @keyup.enter="load" />
@@ -33,6 +33,7 @@
             <td>{{ (c.products || []).length }}</td>
             <td>
               <button @click="openEdit(c)">编辑</button>
+              <button @click="viewQRCode(c.id)">查看二维码</button>
               <button class="danger" @click="remove(c.id)">删除</button>
             </td>
           </tr>
@@ -155,6 +156,20 @@
         </div>
       </form>
     </dialog>
+
+    <dialog ref="dlgQRCode">
+      <div class="modal-header">合同二维码</div>
+      <div class="modal-body qrcode-container">
+        <div v-if="qrCodeData" class="qrcode-image">
+          <img :src="qrCodeData" alt="合同二维码" />
+        </div>
+        <div v-else class="loading">加载中...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" @click="closeQRCode">关闭</button>
+        <button class="primary" @click="downloadQRCode">下载二维码</button>
+      </div>
+    </dialog>
   </div>
 </template>
 
@@ -162,6 +177,7 @@
 import { ref, reactive, onMounted } from 'vue';
 import { listContracts, createContract, updateContract, deleteContract, importContracts } from '../api/contracts';
 import { listProductTypes } from '../api/productTypes';
+import { getContractQRCode } from '../api/qrcodes';
 
 const clauseFields = Array.from({ length: 10 }, (_, i) => `clause${i + 1}`);
 const clauseLabels = clauseFields.reduce((acc, field, index) => {
@@ -489,6 +505,47 @@ const doImport = async () => {
   } catch (error) {
     alert(error?.message || '导入失败，请检查 JSON 格式');
   }
+};
+
+const dlgQRCode = ref();
+const qrCodeData = ref('');
+const currentContractId = ref('');
+
+const viewQRCode = async (contractId) => {
+  try {
+    currentContractId.value = contractId;
+    qrCodeData.value = '';
+    const response = await getContractQRCode(contractId);
+    if (response.success) {
+      qrCodeData.value = response.data.qrCodeUrl || response.data;
+    } else {
+      alert('获取二维码失败');
+    }
+    dlgQRCode.value.showModal();
+  } catch (error) {
+    alert('获取二维码失败');
+  }
+};
+
+const closeQRCode = () => {
+  try {
+    dlgQRCode.value.close();
+    qrCodeData.value = '';
+    currentContractId.value = '';
+  } catch (error) {
+    console.warn('关闭二维码对话框失败', error);
+  }
+};
+
+const downloadQRCode = () => {
+  if (!qrCodeData.value) return;
+  
+  const link = document.createElement('a');
+  link.href = qrCodeData.value;
+  link.download = `contract-qrcode-${currentContractId.value}.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 onMounted(() => {
