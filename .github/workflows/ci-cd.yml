@@ -1,0 +1,119 @@
+﻿name: CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+          cache-dependency-path: |
+            admin/package-lock.json
+            backend/package-lock.json
+
+      - name: Install Admin deps
+        working-directory: admin
+        run: npm ci
+
+      - name: Build Admin
+        working-directory: admin
+        run: npm run build --if-present
+
+      - name: Install Backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Run backend QR code tests
+        working-directory: backend
+        env:
+          NODE_ENV: test
+        run: |
+          set -euo pipefail
+          echo "Starting backend server..."
+          nohup node app.js > backend-test.log 2>&1 &
+          BACKEND_PID=$!
+          echo "Backend server started with PID: $BACKEND_PID"
+          trap "kill $BACKEND_PID" EXIT
+          echo "Waiting for server to be ready..."
+          npx wait-on@7 http://127.0.0.1:3000/shangyin/ --timeout 30000 --interval 1000
+          echo "Server is ready, running QR code tests..."
+          npm run test:qrcodes
+
+      - name: Upload backend test log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-log
+          path: backend/backend-test.log
+
+      - name: Archive admin dist artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-dist
+          path: admin/dist
+
+  deploy:
+    name: Deploy to Alibaba Cloud
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    timeout-minutes: 20
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: true
+    steps:
+      - name: Print deploy target
+        run: |
+          echo "Host: ${{ secrets.SSH_HOST }}"
+          echo "User: ${{ secrets.SSH_USER }}"
+          echo "Dir:  ${{ secrets.PROJECT_DIR }}"
+
+      - name: Deploy over SSH and run server script
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            PROJECT_DIR="${{ secrets.PROJECT_DIR }}"
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+            BRANCH="main"
+            if [ -z "$PROJECT_DIR" ]; then echo "PROJECT_DIR secret is required"; exit 1; fi
+            sudo mkdir -p "$PROJECT_DIR"
+            if [ ! -d "$PROJECT_DIR/.git" ]; then
+              echo "Bootstrapping repo at $PROJECT_DIR ..."
+              sudo rm -rf "$PROJECT_DIR"
+              sudo mkdir -p "$PROJECT_DIR"
+              sudo chown -R $(whoami):$(whoami) "$PROJECT_DIR"
+              git clone --depth 1 -b "$BRANCH" "$REPO_URL" "$PROJECT_DIR"
+            fi
+            cd "$PROJECT_DIR"
+            chmod +x scripts/deploy_server.sh || true
+            chmod +x scripts/create_systemd_service.sh || true
+            sudo scripts/deploy_server.sh
