@@ -124,13 +124,13 @@ jobs:
           command_timeout: 20m
           script: |
             set -euo pipefail
-            PROJECT_DIR="${{ secrets.PROJECT_DIR }}"
+            PROJECT_DIR="/root/shangyin-backend"
             REPO_URL="https://github.com/${{ github.repository }}.git"
             BRANCH="main"
-            if [ -z "$PROJECT_DIR" ]; then echo "PROJECT_DIR secret is required"; exit 1; fi
+            echo "设置云端工作目录为: $PROJECT_DIR"
             sudo mkdir -p "$PROJECT_DIR"
             if [ ! -d "$PROJECT_DIR/.git" ]; then
-              echo "Bootstrapping repo at $PROJECT_DIR ..."
+              echo "初始化仓库到 $PROJECT_DIR ..."
               sudo rm -rf "$PROJECT_DIR"
               sudo mkdir -p "$PROJECT_DIR"
               sudo chown -R $(whoami):$(whoami) "$PROJECT_DIR"
@@ -140,11 +140,9 @@ jobs:
             echo "当前目录: $(pwd)"
             echo "目录内容:"
             ls -la
-            echo "将shangyin-backend目录内容移动到shangyin目录..."
-            sudo rm -rf "$PROJECT_DIR/shangyin"
-            sudo cp -r shangyin-backend "$PROJECT_DIR/shangyin"
-            cd "$PROJECT_DIR/shangyin"
-            echo "当前在shangyin目录: $(pwd)"
+            echo "进入shangyin-backend目录..."
+            cd shangyin-backend
+            echo "当前在shangyin-backend目录: $(pwd)"
             echo "目录内容:"
             ls -la
             echo "scripts目录内容:"
