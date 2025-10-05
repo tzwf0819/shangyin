@@ -33,6 +33,29 @@ sleep 3
 
 # 检查并安装Node.js和npm
 echo "检查Node.js和npm..."
+echo "当前PATH: $PATH"
+
+# 首先尝试重新加载环境变量
+if [ -f ~/.bashrc ]; then
+    source ~/.bashrc
+fi
+if [ -f ~/.profile ]; then
+    source ~/.profile
+fi
+
+# 检查npm是否在常见安装路径中
+if ! command -v npm &> /dev/null; then
+    echo "npm命令未找到，检查常见安装路径..."
+    # 检查常见npm安装位置
+    for path in /usr/local/bin/npm /usr/bin/npm /opt/node/bin/npm ~/.nvm/versions/*/bin/npm; do
+        if [ -f "$path" ]; then
+            echo "找到npm在: $path"
+            export PATH="$(dirname $path):$PATH"
+            break
+        fi
+    done
+fi
+
 if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
     echo "安装Node.js 18..."
     
@@ -53,9 +76,18 @@ if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
         curl -fsSL https://install-node.now.sh/lts | sudo bash -
     fi
     
-    echo "Node.js版本: $(node --version 2>/dev/null || echo '未安装')"
-    echo "npm版本: $(npm --version 2>/dev/null || echo '未安装')"
+    # 重新加载环境变量
+    if [ -f ~/.bashrc ]; then
+        source ~/.bashrc
+    fi
+    if [ -f ~/.profile ]; then
+        source ~/.profile
+    fi
 fi
+
+echo "Node.js版本: $(node --version 2>/dev/null || echo '未安装')"
+echo "npm版本: $(npm --version 2>/dev/null || echo '未安装')"
+echo "最终PATH: $PATH"
 
 # 安装后端依赖
 echo "安装后端依赖..."
