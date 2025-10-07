@@ -134,27 +134,44 @@ jobs:
           script: |
             set -euo pipefail
             PROJECT_DIR="${{ secrets.PROJECT_DIR }}"
-            echo "设置云端工作目录为: $PROJECT_DIR"
-            # 清空项目目录
-            sudo rm -rf "$PROJECT_DIR"/*
+            echo "目标部署目录: $PROJECT_DIR"
             sudo mkdir -p "$PROJECT_DIR"
+
+            TEMP_BACKUP="$(mktemp -d)"
+            echo "临时备份目录: $TEMP_BACKUP"
+            if [ -f "$PROJECT_DIR/backend/.env" ]; then
+              sudo cp "$PROJECT_DIR/backend/.env" "$TEMP_BACKUP/backend.env"
+            fi
+            if [ -d "$PROJECT_DIR/backend/database" ]; then
+              sudo cp -a "$PROJECT_DIR/backend/database" "$TEMP_BACKUP/database"
+            fi
+
+            sudo rm -rf "$PROJECT_DIR"/*
             cd "$PROJECT_DIR"
-            echo "使用wget下载最新代码..."
-            # 下载GitHub仓库的zip包
+
+            echo "下载最新源码..."
             wget -O latest.zip "https://github.com/${{ github.repository }}/archive/refs/heads/main.zip"
             unzip -o latest.zip -d "$PROJECT_DIR/temp"
-            # 复制解压后的目录内容到目标位置
-            echo "复制文件从临时目录到项目目录..."
-            # 确保复制整个shangyin-main目录的内容，保持正确的目录结构
             sudo cp -r "$PROJECT_DIR/temp/$(basename ${{ github.repository }})-main"/* "$PROJECT_DIR/"
             sudo cp -r "$PROJECT_DIR/temp/$(basename ${{ github.repository }})-main"/.* "$PROJECT_DIR/" 2>/dev/null || true
-            echo "复制完成，检查文件结构..."
             sudo rm -rf "$PROJECT_DIR/temp" "$PROJECT_DIR/latest.zip"
+
+            sudo find "$PROJECT_DIR/backend/database" -maxdepth 1 -type f -name '*.db' -delete 2>/dev/null || true
+
+            if [ -d "$TEMP_BACKUP/database" ]; then
+              sudo mkdir -p "$PROJECT_DIR/backend/database"
+              sudo cp -a "$TEMP_BACKUP/database/." "$PROJECT_DIR/backend/database/"
+            fi
+            if [ -f "$TEMP_BACKUP/backend.env" ]; then
+              sudo cp "$TEMP_BACKUP/backend.env" "$PROJECT_DIR/backend/.env"
+            fi
+            sudo rm -rf "$TEMP_BACKUP"
+
             echo "当前目录: $(pwd)"
-            echo "目录内容:"
             ls -la
-            echo "scripts目录内容:"
-            ls -la scripts/ || echo "scripts目录不存在"
+            echo "scripts 目录:"
+            ls -la scripts/ || echo "scripts 目录不存在"
+
             chmod +x scripts/deploy_server.sh || true
             chmod +x scripts/create_systemd_service.sh || true
             sudo scripts/deploy_server.sh
