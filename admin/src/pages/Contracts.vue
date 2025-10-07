@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿<template>
+﻿﻿﻿﻿﻿﻿﻿<template>
   <div>
     <div class="toolbar">
       <input v-model="query.keyword" placeholder="合同编号/甲方/乙方" @keyup.enter="load" />
@@ -508,16 +508,16 @@ const doImport = async () => {
 };
 
 const dlgQRCode = ref();
-const qrCodeData = ref('');
+const currentQRCode = ref('');
 const currentContractId = ref('');
 
 const viewQRCode = async (contractId) => {
   try {
     currentContractId.value = contractId;
-    qrCodeData.value = '';
+    currentQRCode.value = '';
     const response = await getContractQRCode(contractId);
     if (response.success) {
-      qrCodeData.value = response.data.qrCodeUrl || response.data;
+      currentQRCode.value = response.data.qrCodeUrl || response.data;
     } else {
       alert('获取二维码失败');
     }
@@ -530,7 +530,7 @@ const viewQRCode = async (contractId) => {
 const closeQRCode = () => {
   try {
     dlgQRCode.value.close();
-    qrCodeData.value = '';
+    currentQRCode.value = '';
     currentContractId.value = '';
   } catch (error) {
     console.warn('关闭二维码对话框失败', error);
@@ -538,10 +538,10 @@ const closeQRCode = () => {
 };
 
 const downloadQRCode = () => {
-  if (!qrCodeData.value) return;
+  if (!currentQRCode.value) return;
   
   const link = document.createElement('a');
-  link.href = qrCodeData.value;
+  link.href = currentQRCode.value;
   link.download = `contract-qrcode-${currentContractId.value}.png`;
   document.body.appendChild(link);
   link.click();

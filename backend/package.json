@@ -10,7 +10,10 @@
     "test:remote:qrcodes": "node test-remote-qrcodes.js",
     "test:api": "node test-api.js",
     "test:production": "node test-production-records.js",
-    "test:producttype": "node test-producttype-processes.js"
+    "test:producttype": "node test-producttype-processes.js",
+    "generate:testdata": "node ../scripts/generate-test-data.js",
+    "generate:simple": "node ../scripts/simple-test-data.js",
+    "generate:quick": "node ../scripts/quick-test-data.js"
   },
   "dependencies": {
     "axios": "^1.5.0",
