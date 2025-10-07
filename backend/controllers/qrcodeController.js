@@ -13,6 +13,7 @@ async function createQRCodeResponse(payload) {
       payload,
       text,
       dataUrl,
+      qrCodeUrl: dataUrl,
     },
   };
 }

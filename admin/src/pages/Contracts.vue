@@ -509,21 +509,33 @@ const doImport = async () => {
 
 const dlgQRCode = ref();
 const currentQRCode = ref('');
+const qrCodeData = currentQRCode;
+const qrCodePayload = ref(null);
 const currentContractId = ref('');
 
 const viewQRCode = async (contractId) => {
   try {
     currentContractId.value = contractId;
     currentQRCode.value = '';
+    qrCodePayload.value = null;
     const response = await getContractQRCode(contractId);
-    if (response.success) {
-      currentQRCode.value = response.data.qrCodeUrl || response.data;
+    if (response.success && response.data) {
+      const { dataUrl, qrCodeUrl, payload } = response.data;
+      const imageUrl = dataUrl || qrCodeUrl || '';
+      if (!imageUrl) {
+        throw new Error('二维码缺少图像数据');
+      }
+      currentQRCode.value = imageUrl;
+      qrCodePayload.value = payload || null;
     } else {
-      alert('获取二维码失败');
+      const message = response?.message || '获取二维码失败';
+      alert(message);
+      return;
     }
     dlgQRCode.value.showModal();
   } catch (error) {
-    alert('获取二维码失败');
+    const message = error?.message || '获取二维码失败';
+    alert(message);
   }
 };
 
@@ -531,6 +543,7 @@ const closeQRCode = () => {
   try {
     dlgQRCode.value.close();
     currentQRCode.value = '';
+    qrCodePayload.value = null;
     currentContractId.value = '';
   } catch (error) {
     console.warn('关闭二维码对话框失败', error);
