@@ -113,7 +113,7 @@
                   产品类型
                   <select v-model="product.productTypeId" @change="onProductTypeSelected(product)" :disabled="!productTypes.length">
                     <option value="">请选择产品类型</option>
-                    <option v-for="type in productTypes" :key="type.id" :value="type.id">
+                    <option v-for="type in productTypes" :key="type.id" :value="String(type.id)">
                       {{ type.name }}{{ type.code ? '（' + type.code + '）' : '' }}
                     </option>
                   </select>
@@ -453,6 +453,7 @@ const normalisePayload = () => {
   payload.products = (form.products || []).map((product) => {
     const copy = { ...product };
     applyProductTypeSelection(copy);
+    copy.productTypeId = copy.productTypeId ? String(copy.productTypeId) : '';
     return copy;
   });
   return payload;
@@ -667,3 +668,4 @@ textarea {
   font-size: 13px;
 }
 </style>
+

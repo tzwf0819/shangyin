@@ -265,10 +265,38 @@ const formatContract = contract => {
   plain.rawData = parseJSON(plain.rawDataJson) || {};
 
   if (Array.isArray(plain.products)) {
-    plain.products = plain.products.map(product => {
+    plain.products = plain.products.map((product, index) => {
       const item = { ...product };
       item.extraInfo = parseJSON(item.extraInfoJson) || {};
       delete item.extraInfoJson;
+      let normalizedTypeId = normalizeText(item.productTypeId);
+      if (normalizedTypeId === null && plain.rawData && Array.isArray(plain.rawData.products)) {
+        const rawProduct = plain.rawData.products[index] || {};
+        normalizedTypeId = normalizeText(rawProduct.productTypeId);
+        if (normalizedTypeId !== null) {
+          item.productTypeId = normalizedTypeId;
+        }
+        const rawTypeName = rawProduct.productTypeName || rawProduct.productType || rawProduct.productTypeCode;
+        if (!item.productTypeName && rawTypeName) {
+          item.productTypeName = rawTypeName;
+        }
+        if (!item.productType && rawTypeName) {
+          item.productType = rawTypeName;
+        }
+        if (!item.productTypeCode && rawProduct.productTypeCode) {
+          item.productTypeCode = rawProduct.productTypeCode;
+        }
+      }
+      item.productTypeId = normalizedTypeId !== null ? normalizedTypeId : '';
+      if (!item.productTypeName && item.productType) {
+        item.productTypeName = item.productType;
+      }
+      if (!item.productType && item.productTypeName) {
+        item.productType = item.productTypeName;
+      }
+      if (!item.productTypeCode) {
+        item.productTypeCode = item.productType || '';
+      }
       if (item.newWoodBox !== null && item.newWoodBox !== undefined) {
         item.newWoodBox = normalizeBoolean(item.newWoodBox);
       }
@@ -359,6 +387,48 @@ const lookupProductType = async (product, cache, transaction) => {
   return record;
 };
 
+
+const buildContractProductPayload = (input = {}, { contractId, index }) => {
+  const {
+    extraInfo: productExtra = {},
+    id,
+    productTypeCode,
+    newWoodBox,
+    ...rest
+  } = input || {};
+
+  const payload = {
+    ...rest,
+    productIndex: index,
+    extraInfoJson: JSON.stringify(productExtra || {}),
+  };
+
+  if (contractId !== undefined) {
+    payload.contractId = contractId;
+  }
+
+  const normalizedTypeId = normalizeText(rest.productTypeId ?? input.productTypeId);
+  payload.productTypeId = normalizedTypeId || null;
+
+  const resolvedTypeName = rest.productTypeName ?? input.productTypeName ?? rest.productType ?? input.productType;
+  if (resolvedTypeName !== undefined) {
+    payload.productTypeName = resolvedTypeName || '';
+  }
+
+  if (productTypeCode !== undefined) {
+    payload.productType = productTypeCode || '';
+  } else if (payload.productTypeName && !payload.productType) {
+    payload.productType = payload.productTypeName;
+  }
+
+  if (newWoodBox !== undefined) {
+    payload.newWoodBox = newWoodBox === null ? null : Boolean(newWoodBox);
+  }
+
+  return { id, payload };
+};
+
+
 const resolveProductReferences = async (products, transaction) => {
   if (!products.length) return;
   const cache = productTypeCache();
@@ -378,20 +448,21 @@ const persistContract = async (normalized, transaction) => {
   await resolveSalesReference(contractData, transaction);
   await resolveProductReferences(products, transaction);
 
+  const productRows = products.map((product, index) => {
+    const { payload: productPayload } = buildContractProductPayload(product, {
+      index: index + 1,
+    });
+    delete productPayload.contractId;
+    return productPayload;
+  });
+
   const payload = {
     ...contractData,
     termsJson: JSON.stringify(terms),
     processStatusJson: JSON.stringify(processStatus),
     extraInfoJson: JSON.stringify(extraInfo),
     rawDataJson: JSON.stringify(rawPayload),
-    products: products.map((product, index) => {
-      const { extraInfo: productExtra = {}, ...rest } = product;
-      return {
-        ...rest,
-        productIndex: index + 1,
-        extraInfoJson: JSON.stringify(productExtra || {}),
-      };
-    }),
+    products: productRows,
   };
 
   return Contract.create(payload, {
@@ -426,26 +497,18 @@ const updateContractRecord = async (contract, normalized, transaction) => {
   let orderCounter = 1;
 
   for (const product of products) {
-    const { extraInfo: productExtra = {}, id, ...rest } = product;
-    const payload = {
-      ...rest,
-      productIndex: orderCounter,
-      extraInfoJson: JSON.stringify(productExtra || {}),
-    };
+    const { payload: productPayload, id } = buildContractProductPayload(product, {
+      contractId: contract.id,
+      index: orderCounter,
+    });
     orderCounter += 1;
 
     const numericId = Number(id);
     if (!Number.isNaN(numericId) && existingMap.has(numericId)) {
-      await existingMap.get(numericId).update(payload, { transaction });
+      await existingMap.get(numericId).update(productPayload, { transaction });
       retainedIds.add(numericId);
     } else {
-      await ContractProduct.create(
-        {
-          ...payload,
-          contractId: contract.id,
-        },
-        { transaction }
-      );
+      await ContractProduct.create(productPayload, { transaction });
     }
   }
 
