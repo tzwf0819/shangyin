@@ -3,21 +3,21 @@
     <div class="filters">
       <input type="date" v-model="summaryFilters.startDate" />
       <input type="date" v-model="summaryFilters.endDate" />
-      <button class="primary" @click="loadSummary" :disabled="loading">ËÑË÷</button>
+      <button class="primary" @click="loadSummary" :disabled="loading">æœç´¢</button>
     </div>
 
     <div class="table-wrapper" v-if="employees.length">
       <table>
         <thead>
           <tr>
-            <th>Ô±¹¤ĞÕÃû</th>
-            <th>Ô±¹¤±àºÅ</th>
-            <th>×´Ì¬</th>
-            <th>Éú²ú¼ÇÂ¼Êı</th>
-            <th>ÀÛ¼ÆÊıÁ¿</th>
-            <th>ÀÛ¼Æ¼¨Ğ§</th>
-            <th>×î½ü¼ÇÂ¼Ê±¼ä</th>
-            <th>²Ù×÷</th>
+            <th>å‘˜å·¥å§“å</th>
+            <th>å‘˜å·¥ç¼–å·</th>
+            <th>çŠ¶æ€</th>
+            <th>ç”Ÿäº§è®°å½•æ•°</th>
+            <th>ç´¯è®¡æ•°é‡</th>
+            <th>ç´¯è®¡ç»©æ•ˆ</th>
+            <th>æœ€è¿‘è®°å½•æ—¶é—´</th>
+            <th>æ“ä½œ</th>
           </tr>
         </thead>
         <tbody>
@@ -29,50 +29,50 @@
             <td>{{ emp.totalQuantity }}</td>
             <td>{{ formatCurrency(emp.totalPayAmount) }}</td>
             <td>{{ formatDate(emp.latestRecordAt) }}</td>
-            <td><button @click="openDetail(emp)" :disabled="detailLoading">ÏêÇé</button></td>
+            <td><button @click="openDetail(emp)" :disabled="detailLoading">è¯¦æƒ…</button></td>
           </tr>
         </tbody>
       </table>
     </div>
-    <div class="empty" v-else>ÔİÎŞÔ±¹¤¼¨Ğ§Êı¾İ</div>
+    <div class="empty" v-else>æš‚æ— å‘˜å·¥ç»©æ•ˆæ•°æ®</div>
 
     <dialog ref="dlgDetail" class="dialog-large">
       <form method="dialog" @submit.prevent>
-        <div class="modal-header">Ô±¹¤Éú²ú¼ÇÂ¼</div>
+        <div class="modal-header">å‘˜å·¥ç”Ÿäº§è®°å½•</div>
         <div class="modal-body">
           <section v-if="detailEmployee" class="employee-overview">
-            <div><strong>ĞÕÃû£º</strong>{{ detailEmployee.name }}</div>
-            <div><strong>±àºÅ£º</strong>{{ detailEmployee.code || '-' }}</div>
-            <div><strong>×´Ì¬£º</strong>{{ renderStatus(detailEmployee.status) }}</div>
-            <div><strong>Í³¼ÆÖÜÆÚ£º</strong>{{ detailFilters.startDate }} ~ {{ detailFilters.endDate }}</div>
+            <div><strong>å§“åï¼š</strong>{{ detailEmployee.name }}</div>
+            <div><strong>ç¼–å·ï¼š</strong>{{ detailEmployee.code || '-' }}</div>
+            <div><strong>çŠ¶æ€ï¼š</strong>{{ renderStatus(detailEmployee.status) }}</div>
+            <div><strong>ç»Ÿè®¡å‘¨æœŸï¼š</strong>{{ detailFilters.startDate }} ~ {{ detailFilters.endDate }}</div>
           </section>
 
           <section class="detail-filters">
-            <label>¿ªÊ¼ÈÕÆÚ<input type="date" v-model="detailFilters.startDate" /></label>
-            <label>½áÊøÈÕÆÚ<input type="date" v-model="detailFilters.endDate" /></label>
-            <button type="button" class="primary" @click="searchDetail" :disabled="detailLoading">ËÑË÷</button>
+            <label>å¼€å§‹æ—¥æœŸ<input type="date" v-model="detailFilters.startDate" /></label>
+            <label>ç»“æŸæ—¥æœŸ<input type="date" v-model="detailFilters.endDate" /></label>
+            <button type="button" class="primary" @click="searchDetail" :disabled="detailLoading">æœç´¢</button>
           </section>
 
           <section class="records-table">
             <table>
               <thead>
                 <tr>
-                  <th>Ê±¼ä</th>
-                  <th>ºÏÍ¬±àºÅ</th>
-                  <th>²úÆ·</th>
-                  <th>¹¤Ğò</th>
-                  <th>ÊıÁ¿</th>
-                  <th>ÓÃÊ±(·Ö)</th>
-                  <th>¼¨Ğ§</th>
-                  <th>±¸×¢</th>
+                  <th>æ—¶é—´</th>
+                  <th>åˆåŒç¼–å·</th>
+                  <th>äº§å“</th>
+                  <th>å·¥åº</th>
+                  <th>æ•°é‡</th>
+                  <th>ç”¨æ—¶(åˆ†)</th>
+                  <th>ç»©æ•ˆ</th>
+                  <th>å¤‡æ³¨</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="detailLoading">
-                  <td colspan="8" class="muted">¼ÓÔØÖĞ...</td>
+                  <td colspan="8" class="muted">åŠ è½½ä¸­...</td>
                 </tr>
                 <tr v-else-if="!detailRecords.length">
-                  <td colspan="8" class="muted">ÔİÎŞÉú²ú¼ÇÂ¼</td>
+                  <td colspan="8" class="muted">æš‚æ— ç”Ÿäº§è®°å½•</td>
                 </tr>
                 <tr v-else v-for="record in detailRecords" :key="record.id">
                   <td>{{ formatDate(record.createdAt) }}</td>
@@ -85,7 +85,7 @@
                   <td>{{ record.notes || '-' }}</td>
                 </tr>
                 <tr v-if="detailRecords.length">
-                  <td colspan="6" class="summary-label">ºÏ¼Æ¼¨Ğ§</td>
+                  <td colspan="6" class="summary-label">åˆè®¡ç»©æ•ˆ</td>
                   <td class="summary-value">{{ formatCurrency(detailTotalPay) }}</td>
                   <td></td>
                 </tr>
@@ -94,7 +94,7 @@
           </section>
         </div>
         <div class="modal-footer">
-          <button type="button" @click="closeDetail">¹Ø±Õ</button>
+          <button type="button" @click="closeDetail">å…³é—­</button>
         </div>
       </form>
     </dialog>
@@ -149,7 +149,7 @@ const formatDate = (value) => {
 
 const renderStatus = (status) => {
   if (!status) return '-';
-  return status === 'active' ? 'ÔÚÖ°' : 'ÀëÖ°';
+  return status === 'active' ? 'åœ¨èŒ' : 'ç¦»èŒ';
 };
 
 const loadSummary = async () => {
@@ -165,8 +165,8 @@ const loadSummary = async () => {
       employees.value = [];
     }
   } catch (error) {
-    console.error('¼ÓÔØ¼¨Ğ§»ã×ÜÊ§°Ü:', error);
-    alert('¼ÓÔØ¼¨Ğ§»ã×ÜÊ§°Ü');
+    console.error('åŠ è½½ç»©æ•ˆæ±‡æ€»å¤±è´¥:', error);
+    alert('åŠ è½½ç»©æ•ˆæ±‡æ€»å¤±è´¥');
     employees.value = [];
   } finally {
     loading.value = false;
@@ -181,7 +181,7 @@ const fetchEmployeeRecords = async (employeeId) => {
       endDate: detailFilters.endDate,
     });
     if (!response.success) {
-      throw new Error(response.message || '»ñÈ¡Ô±¹¤Éú²ú¼ÇÂ¼Ê§°Ü');
+      throw new Error(response.message || 'è·å–å‘˜å·¥ç”Ÿäº§è®°å½•å¤±è´¥');
     }
     const data = response.data || {};
     if (data.employee) {
@@ -193,8 +193,8 @@ const fetchEmployeeRecords = async (employeeId) => {
     }));
     detailTotalPay.value = Number(data.totalPayAmount || 0);
   } catch (error) {
-    console.error('¼ÓÔØÔ±¹¤¼ÇÂ¼Ê§°Ü:', error);
-    alert(error?.message || '»ñÈ¡Ô±¹¤Éú²ú¼ÇÂ¼Ê§°Ü');
+    console.error('åŠ è½½å‘˜å·¥è®°å½•å¤±è´¥:', error);
+    alert(error?.message || 'è·å–å‘˜å·¥ç”Ÿäº§è®°å½•å¤±è´¥');
     detailRecords.value = [];
     detailTotalPay.value = 0;
   } finally {

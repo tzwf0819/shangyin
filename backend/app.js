@@ -104,8 +104,23 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('Database connected successfully');
 
-    await sequelize.sync({ force: false });
-    console.log('Database tables synchronized');
+    const env = process.env.NODE_ENV || 'development';
+    const syncOptions = {};
+    if (process.env.DB_SYNC_FORCE === 'true') {
+      syncOptions.force = true;
+      console.warn('[database] Running sync with force=true (data may be dropped)');
+    } else if (process.env.DB_SYNC_ALTER === 'true') {
+      syncOptions.alter = true;
+      console.log('[database] Running sync with alter=true (explicit override)');
+    } else if (env !== 'production') {
+      syncOptions.alter = true;
+      console.log('[database] Running sync with alter=true (non-production default)');
+    } else {
+      console.log('[database] Running sync without automatic schema alterations (safe production mode)');
+    }
+
+    await sequelize.sync(syncOptions);
+    console.log('[database] Sequelize sync complete');
 
     await runDatabaseMigrations();
     console.log('Database migrations executed');

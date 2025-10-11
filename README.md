@@ -204,6 +204,11 @@ npm start
 # 预览和调试
 ```
 
+## 数据库持久化配置
+- **DB_STORAGE**：可选环境变量，用于指定 SQLite 数据库文件的储存路径。未设置时默认使用项目目录下的 ackend/database/shangyin.db。建议生产环境将其指向独立的数据目录（例如 /srv/shangyin/data/shangyin.db）以避免部署时被删除。
+- **DB_SYNC_ALTER**：显式设为 	rue 时，在启动时执行 sequelize.sync({ alter: true })。生产环境默认关闭自动结构调整，只有在确认安全时才应临时开启。
+- **DB_SYNC_FORCE**：显式设为 	rue 时会强制重建所有表（会清空数据），仅在开发或全量重置时使用。
+
 ## 项目特点
 
 ### ✅ 业务优势

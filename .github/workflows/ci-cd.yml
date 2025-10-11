@@ -146,6 +146,11 @@ jobs:
               sudo cp -a "$PROJECT_DIR/backend/database" "$TEMP_BACKUP/database"
             fi
 
+            if [ -x "$PROJECT_DIR/scripts/database_backup.sh" ]; then
+              echo "Running pre-deploy database backup..."
+              sudo "$PROJECT_DIR/scripts/database_backup.sh" || echo "Database backup script failed; please review server logs."
+            fi
+
             sudo rm -rf "$PROJECT_DIR"/*
             cd "$PROJECT_DIR"
 
