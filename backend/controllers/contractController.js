@@ -5,6 +5,7 @@ const {
   ContractProduct,
   Employee,
   ProductType,
+  ProcessRecord,
 } = require('../models');
 
 const MAX_PRODUCTS = 10;
@@ -95,6 +96,7 @@ const KNOWN_CONTRACT_KEYS = new Set([
 ]);
 
 const KNOWN_PRODUCT_KEYS = new Set(Object.values(PRODUCT_FIELD_MAP).flat());
+KNOWN_PRODUCT_KEYS.add('id');
 
 const normalizeText = value => {
   if (value === null || value === undefined) return null;
@@ -172,6 +174,12 @@ const normalizeProduct = (source = {}, index = 0) => {
   const product = {
     productIndex: index + 1,
   };
+
+  const existingId = source && Object.prototype.hasOwnProperty.call(source, 'id') ? source.id : undefined;
+  if (existingId !== null && existingId !== undefined && `${existingId}` !== '') {
+    const numericId = Number(existingId);
+    product.id = Number.isNaN(numericId) ? existingId : numericId;
+  }
 
   Object.entries(PRODUCT_FIELD_MAP).forEach(([field, aliases]) => {
     const value = pickFirst(source, aliases);
@@ -409,21 +417,52 @@ const updateContractRecord = async (contract, normalized, transaction) => {
     { transaction }
   );
 
-  await ContractProduct.destroy({ where: { contractId: contract.id }, transaction });
+  const existingProducts = await ContractProduct.findAll({
+    where: { contractId: contract.id },
+    transaction,
+  });
+  const existingMap = new Map(existingProducts.map(item => [item.id, item]));
+  const retainedIds = new Set();
+  let orderCounter = 1;
 
-  if (products.length) {
-    await ContractProduct.bulkCreate(
-      products.map((product, index) => {
-        const { extraInfo: productExtra = {}, ...rest } = product;
-        return {
-          ...rest,
+  for (const product of products) {
+    const { extraInfo: productExtra = {}, id, ...rest } = product;
+    const payload = {
+      ...rest,
+      productIndex: orderCounter,
+      extraInfoJson: JSON.stringify(productExtra || {}),
+    };
+    orderCounter += 1;
+
+    const numericId = Number(id);
+    if (!Number.isNaN(numericId) && existingMap.has(numericId)) {
+      await existingMap.get(numericId).update(payload, { transaction });
+      retainedIds.add(numericId);
+    } else {
+      await ContractProduct.create(
+        {
+          ...payload,
           contractId: contract.id,
-          productIndex: index + 1,
-          extraInfoJson: JSON.stringify(productExtra || {}),
-        };
-      }),
-      { transaction }
-    );
+        },
+        { transaction }
+      );
+    }
+  }
+
+  const removable = existingProducts.filter(item => !retainedIds.has(item.id));
+  if (removable.length) {
+    const removableIds = removable.map(item => item.id);
+    const inUseCount = await ProcessRecord.count({
+      where: { contractProductId: removableIds },
+      transaction,
+    });
+    if (inUseCount > 0) {
+      const error = new Error('CONTRACT_PRODUCT_IN_USE');
+      error.code = 'CONTRACT_PRODUCT_IN_USE';
+      error.meta = { productIds: removableIds };
+      throw error;
+    }
+    await ContractProduct.destroy({ where: { id: removableIds }, transaction });
   }
 
   return Contract.findByPk(contract.id, {
@@ -593,11 +632,13 @@ exports.updateContract = async (req, res) => {
 
     res.json({ success: true, message: '合同更新成功', data: { contract: formatContract(updated) } });
   } catch (error) {
+    if (error && error.code === 'CONTRACT_PRODUCT_IN_USE') {
+      return res.status(400).json({ success: false, message: '存在已被生产记录引用的合同产品，无法删除或替换。请先处理相关生产记录。' });
+    }
     console.error('更新合同失败:', error);
     res.status(500).json({ success: false, message: '更新合同失败' });
   }
 };
-
 exports.deleteContract = async (req, res) => {
   try {
     const { id } = req.params;
@@ -682,4 +723,5 @@ exports.importContracts = async (req, res) => {
     res.status(500).json({ success: false, message: '批量导入合同失败' });
   }
 };
+
 
