@@ -158,16 +158,87 @@
     </dialog>
 
     <dialog ref="dlgQRCode">
-      <div class="modal-header">合同二维码</div>
+      <div class="modal-header">
+        合同二维码
+        <span v-if="qrDialogState.contract?.contractNumber" class="qr-contract-number">
+          （{{ qrDialogState.contract.contractNumber }}）
+        </span>
+      </div>
       <div class="modal-body qrcode-container">
-        <div v-if="qrCodeData" class="qrcode-image">
-          <img :src="qrCodeData" alt="合同二维码" />
-        </div>
-        <div v-else class="loading">加载中...</div>
+        <section class="qr-section">
+          <h3>合同</h3>
+          <div v-if="qrDialogState.contractImage" class="qrcode-image">
+            <img :src="qrDialogState.contractImage" alt="合同二维码" />
+          </div>
+          <div class="loading" v-else-if="qrDialogState.loading">加载中...</div>
+          <div class="qr-empty" v-else>暂无合同二维码</div>
+        </section>
+
+        <section class="qr-section">
+          <h3>合同产品二维码</h3>
+          <div v-if="qrDialogState.loading && !qrDialogState.products.length" class="loading">加载中...</div>
+          <div v-else-if="!qrDialogState.products.length" class="qr-empty">暂无产品信息</div>
+          <div class="qr-grid" v-else>
+            <div
+              v-for="productEntry in qrDialogState.products"
+              :key="productEntry.product.id || productEntry.productIndex"
+              class="qr-card"
+            >
+              <div class="qr-title">
+                {{ productEntry.product.productName || '未命名产品' }}
+              </div>
+              <div v-if="productEntry.image" class="qrcode-image">
+                <img
+                  :src="productEntry.image"
+                  :alt="`${productEntry.product.productName || '产品'}二维码`"
+                />
+              </div>
+              <div class="qr-empty" v-else>{{ productEntry.error || '二维码生成失败' }}</div>
+              <div class="qr-meta">
+                <span v-if="productEntry.product.productCode">编号：{{ productEntry.product.productCode }}</span>
+                <span v-else-if="productEntry.product.productId">编号：{{ productEntry.product.productId }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="qr-section">
+          <h3>工序二维码</h3>
+          <div v-if="qrDialogState.loading && !qrDialogState.products.length" class="loading">加载中...</div>
+          <div v-else-if="!qrDialogState.products.length" class="qr-empty">暂无产品工序信息</div>
+          <div v-else class="process-blocks">
+            <div
+              v-for="productEntry in qrDialogState.products"
+              :key="`process-${productEntry.product.id || productEntry.productIndex}`"
+              class="process-block"
+            >
+              <div class="process-product-title">
+                {{ productEntry.product.productName || '未命名产品' }}
+              </div>
+              <div v-if="productEntry.processError" class="qr-empty">{{ productEntry.processError }}</div>
+              <div v-else-if="!productEntry.processes.length" class="qr-empty">未配置工序</div>
+              <div class="qr-grid process-grid" v-else>
+                <div
+                  v-for="processEntry in productEntry.processes"
+                  :key="processEntry.process.id"
+                  class="qr-card process-card"
+                >
+                  <div class="qr-title">{{ processEntry.process.name || '工序' }}</div>
+                  <div v-if="processEntry.image" class="qrcode-image">
+                    <img :src="processEntry.image" :alt="`${processEntry.process.name || '工序'}二维码`" />
+                  </div>
+                  <div class="qr-empty" v-else>{{ processEntry.error || '二维码生成失败' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div v-if="qrDialogState.error" class="qr-error">{{ qrDialogState.error }}</div>
       </div>
       <div class="modal-footer">
         <button type="button" @click="closeQRCode">关闭</button>
-        <button class="primary" @click="downloadQRCode">下载二维码</button>
+        <button class="primary" @click="downloadQRCode" :disabled="!qrDialogState.contractImage">下载合同二维码</button>
       </div>
     </dialog>
   </div>
@@ -175,9 +246,16 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { listContracts, createContract, updateContract, deleteContract, importContracts } from '../api/contracts';
-import { listProductTypes } from '../api/productTypes';
-import { getContractQRCode } from '../api/qrcodes';
+import {
+  listContracts,
+  getContract,
+  createContract,
+  updateContract,
+  deleteContract,
+  importContracts,
+} from '../api/contracts';
+import { listProductTypes, getProductTypeProcesses } from '../api/productTypes';
+import { getContractQRCode, getContractProductQRCode, getProcessQRCode } from '../api/qrcodes';
 
 const clauseFields = Array.from({ length: 10 }, (_, i) => `clause${i + 1}`);
 const clauseLabels = clauseFields.reduce((acc, field, index) => {
@@ -509,54 +587,214 @@ const doImport = async () => {
 };
 
 const dlgQRCode = ref();
-const currentQRCode = ref('');
-const qrCodeData = currentQRCode;
-const qrCodePayload = ref(null);
 const currentContractId = ref('');
+const qrDialogState = reactive({
+  loading: false,
+  contractImage: '',
+  contract: null,
+  products: [],
+  error: '',
+});
+
+const productTypeProcessCache = new Map();
+const processQRCodeCache = new Map();
+
+const resetQrDialogState = () => {
+  qrDialogState.loading = false;
+  qrDialogState.contractImage = '';
+  qrDialogState.contract = null;
+  qrDialogState.products = [];
+  qrDialogState.error = '';
+};
+
+const toPositiveInteger = (value) => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+};
+
+const loadProcessesForProductType = async (productTypeId) => {
+  if (!productTypeId) {
+    return [];
+  }
+  if (productTypeProcessCache.has(productTypeId)) {
+    return productTypeProcessCache.get(productTypeId);
+  }
+  const response = await getProductTypeProcesses(productTypeId);
+  if (!response?.success) {
+    const message = response?.message || '获取产品类型工序失败';
+    throw new Error(message);
+  }
+  const processes = (response.data?.processes || [])
+    .map((process, index) => ({
+      id: process.id,
+      name: process.name,
+      description: process.description,
+      payRate: process.payRate,
+      payRateUnit: process.payRateUnit,
+      status: process.status,
+      sequenceOrder:
+        (process.ProductTypeProcess && process.ProductTypeProcess.sequenceOrder) ?? index,
+    }))
+    .sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0));
+  productTypeProcessCache.set(productTypeId, processes);
+  return processes;
+};
+
+const fetchProcessQRCodeImage = async (processId) => {
+  if (!processId) {
+    return { image: '', error: '缺少工序ID' };
+  }
+  if (processQRCodeCache.has(processId)) {
+    return processQRCodeCache.get(processId);
+  }
+  let image = '';
+  let error = '';
+  try {
+    const response = await getProcessQRCode(processId);
+    if (response?.success && response.data) {
+      const { dataUrl, qrCodeUrl } = response.data;
+      image = dataUrl || qrCodeUrl || '';
+      if (!image) {
+        error = '二维码缺少图像数据';
+      }
+    } else {
+      error = response?.message || '获取二维码失败';
+    }
+  } catch (fetchError) {
+    error = fetchError?.message || '获取二维码失败';
+  }
+  const result = { image, error };
+  processQRCodeCache.set(processId, result);
+  return result;
+};
+
+const buildProductEntries = async (contract) => {
+  const products = Array.isArray(contract?.products) ? contract.products : [];
+  const entries = [];
+  for (let index = 0; index < products.length; index += 1) {
+    const product = products[index] || {};
+    const entry = {
+      product,
+      productIndex: index,
+      image: '',
+      error: '',
+      processes: [],
+      processError: '',
+    };
+
+    if (product?.id) {
+      try {
+        const response = await getContractProductQRCode(product.id);
+        if (response?.success && response.data) {
+          const { dataUrl, qrCodeUrl } = response.data;
+          entry.image = dataUrl || qrCodeUrl || '';
+          if (!entry.image) {
+            entry.error = '二维码缺少图像数据';
+          }
+        } else {
+          entry.error = response?.message || '获取二维码失败';
+        }
+      } catch (error) {
+        entry.error = error?.message || '获取二维码失败';
+      }
+    } else {
+      entry.error = '缺少产品ID，无法生成二维码';
+    }
+
+    const productTypeId = toPositiveInteger(product?.productTypeId);
+    if (!productTypeId) {
+      entry.processError = '未设置产品类型，无法获取工序';
+    } else {
+      try {
+        const processes = await loadProcessesForProductType(productTypeId);
+        if (Array.isArray(processes) && processes.length) {
+          entry.processes = await Promise.all(
+            processes.map(async (process) => {
+              const { image, error } = await fetchProcessQRCodeImage(process.id);
+              return { process, image, error };
+            }),
+          );
+        }
+      } catch (error) {
+        entry.processError = error?.message || '获取工序信息失败';
+      }
+    }
+
+    entries.push(entry);
+  }
+  return entries;
+};
 
 const viewQRCode = async (contractId) => {
+  if (!contractId) {
+    alert('合同ID无效');
+    return;
+  }
+  currentContractId.value = contractId;
+  resetQrDialogState();
+  dlgQRCode.value.showModal();
+  qrDialogState.loading = true;
+
+  const errors = [];
+
   try {
-    currentContractId.value = contractId;
-    currentQRCode.value = '';
-    qrCodePayload.value = null;
-    const response = await getContractQRCode(contractId);
-    if (response.success && response.data) {
-      const { dataUrl, qrCodeUrl, payload } = response.data;
-      const imageUrl = dataUrl || qrCodeUrl || '';
-      if (!imageUrl) {
-        throw new Error('二维码缺少图像数据');
+    const [qrResult, contractResult] = await Promise.allSettled([
+      getContractQRCode(contractId),
+      getContract(contractId),
+    ]);
+
+    if (qrResult.status === 'fulfilled') {
+      const response = qrResult.value;
+      if (response?.success && response.data) {
+        const { dataUrl, qrCodeUrl } = response.data;
+        qrDialogState.contractImage = dataUrl || qrCodeUrl || '';
+        if (!qrDialogState.contractImage) {
+          errors.push('合同二维码缺少图像数据');
+        }
+      } else {
+        errors.push(response?.message || '获取合同二维码失败');
       }
-      currentQRCode.value = imageUrl;
-      qrCodePayload.value = payload || null;
     } else {
-      const message = response?.message || '获取二维码失败';
-      alert(message);
-      return;
+      errors.push(qrResult.reason?.message || '获取合同二维码失败');
     }
-    dlgQRCode.value.showModal();
+
+    if (contractResult.status === 'fulfilled') {
+      const response = contractResult.value;
+      if (response?.success && response.data?.contract) {
+        qrDialogState.contract = response.data.contract;
+        qrDialogState.products = await buildProductEntries(qrDialogState.contract);
+      } else {
+        errors.push(response?.message || '获取合同详情失败');
+      }
+    } else {
+      errors.push(contractResult.reason?.message || '获取合同详情失败');
+    }
   } catch (error) {
-    const message = error?.message || '获取二维码失败';
-    alert(message);
+    errors.push(error?.message || '加载二维码信息失败');
+  } finally {
+    qrDialogState.loading = false;
+    qrDialogState.error = errors.filter(Boolean).join('；');
   }
 };
 
 const closeQRCode = () => {
   try {
     dlgQRCode.value.close();
-    currentQRCode.value = '';
-    qrCodePayload.value = null;
-    currentContractId.value = '';
   } catch (error) {
     console.warn('关闭二维码对话框失败', error);
+  } finally {
+    resetQrDialogState();
+    currentContractId.value = '';
   }
 };
 
 const downloadQRCode = () => {
-  if (!currentQRCode.value) return;
-  
+  if (!qrDialogState.contractImage) return;
+
   const link = document.createElement('a');
-  link.href = currentQRCode.value;
-  link.download = `contract-qrcode-${currentContractId.value}.png`;
+  link.href = qrDialogState.contractImage;
+  const fileId = currentContractId.value || (qrDialogState.contract?.contractNumber ?? 'contract');
+  link.download = `contract-qrcode-${fileId}.png`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -667,5 +905,110 @@ textarea {
   color: #64748b;
   font-size: 13px;
 }
+.loading {
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+  padding: 12px;
+}
+.qrcode-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.qr-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.qr-section > h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.qr-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+.qr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+.process-card {
+  background: #f1f5f9;
+}
+.qr-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+.qr-meta {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.qrcode-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  min-height: 160px;
+}
+.qrcode-image img {
+  max-width: 160px;
+  width: 100%;
+}
+.qr-empty {
+  padding: 12px;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  border: 1px dashed #cbd5f5;
+  border-radius: 6px;
+  background: #fff;
+}
+.qr-error {
+  color: #dc2626;
+  font-size: 13px;
+}
+.qr-contract-number {
+  font-size: 13px;
+  color: #64748b;
+  margin-left: 8px;
+}
+.process-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.process-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+.process-product-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+.process-grid {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
 </style>
-
