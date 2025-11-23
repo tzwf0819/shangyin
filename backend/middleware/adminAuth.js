@@ -8,6 +8,11 @@ const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || (process.env.JWT_SECRET
 exports.adminLogin = (req, res) => {
   const { username, password } = req.body || {};
   if (!username || !password) {
+    // 在开发环境提供更详细的调试信息
+    if ((process.env.NODE_ENV || 'development') !== 'production') {
+      console.warn('[adminLogin] Missing credentials, request body:', req.body);
+      return res.status(400).json({ success: false, message: '用户名或密码缺失', debug: { receivedBody: req.body } });
+    }
     return res.status(400).json({ success: false, message: '用户名或密码缺失' });
   }
   if (username !== ADMIN_USER || password !== ADMIN_PASS) {

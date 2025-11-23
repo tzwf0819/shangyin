@@ -11,6 +11,8 @@ const runDatabaseMigrations = require('./scripts/databaseMigrations');
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+// 支持 application/x-www-form-urlencoded（例如传统表单提交）
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // 管理后台静态页面（优先使用构建产物 dist）
 let adminStaticPath = path.join(__dirname, '../admin/dist');
@@ -119,8 +121,47 @@ const startServer = async () => {
       console.log('[database] Running sync without automatic schema alterations (safe production mode)');
     }
 
+    // 在执行 sync({ alter: true }) 之前，清理残留的 SQLite 中间表（例如 product_types_backup）
+    // Sequelize 在对 SQLite 执行 alter 时会创建 <table>_backup 临时表并向其中插入数据；
+    // 如果项目目录中已存在同名 backup 表（历史残留），会导致 UNIQUE 约束冲突。
+    if (sequelize.getDialect && sequelize.getDialect() === 'sqlite') {
+      try {
+        console.log('[database] Looking for leftover *_backup tables to avoid ALTER conflicts...');
+        const [backupTables] = await sequelize.query("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_backup';");
+        if (Array.isArray(backupTables) && backupTables.length > 0) {
+          for (const row of backupTables) {
+            // row may be { name: 'xxx_backup' }
+            const tname = row.name || Object.values(row)[0];
+            if (tname) {
+              console.log('[database] Dropping leftover table:', tname);
+              try {
+                await sequelize.query(`DROP TABLE IF EXISTS \`${tname}\`;`);
+              } catch (dropErr) {
+                console.warn('[database] Failed to drop table', tname, dropErr);
+              }
+            }
+          }
+        } else {
+          console.log('[database] No leftover _backup tables found.');
+        }
+      } catch (cleanupErr) {
+        console.warn('[database] Error while searching/dropping backup tables:', cleanupErr);
+      }
+    }
+
+    // 如果使用 SQLite，避免使用 alter=true 自动同步，因为 Sequelize 在 SQLite 上
+    // 通过创建 <table>_backup 临时表并写入数据来实现 alter，这会与残留表或外键约束冲突。
+    if (sequelize.getDialect && sequelize.getDialect() === 'sqlite') {
+      if (syncOptions.alter) {
+        console.log('[database] SQLite detected - disabling alter sync to avoid DROP/CREATE conflicts');
+      }
+      syncOptions.alter = false;
+      syncOptions.force = false;
+    }
+
+    // 使用最小化的 sync（不使用 alter）以避免在 SQLite 上触发复杂的表重建逻辑
     await sequelize.sync(syncOptions);
-    console.log('[database] Sequelize sync complete');
+    console.log('[database] Sequelize sync complete (safe mode for SQLite)');
 
     await runDatabaseMigrations();
     console.log('Database migrations executed');
