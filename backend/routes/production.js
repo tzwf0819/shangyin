@@ -488,16 +488,142 @@ router.get('/performance', async (req, res) => {
 // 新建生产记录
 router.post('/record', async (req, res) => {
   try {
-    const { employeeId, contractId, contractProductId, processId, quantity, actualTimeMinutes, notes } = req.body;
+    const {
+      employeeId,
+      contractId,
+      contractProductId,
+      processId,
+      quantity,
+      actualTimeMinutes,
+      notes,
+      rating,  // 新增：评分
+      ratingEmployeeId,  // 新增：评分员工ID
+      ratingEmployeeName,  // 新增：评分员工姓名
+      ratingTime  // 新增：评分时间
+    } = req.body;
+
     if (!employeeId || !contractId || !contractProductId || !processId) {
       return res.status(400).json({ success: false, message: '缺少必要字段' });
     }
+
     const employee = await Employee.findByPk(employeeId);
     if (!employee) {
       return res.status(404).json({ success: false, message: '员工不存在' });
     }
+
     const calc = await calcPay({ processId, quantity, actualTimeMinutes });
-    const record = await ProcessRecord.create({
+
+    // 准备创建记录的数据
+    const recordData = {
+      employeeId,
+      employeeNameSnapshot: employee.name,
+      contractId,
+      contractProductId,
+      processId,
+      quantity: quantity || 1,
+      actualTimeMinutes: actualTimeMinutes || 0,
+      payRateSnapshot: calc.payRateSnapshot,
+      payRateUnitSnapshot: calc.payRateUnitSnapshot,
+      payAmount: calc.payAmount,
+      notes,
+    };
+
+    // 如果提供了评分相关信息，添加评分数据
+    if (rating !== undefined && rating !== null) {
+      if (![0, 5, 10].includes(Number(rating))) {
+        return res.status(400).json({
+          success: false,
+          message: '评分必须为0、5或10分'
+        });
+      }
+
+      recordData.rating = rating;
+
+      // 如果提供了评分员工ID，验证该员工是否存在
+      if (ratingEmployeeId) {
+        const raterEmployee = await Employee.findByPk(ratingEmployeeId);
+        if (raterEmployee) {
+          recordData.ratingEmployeeId = ratingEmployeeId;
+          recordData.ratingEmployeeName = ratingEmployeeName || raterEmployee.name;
+          recordData.ratingTime = ratingTime ? new Date(ratingTime) : new Date();
+        } else {
+          return res.status(404).json({
+            success: false,
+            message: '评分员工不存在'
+          });
+        }
+      }
+    }
+
+    const record = await ProcessRecord.create(recordData);
+    res.json({ success: true, data: { record } });
+  } catch (error) {
+    console.error('新建生产记录失败:', error);
+    res.status(500).json({ success: false, message: '新建生产记录失败' });
+  }
+});
+
+// 小程序工序提交接口：支持在当前工序提交时对上一工序进行评分
+router.post('/submit', async (req, res) => {
+  try {
+    const {
+      employeeId,
+      contractId,
+      contractProductId,
+      processId,
+      quantity,
+      actualTimeMinutes,
+      notes,
+      previousRating,  // 对前一道工序的评分
+      previousRecordId // 前一道工序的记录ID
+    } = req.body;
+
+    if (!employeeId || !contractId || !contractProductId || !processId) {
+      return res.status(400).json({ success: false, message: '缺少必要字段' });
+    }
+
+    // 验证员工是否存在
+    const employee = await Employee.findByPk(employeeId);
+    if (!employee) {
+      return res.status(404).json({ success: false, message: '员工不存在' });
+    }
+
+    // 如果有对前一道工序的评分，则先更新前一道工序的评分信息
+    let previousRecord = null;
+    if (previousRating !== undefined && previousRecordId) {
+      if (![0, 5, 10].includes(Number(previousRating))) {
+        return res.status(400).json({
+          success: false,
+          message: '前工序评分必须为0、5或10分'
+        });
+      }
+
+      previousRecord = await ProcessRecord.findByPk(previousRecordId);
+      if (!previousRecord) {
+        return res.status(404).json({
+          success: false,
+          message: '前一道工序记录不存在'
+        });
+      }
+
+      // 检查评分员工是否有权限对前一道工序进行评分
+      // 这里可以加入业务逻辑：当前员工是否有权限对前一道工序进行评分
+      // 例如：当前工序的员工可以对前一道工序进行评分
+
+      // 更新前一道工序的评分信息
+      await previousRecord.update({
+        rating: previousRating,
+        ratingEmployeeId: employeeId,
+        ratingEmployeeName: employee.name,
+        ratingTime: new Date()
+      });
+    }
+
+    // 计算当前工序的绩效
+    const calc = await calcPay({ processId, quantity, actualTimeMinutes });
+
+    // 创建当前工序的记录
+    const currentRecord = await ProcessRecord.create({
       employeeId,
       employeeNameSnapshot: employee.name,
       contractId,
@@ -510,10 +636,18 @@ router.post('/record', async (req, res) => {
       payAmount: calc.payAmount,
       notes,
     });
-    res.json({ success: true, data: { record } });
+
+    res.json({
+      success: true,
+      data: {
+        currentRecord,
+        previousRecord: previousRecord ? { id: previousRecord.id, rating: previousRating } : null
+      },
+      message: '工序提交成功'
+    });
   } catch (error) {
-    console.error('新建生产记录失败:', error);
-    res.status(500).json({ success: false, message: '新建生产记录失败' });
+    console.error('工序提交失败:', error);
+    res.status(500).json({ success: false, message: '工序提交失败' });
   }
 });
 

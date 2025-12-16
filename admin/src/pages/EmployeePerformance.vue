@@ -16,6 +16,7 @@
             <th>生产记录数</th>
             <th>累计数量</th>
             <th>累计绩效</th>
+            <th>总评分</th>
             <th>最近记录时间</th>
             <th>操作</th>
           </tr>
@@ -28,6 +29,7 @@
             <td>{{ emp.recordCount }}</td>
             <td>{{ emp.totalQuantity }}</td>
             <td>{{ formatCurrency(emp.totalPayAmount) }}</td>
+            <td>{{ emp.totalRating || 0 }}</td>
             <td>{{ formatDate(emp.latestRecordAt) }}</td>
             <td><button @click="openDetail(emp)" :disabled="detailLoading">详情</button></td>
           </tr>
@@ -64,6 +66,7 @@
                   <th>数量</th>
                   <th>用时(分)</th>
                   <th>绩效</th>
+                  <th>评分</th>
                   <th>备注</th>
                 </tr>
               </thead>
@@ -82,10 +85,11 @@
                   <td>{{ record.quantity === null || record.quantity === undefined ? '-' : record.quantity }}</td>
                   <td>{{ record.actualTimeMinutes === null || record.actualTimeMinutes === undefined ? '-' : record.actualTimeMinutes }}</td>
                   <td>{{ record.payAmount === null || record.payAmount === undefined ? '-' : formatCurrency(record.payAmount) }}</td>
+                  <td>{{ record.rating !== null && record.rating !== undefined ? record.rating : '-' }}</td>
                   <td>{{ record.notes || '-' }}</td>
                 </tr>
                 <tr v-if="detailRecords.length">
-                  <td colspan="6" class="summary-label">合计绩效</td>
+                  <td colspan="7" class="summary-label">合计绩效</td>
                   <td class="summary-value">{{ formatCurrency(detailTotalPay) }}</td>
                   <td></td>
                 </tr>
@@ -132,6 +136,7 @@ const loading = ref(false);
 const detailEmployee = ref(null);
 const detailRecords = ref([]);
 const detailTotalPay = ref(0);
+const detailTotalRating = ref(0);
 const detailLoading = ref(false);
 const dlgDetail = ref(null);
 
@@ -192,6 +197,7 @@ const fetchEmployeeRecords = async (employeeId) => {
       payAmount: item.payAmount === null || item.payAmount === undefined ? null : Number(item.payAmount),
     }));
     detailTotalPay.value = Number(data.totalPayAmount || 0);
+    detailTotalRating.value = Number(data.totalRating || 0);
   } catch (error) {
     console.error('加载员工记录失败:', error);
     alert(error?.message || '获取员工生产记录失败');
@@ -208,6 +214,7 @@ const openDetail = async (employee) => {
   detailFilters.endDate = summaryFilters.endDate;
   detailRecords.value = [];
   detailTotalPay.value = 0;
+  detailTotalRating.value = 0;
   if (dlgDetail.value?.showModal) {
     try {
       dlgDetail.value.showModal();
