@@ -61,7 +61,21 @@ const save = async () => {
   if(form.id) await updateProcess(form.id,payload); else await createProcess(payload);
   close(); load();
 };
-const remove = async (id) => { if(!confirm('确认删除?')) return; await deleteProcess(id); load(); };
+const remove = async (id) => {
+  if(!confirm('确认删除?')) return;
+  try {
+    const result = await deleteProcess(id);
+    if (result.success) {
+      load(); // 重新加载数据
+      alert('工序删除成功');
+    } else {
+      alert(result.message || '删除失败');
+    }
+  } catch (error) {
+    console.error('删除工序失败:', error);
+    alert('删除工序失败: ' + (error.response?.data?.message || error.message || '未知错误'));
+  }
+};
 
 onMounted(load);
 </script>

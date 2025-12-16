@@ -1,5 +1,5 @@
 // controllers/processController.js
-const { Process, ProductTypeProcess } = require('../models');
+const { Process, ProductTypeProcess, ProcessRecord, EmployeeProcess } = require('../models');
 const { Op } = require('sequelize');
 
 // 工具函数：生成工序编码
@@ -282,19 +282,68 @@ exports.deleteProcess = async (req, res) => {
       });
     }
 
-    // 删除前清理关联（放开限制，满足“工序可删除”需求）
-    await ProductTypeProcess.destroy({ where: { processId: id } });
-    await process.destroy();
+    // 使用事务确保数据一致性
+    const transaction = await Process.sequelize.transaction();
 
-    res.json({
-      success: true,
-      message: '工序删除成功（已自动解除关联）'
-    });
+    try {
+      // 删除前清理关联（放开限制，满足"工序可删除"需求）
+      // 首先删除产品类型与工序的关联
+      await ProductTypeProcess.destroy({
+        where: { processId: id },
+        transaction
+      });
+
+      // 检查是否有生产记录使用此工序
+      const processRecordCount = await ProcessRecord.count({
+        where: { processId: id },
+        transaction
+      });
+
+      if (processRecordCount > 0) {
+        // 如果存在关联的生产记录，不允许删除
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: `无法删除工序: 此工序已被 ${processRecordCount} 条生产记录使用`
+        });
+      }
+
+      // 删除与员工的工序权限关联
+      await EmployeeProcess.destroy({
+        where: { processId: id },
+        transaction
+      });
+
+      await process.destroy({ transaction });
+
+      await transaction.commit();
+
+      res.json({
+        success: true,
+        message: '工序删除成功'
+      });
+    } catch (transactionError) {
+      // 检查是否是外键约束错误
+      if (transactionError.name === 'SequelizeForeignKeyConstraintError') {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          message: '无法删除工序: 该工序可能被其他数据引用'
+        });
+      }
+
+      await transaction.rollback();
+      console.error('Delete process transaction error:', transactionError);
+      res.status(500).json({
+        success: false,
+        message: '删除工序失败: ' + transactionError.message
+      });
+    }
   } catch (error) {
     console.error('Delete process error:', error);
     res.status(500).json({
       success: false,
-      message: '删除工序失败'
+      message: '删除工序失败: ' + error.message
     });
   }
 };
