@@ -59,8 +59,9 @@ class BackendTestSuite {
         console.log(`现有工序数量: ${processes.length}`);
         
         // 创建测试工序
+        const timestamp = Date.now();
         const createResponse = await this.axios.post('/processes', {
-            name: '测试工序-' + Date.now(),
+            name: '测试工序-' + timestamp,
             description: '自动化测试创建的工序',
             payRate: 5.5,
             payRateUnit: 'perItem'
@@ -117,10 +118,11 @@ class BackendTestSuite {
         const employees = listResponse.data.data.employees || [];
         console.log(`现有员工数量: ${employees.length}`);
         
+        const timestamp = Date.now();
         // 创建测试员工
         const createResponse = await this.axios.post('/employees', {
-            name: '测试员工-' + Date.now(),
-            code: 'EMP-' + Date.now()
+            name: '测试员工-' + timestamp,
+            code: 'EMP-' + timestamp
         });
         
         if (!createResponse.data.success) {
@@ -139,14 +141,15 @@ class BackendTestSuite {
         const contracts = listResponse.data.data.contracts || [];
         console.log(`现有合同数量: ${contracts.length}`);
         
+        const timestamp = Date.now();
         // 创建测试合同
         const createResponse = await this.axios.post('/contracts', {
-            contractNumber: 'TEST-' + Date.now(),
+            contractNumber: 'TEST-' + timestamp,
             partyAName: '测试甲方',
             partyBName: '测试乙方',
             products: [{
                 productName: '测试产品',
-                productCode: 'PROD-' + Date.now(),
+                productCode: 'PROD-' + timestamp,
                 quantity: 100
             }]
         });

@@ -7,8 +7,9 @@ const axios = require('axios');
 
     // 1. 确保有员工
     let empId;
+    const timestamp = Date.now();
     try {
-      const er = await axios.post(base + '/employees', { name: '测试员工A', code: 'EMP-A' });
+      const er = await axios.post(base + '/employees', { name: `测试员工A-${timestamp}`, code: `EMP-A-${timestamp}` });
       empId = er.data.data.employee.id;
     } catch {
       const el = await axios.get(base + '/employees');
@@ -18,8 +19,8 @@ const axios = require('axios');
     console.log('员工ID:', empId);
 
     // 2. 确保有工序（perItem / perHour 各一个）
-    const p1 = await axios.post(base + '/processes', { name: '计件工序X', payRate: 2.5, payRateUnit:'perItem' }).catch(()=>null);
-    const p2 = await axios.post(base + '/processes', { name: '计时工序Y', payRate: 60, payRateUnit:'perHour' }).catch(()=>null);
+    const p1 = await axios.post(base + '/processes', { name: `计件工序X-${timestamp}`, payRate: 2.5, payRateUnit:'perItem' }).catch(()=>null);
+    const p2 = await axios.post(base + '/processes', { name: `计时工序Y-${timestamp}`, payRate: 60, payRateUnit:'perHour' }).catch(()=>null);
     const plist = (await axios.get(base + '/processes')).data.data.processes;
     const piece = plist.find(p=>p.payRateUnit==='perItem');
     const hour = plist.find(p=>p.payRateUnit==='perHour');

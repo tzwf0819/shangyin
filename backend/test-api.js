@@ -25,22 +25,23 @@ async function testAPI() {
         
         // 测试创建工序
         console.log('\n4. 测试创建工序...');
+        const timestamp = Date.now();
         const newProcess = {
-            name: 'API测试工序',
+            name: `API测试工序-${timestamp}`,
             description: '这是一个通过API创建的测试工序',
             payRate: 5.50,
             payRateUnit: 'perItem'
         };
-        
+
         const createProcessResponse = await axios.post(`${baseURL}/processes`, newProcess);
         console.log('创建工序成功:', createProcessResponse.data);
-        
+
         // 测试创建产品类型
         console.log('\n5. 测试创建产品类型...');
         const newProductType = {
-            name: 'API测试产品类型'
+            name: `API测试产品类型-${timestamp}`
         };
-        
+
         const createProductTypeResponse = await axios.post(`${baseURL}/product-types`, newProductType);
         console.log('创建产品类型成功:', createProductTypeResponse.data);
         

@@ -8,22 +8,23 @@ async function testProductTypeProcessAPIs() {
     try {
         // 1. 先创建一个产品类型用于测试
         console.log('1. 创建测试产品类型...');
+        const timestamp = Date.now();
         const createProductTypeResponse = await axios.post(`${baseURL}/product-types`, {
-            name: '测试工序管理产品类型'
+            name: `测试工序管理产品类型-${timestamp}`
         });
         const productTypeId = createProductTypeResponse.data.data.productType.id;
         console.log('产品类型创建成功，ID:', productTypeId);
-        
+
         // 2. 获取所有工序
         console.log('\n2. 获取所有工序...');
         const processesResponse = await axios.get(`${baseURL}/processes`);
         const processes = processesResponse.data.data.processes;
         console.log('工序数量:', processes.length);
-        
+
         if (processes.length === 0) {
             console.log('没有工序，创建一个测试工序...');
             await axios.post(`${baseURL}/processes`, {
-                name: '测试工序用于关联',
+                name: `测试工序用于关联-${timestamp}`,
                 description: '测试工序',
                 payRate: 5.0,
                 payRateUnit: 'perItem'
