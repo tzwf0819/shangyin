@@ -40,25 +40,39 @@ jobs:
         working-directory: admin
         run: npm run build --if-present
 
-      - name: Setup SQLite for testing
-        working-directory: backend
-        run: |
-          echo "Using SQLite for testing (no setup required)"
-
       - name: Install Backend deps
         working-directory: backend
         run: npm ci
+
+      - name: Install MySQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
 
       - name: Run backend comprehensive tests
         working-directory: backend
         env:
           NODE_ENV: test
+          DB_DIALECT: mysql
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          DB_NAME: ${{ secrets.DB_NAME }}
           PORT: 3000
           JWT_SECRET: test_jwt_secret_for_ci
         run: |
           set -euo pipefail
           echo "Installing wait-on package..."
           npm install -g wait-on@7
+
+          # Wait for MySQL to be ready
+          echo "Waiting for remote MySQL to be ready..."
+          timeout 30 bash -c 'until mysqladmin ping -h "${{ secrets.DB_HOST }}" -u "${{ secrets.DB_USER }}" -p"${{ secrets.DB_PASS }}" --silent; do echo "Waiting for remote MySQL..."; sleep 2; done' || {
+            echo "Remote MySQL server is not accessible"
+            exit 1
+          }
+
           echo "Starting backend server with test environment..."
           nohup node app.js > backend-test.log 2>&1 &
           BACKEND_PID=$!
