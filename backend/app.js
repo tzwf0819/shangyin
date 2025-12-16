@@ -110,34 +110,27 @@ const startServer = async () => {
     const dialect = sequelize.getDialect();
     console.log(`Database dialect: ${dialect}`);
 
-    // 在测试环境中，快速启动服务器，不阻塞等待数据库同步
+    // 在测试环境中，需要等待数据库初始化完成
     if (process.env.NODE_ENV === 'test') {
-      console.log('Test environment detected - starting server without blocking database sync');
+      console.log('Test environment detected - waiting for database initialization...');
 
-      // 快速启动服务器
+      if (dialect === 'mysql') {
+        // MySQL数据库：运行初始化脚本
+        console.log('Initializing MySQL database...');
+        const initMysqlDb = require('./scripts/init-mysql-db');
+        await initMysqlDb(); // 等待初始化完成
+      } else {
+        console.log('Running database sync...');
+        const syncOptions = { alter: true }; // 为测试环境启用自动同步
+        await sequelize.sync(syncOptions);
+      }
+
+      await runDatabaseMigrations();
+      console.log('Database migrations executed');
+
       const server = app.listen(PORT, () => {
         console.log('Server running on port ' + PORT);
         console.log('Environment: ' + (process.env.NODE_ENV || 'development'));
-      });
-
-      // 异步执行数据库初始化，不阻塞服务器启动
-      if (dialect === 'mysql') {
-        console.log('Initializing MySQL database asynchronously...');
-        const initMysqlDb = require('./scripts/init-mysql-db');
-        initMysqlDb().catch(err => {
-          console.error('MySQL initialization error (non-blocking):', err);
-        });
-      } else {
-        console.log('Running database sync asynchronously...');
-        const syncOptions = { alter: true }; // 为测试环境启用自动同步
-        sequelize.sync(syncOptions).catch(err => {
-          console.error('Database sync error (non-blocking):', err);
-        });
-      }
-
-      // 运行数据库迁移（异步）
-      runDatabaseMigrations().catch(err => {
-        console.error('Database migrations error (non-blocking):', err);
       });
 
       return server; // 返回服务器实例以便测试使用
