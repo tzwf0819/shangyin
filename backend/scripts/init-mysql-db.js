@@ -51,7 +51,7 @@ async function initializeDatabase() {
 
     // 检查关键表是否存在
     const requiredTables = [
-      'users', 'employees', 'processes', 'product_types', 'contracts', 
+      'users', 'employees', 'processes', 'product_types', 'contract_records',
       'contract_products', 'process_records', 'product_type_processes', 'employee_processes'
     ];
     
