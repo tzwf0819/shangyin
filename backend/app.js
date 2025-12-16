@@ -149,9 +149,31 @@ const startServer = async () => {
       }
     }
 
-    // 如果使用 SQLite，避免使用 alter=true 自动同步，因为 Sequelize 在 SQLite 上
-    // 通过创建 <table>_backup 临时表并写入数据来实现 alter，这会与残留表或外键约束冲突。
+    // 在SQLite上运行自定义迁移以添加新字段（如果需要）
     if (sequelize.getDialect && sequelize.getDialect() === 'sqlite') {
+      try {
+        // 检查并添加评分相关字段
+        await sequelize.query(`
+          ALTER TABLE process_records ADD COLUMN rating INTEGER DEFAULT NULL
+        `).catch(() => {}); // 如果字段已存在则忽略错误
+
+        await sequelize.query(`
+          ALTER TABLE process_records ADD COLUMN ratingEmployeeId INTEGER DEFAULT NULL
+        `).catch(() => {});
+
+        await sequelize.query(`
+          ALTER TABLE process_records ADD COLUMN ratingEmployeeName TEXT DEFAULT NULL
+        `).catch(() => {});
+
+        await sequelize.query(`
+          ALTER TABLE process_records ADD COLUMN ratingTime DATETIME DEFAULT NULL
+        `).catch(() => {});
+
+        console.log('[database] Process records 表结构更新检查完成');
+      } catch (migrationError) {
+        console.log('[database] 表结构更新检查完成（可能字段已存在）');
+      }
+
       if (syncOptions.alter) {
         console.log('[database] SQLite detected - disabling alter sync to avoid DROP/CREATE conflicts');
       }

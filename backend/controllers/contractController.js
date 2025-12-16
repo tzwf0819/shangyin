@@ -705,18 +705,58 @@ exports.updateContract = async (req, res) => {
 exports.deleteContract = async (req, res) => {
   try {
     const { id } = req.params;
+    const force = req.query.force === 'true' || req.body.force === true; // 添加强制删除参数
+
     const contract = await Contract.findByPk(id);
     if (!contract) {
       return res.status(404).json({ success: false, message: '合同不存在' });
     }
 
     await sequelize.transaction(async transaction => {
+      // 检查是否存在关联的生产记录
+      const productIds = (await ContractProduct.findAll({
+        where: { contractId: contract.id },
+        attributes: ['id'],
+        transaction,
+      })).map(p => p.id);
+
+      if (productIds.length > 0) {
+        const inUseCount = await ProcessRecord.count({
+          where: { contractProductId: productIds },
+          transaction,
+        });
+
+        if (inUseCount > 0 && !force) {
+          // 如果存在关联记录且未强制删除，返回错误
+          const error = new Error('CONTRACT_IN_USE');
+          error.code = 'CONTRACT_IN_USE';
+          error.meta = { productIds, processRecordCount: inUseCount };
+          throw error;
+        } else if (inUseCount > 0 && force) {
+          // 如果存在关联记录但强制删除，则删除关联的生产记录
+          await ProcessRecord.destroy({
+            where: { contractProductId: productIds },
+            transaction,
+          });
+        }
+      }
+
+      // 删除合同下的所有产品
       await ContractProduct.destroy({ where: { contractId: contract.id }, transaction });
+
+      // 删除合同本身
       await contract.destroy({ transaction });
     });
 
     res.json({ success: true, message: '合同已删除' });
   } catch (error) {
+    if (error && error.code === 'CONTRACT_IN_USE') {
+      return res.status(400).json({
+        success: false,
+        message: '存在已被生产记录引用的合同产品，无法删除。请先处理相关生产记录，或使用 force=true 参数强制删除。',
+        meta: error.meta
+      });
+    }
     console.error('删除合同失败:', error);
     res.status(500).json({ success: false, message: '删除合同失败' });
   }

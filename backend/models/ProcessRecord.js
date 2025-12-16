@@ -72,6 +72,28 @@ module.exports = (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true,
       comment: '备注'
+    },
+    // 评分相关字段
+    rating: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+      comment: '评分(0,5,10分)'
+    },
+    ratingEmployeeId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: '评分员工ID'
+    },
+    ratingEmployeeName: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+      comment: '评分员工姓名'
+    },
+    ratingTime: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: '评分时间'
     }
   }, {
     tableName: 'process_records',

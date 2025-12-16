@@ -261,6 +261,7 @@ router.get('/performance/summary', async (req, res) => {
         [sequelize.fn('COUNT', sequelize.col('ProcessRecord.id')), 'recordCount'],
         [sequelize.fn('SUM', sequelize.col('quantity')), 'totalQuantity'],
         [sequelize.fn('SUM', sequelize.col('payAmount')), 'totalPayAmount'],
+        [sequelize.fn('SUM', sequelize.col('rating')), 'totalRating'], // 新增：总评分
         [sequelize.fn('MAX', sequelize.col('createdAt')), 'latestRecordAt'],
       ],
       group: ['employeeId'],
@@ -275,6 +276,7 @@ router.get('/performance/summary', async (req, res) => {
         recordCount: Number(item.recordCount || 0),
         totalQuantity: Number(item.totalQuantity || 0),
         totalPayAmount: Number(item.totalPayAmount || 0),
+        totalRating: Number(item.totalRating || 0), // 新增：总评分
         latestRecordAt: item.latestRecordAt || null,
       });
     });
@@ -307,6 +309,7 @@ router.get('/performance/summary', async (req, res) => {
         recordCount: stats.recordCount || 0,
         totalQuantity: stats.totalQuantity || 0,
         totalPayAmount: Number(stats.totalPayAmount || 0),
+        totalRating: stats.totalRating || 0, // 新增：总评分
         latestRecordAt: stats.latestRecordAt || null,
       };
     });
@@ -376,10 +379,14 @@ router.get('/performance/:employeeId/records', async (req, res) => {
       quantity: record.quantity,
       actualTimeMinutes: record.actualTimeMinutes,
       payAmount: Number(record.payAmount || 0),
+      rating: record.rating, // 新增：评分
+      ratingEmployeeName: record.ratingEmployeeName, // 新增：评分员工姓名
+      ratingTime: record.ratingTime ? record.ratingTime.toISOString() : null, // 新增：评分时间
       notes: record.notes || "",
     }));
 
     const totalPayAmount = items.reduce((sum, item) => sum + (item.payAmount || 0), 0);
+    const totalRating = items.reduce((sum, item) => sum + (item.rating || 0), 0); // 新增：总评分
 
     res.json({
       success: true,
@@ -388,6 +395,7 @@ router.get('/performance/:employeeId/records', async (req, res) => {
         items,
         total: items.length,
         totalPayAmount,
+        totalRating, // 新增：总评分
         range: {
           start: start.toISOString(),
           end: end.toISOString(),
@@ -451,6 +459,9 @@ router.get('/performance', async (req, res) => {
       quantity: record.quantity,
       actualTimeMinutes: record.actualTimeMinutes,
       payAmount: Number(record.payAmount || 0),
+      rating: record.rating, // 新增：评分
+      ratingEmployeeName: record.ratingEmployeeName, // 新增：评分员工姓名
+      ratingTime: record.ratingTime ? record.ratingTime.toISOString() : null, // 新增：评分时间
       notes: record.notes || '',
     }));
 
@@ -598,9 +609,9 @@ router.get('/contract-list', async (req, res) => {
 router.post('/scan/process', async (req, res) => {
   try {
     const { qrCode, employeeId, wechatOpenId, duration, notes } = req.body;
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       message: '流程记录成功',
       data: { recordId: 1, totalWage: 10, processName: '示例工序' }
     });
@@ -608,6 +619,132 @@ router.post('/scan/process', async (req, res) => {
   } catch (error) {
     console.error('扫码工序失败:', error);
     res.status(500).json({ success: false, message: '录入流程失败' });
+  }
+});
+
+// 为生产记录评分
+router.post('/record/:id/rate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rating, raterEmployeeId } = req.body;
+
+    // 验证评分值是否为0、5或10
+    if (![0, 5, 10].includes(Number(rating))) {
+      return res.status(400).json({
+        success: false,
+        message: '评分必须为0、5或10分'
+      });
+    }
+
+    // 检查生产记录是否存在
+    const record = await ProcessRecord.findByPk(id, {
+      include: [
+        { model: ContractProduct, as: 'contractProduct', attributes: ['id'] },
+        { model: Process, as: 'process', attributes: ['id'] }
+      ]
+    });
+    if (!record) {
+      return res.status(404).json({
+        success: false,
+        message: '生产记录不存在'
+      });
+    }
+
+    // 获取评分员工信息
+    const raterEmployee = await Employee.findByPk(raterEmployeeId);
+    if (!raterEmployee) {
+      return res.status(404).json({
+        success: false,
+        message: '评分员工不存在'
+      });
+    }
+
+    // 获取合同产品的所有工序列表（按顺序）
+    const contractProduct = await ContractProduct.findByPk(record.contractProductId);
+    if (!contractProduct) {
+      return res.status(404).json({
+        success: false,
+        message: '合同产品不存在'
+      });
+    }
+
+    // 获取产品类型
+    const productType = await ProductType.findOne({
+      include: [{
+        model: ContractProduct,
+        as: 'contractProducts',
+        where: { id: contractProduct.id },
+        required: true
+      }]
+    });
+
+    if (productType) {
+      // 获取该产品类型的所有工序（按顺序）
+      const productTypeProcesses = await sequelize.query(
+        `SELECT ptp.processId, ptp.sequence FROM product_type_processes ptp
+         WHERE ptp.productTypeId = :productTypeId
+         ORDER BY ptp.sequence ASC`,
+        {
+          replacements: { productTypeId: productType.id },
+          type: sequelize.QueryTypes.SELECT
+        }
+      );
+
+      if (productTypeProcesses.length > 0) {
+        // 找到当前工序的索引
+        const currentProcessIndex = productTypeProcesses.findIndex(p => p.processId === record.processId);
+        if (currentProcessIndex === -1) {
+          return res.status(400).json({
+            success: false,
+            message: '当前工序不在产品类型工序列表中'
+          });
+        }
+
+        // 检查评分员工是否有权对当前工序进行评分（即是否是下一个工序的员工）
+        const nextProcessIndex = currentProcessIndex + 1;
+        if (nextProcessIndex < productTypeProcesses.length) {
+          // 检查评分员工是否被授权执行下一个工序
+          const nextProcessId = productTypeProcesses[nextProcessIndex].processId;
+          const authorized = await EmployeeProcess.findOne({
+            where: {
+              employeeId: raterEmployeeId,
+              processId: nextProcessId
+            }
+          });
+
+          if (!authorized) {
+            return res.status(403).json({
+              success: false,
+              message: '评分员工没有权限对当前工序进行评分'
+            });
+          }
+        } else {
+          // 如果是最后一个工序，则不允许评分
+          return res.status(400).json({
+            success: false,
+            message: '最后一个工序不能被评分'
+          });
+        }
+      }
+    }
+
+    // 更新评分信息
+    await record.update({
+      rating: rating,
+      ratingEmployeeId: raterEmployeeId,
+      ratingEmployeeName: raterEmployee.name,
+      ratingTime: new Date()
+    });
+
+    res.json({
+      success: true,
+      message: '评分成功',
+      data: { record }
+    });
+
+  } catch (error) {
+    console.error('评分失败:', error);
+    res.status(500).json({ success: false, message: '评分失败' });
   }
 });
 
