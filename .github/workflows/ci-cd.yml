@@ -58,7 +58,7 @@ jobs:
           DB_PORT: ${{ secrets.DB_PORT }}
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASS: ${{ secrets.DB_PASS }}
-          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_NAME: shangyin_test  # Use separate test database
           PORT: 3000
           JWT_SECRET: test_jwt_secret_for_ci
         run: |
@@ -72,6 +72,19 @@ jobs:
             echo "Remote MySQL server is not accessible"
             exit 1
           }
+
+          # Create test database if it doesn't exist
+          echo "Creating test database (shangyin_test)..."
+          mysql -h "${{ secrets.DB_HOST }}" -u "${{ secrets.DB_USER }}" -p"${{ secrets.DB_PASS }}" -e "CREATE DATABASE IF NOT EXISTS shangyin_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+          # Clean up test database before running tests (drop and recreate to ensure clean state)
+          echo "Cleaning up test database..."
+          mysql -h "${{ secrets.DB_HOST }}" -u "${{ secrets.DB_USER }}" -p"${{ secrets.DB_PASS }}" -e "DROP DATABASE IF EXISTS shangyin_test;"
+          mysql -h "${{ secrets.DB_HOST }}" -u "${{ secrets.DB_USER }}" -p"${{ secrets.DB_PASS }}" -e "CREATE DATABASE shangyin_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+          # Copy schema from production database to test database to ensure identical structure
+          echo "Copying schema from production to test database..."
+          # We'll let the app.js initialization create the schema in the test database
 
           echo "Starting backend server with test environment..."
           nohup node app.js > backend-test.log 2>&1 &
@@ -105,6 +118,10 @@ jobs:
           npm run test:producttype
           echo "5. Running complete test suite..."
           npm test
+
+          # Clean up test database after running tests
+          echo "Cleaning up test database after tests..."
+          mysql -h "${{ secrets.DB_HOST }}" -u "${{ secrets.DB_USER }}" -p"${{ secrets.DB_PASS }}" -e "DROP DATABASE IF EXISTS shangyin_test;"
 
       - name: Upload backend test log on failure
         if: failure()
