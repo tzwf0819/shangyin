@@ -77,7 +77,7 @@ class BackendTestSuite {
         
         // 测试更新工序
         const updateResponse = await this.axios.put(`/processes/${newProcess.id}`, {
-            name: '更新后的工序',
+            name: '更新后的工序-' + Date.now(),
             description: '已更新的工序描述',
             payRate: 6.0,
             payRateUnit: 'perItem'
