@@ -12,7 +12,7 @@
       <table>
         <thead>
           <tr>
-            <th>时间</th><th>合同</th><th>产品</th><th>工序</th><th>员工</th><th>数量</th><th>用时(分)</th><th>金额</th><th>操作</th>
+            <th>时间</th><th>合同</th><th>产品</th><th>工序</th><th>员工</th><th>数量</th><th>用时(分)</th><th>金额</th><th>评分</th><th>评分员工</th><th>评分时间</th><th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -25,6 +25,9 @@
             <td>{{ r.quantity }}</td>
             <td>{{ r.actualTimeMinutes }}</td>
             <td>￥{{ Number(r.payAmount||0).toFixed(2) }}</td>
+            <td>{{ r.rating !== null && r.rating !== undefined ? r.rating + '分' : '-' }}</td>
+            <td>{{ r.ratingEmployeeName || '-' }}</td>
+            <td>{{ r.ratingTime ? formatTime(r.ratingTime) : '-' }}</td>
             <td>
               <button @click="edit(r)">编辑</button>
               <button class="danger" @click="remove(r.id)">删除</button>
@@ -67,6 +70,14 @@
             </div>
             <div class="field"><label>数量</label><input type="number" min="1" v-model.number="form.quantity" required /></div>
             <div class="field"><label>用时(分钟)</label><input type="number" min="0" v-model.number="form.actualTimeMinutes" required /></div>
+            <div class="field"><label>评分</label>
+              <select v-model.number="form.rating">
+                <option :value="null">无评分</option>
+                <option value="0">0分</option>
+                <option value="5">5分</option>
+                <option value="10">10分</option>
+              </select>
+            </div>
             <div class="field" style="grid-column:1/3"><label>备注</label><textarea v-model="form.notes" rows="3"></textarea></div>
           </div>
         </div>
@@ -93,7 +104,7 @@ const processes = ref([]); // 全量工序（用于筛选）
 const formProcesses = ref([]); // 表单内工序（按产品类型顺序）
 const employees = ref([]);
 const dlg = ref();
-const form = reactive({ id:null, employeeId:'', contractId:'', contractProductId:'', processId:'', quantity:1, actualTimeMinutes:0, notes:'' });
+const form = reactive({ id:null, employeeId:'', contractId:'', contractProductId:'', processId:'', quantity:1, actualTimeMinutes:0, rating: null, notes:'' });
 
 const load = async ()=>{
   const r = await listRecords({ ...query });
@@ -121,15 +132,24 @@ const openCreate = ()=>{
   onContractChange().then(onProductChange);
   dlg.value.showModal(); 
 };
-const edit = async (r)=>{ 
-  Object.assign(form,{ id:r.id, employeeId:r.employeeId || '', contractId:r.contractId, contractProductId:r.contractProductId, processId:r.processId, quantity:r.quantity, actualTimeMinutes:r.actualTimeMinutes, notes:r.notes||'' }); 
-  await onContractChange(); 
+const edit = async (r)=>{
+  Object.assign(form,{ id:r.id, employeeId:r.employeeId || '', contractId:r.contractId, contractProductId:r.contractProductId, processId:r.processId, quantity:r.quantity, actualTimeMinutes:r.actualTimeMinutes, rating:r.rating, notes:r.notes||'' });
+  await onContractChange();
   await onProductChange();
-  dlg.value.showModal(); 
+  dlg.value.showModal();
 };
 const close = ()=> dlg.value.close();
 const save = async ()=>{
-  const payload = { employeeId:+form.employeeId, contractId:+form.contractId, contractProductId:+form.contractProductId, processId:+form.processId, quantity:+form.quantity, actualTimeMinutes:+form.actualTimeMinutes, notes:form.notes };
+  const payload = {
+    employeeId:+form.employeeId,
+    contractId:+form.contractId,
+    contractProductId:+form.contractProductId,
+    processId:+form.processId,
+    quantity:+form.quantity,
+    actualTimeMinutes:+form.actualTimeMinutes,
+    rating: form.rating !== null ? +form.rating : null,
+    notes:form.notes
+  };
   if(form.id) await updateRecord(form.id, payload); else await createRecord(payload);
   close(); load();
 };
