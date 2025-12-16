@@ -106,84 +106,96 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('Database connected successfully');
 
-    const env = process.env.NODE_ENV || 'development';
-    const syncOptions = {};
-    if (process.env.DB_SYNC_FORCE === 'true') {
-      syncOptions.force = true;
-      console.warn('[database] Running sync with force=true (data may be dropped)');
-    } else if (process.env.DB_SYNC_ALTER === 'true') {
-      syncOptions.alter = true;
-      console.log('[database] Running sync with alter=true (explicit override)');
-    } else if (env !== 'production') {
-      syncOptions.alter = true;
-      console.log('[database] Running sync with alter=true (non-production default)');
-    } else {
-      console.log('[database] Running sync without automatic schema alterations (safe production mode)');
-    }
+    // 检查数据库类型并初始化
+    const dialect = sequelize.getDialect();
+    console.log(`Database dialect: ${dialect}`);
 
-    // 在执行 sync({ alter: true }) 之前，清理残留的 SQLite 中间表（例如 product_types_backup）
-    // Sequelize 在对 SQLite 执行 alter 时会创建 <table>_backup 临时表并向其中插入数据；
-    // 如果项目目录中已存在同名 backup 表（历史残留），会导致 UNIQUE 约束冲突。
-    if (sequelize.getDialect && sequelize.getDialect() === 'sqlite') {
-      try {
-        console.log('[database] Looking for leftover *_backup tables to avoid ALTER conflicts...');
-        const [backupTables] = await sequelize.query("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_backup';");
-        if (Array.isArray(backupTables) && backupTables.length > 0) {
-          for (const row of backupTables) {
-            // row may be { name: 'xxx_backup' }
-            const tname = row.name || Object.values(row)[0];
-            if (tname) {
-              console.log('[database] Dropping leftover table:', tname);
-              try {
-                await sequelize.query(`DROP TABLE IF EXISTS \`${tname}\`;`);
-              } catch (dropErr) {
-                console.warn('[database] Failed to drop table', tname, dropErr);
+    if (dialect === 'mysql') {
+      // MySQL数据库：运行初始化脚本
+      console.log('Initializing MySQL database...');
+      const initMysqlDb = require('./scripts/init-mysql-db');
+      await initMysqlDb();
+    } else {
+      // SQLite数据库：使用原有逻辑
+      const env = process.env.NODE_ENV || 'development';
+      const syncOptions = {};
+      if (process.env.DB_SYNC_FORCE === 'true') {
+        syncOptions.force = true;
+        console.warn('[database] Running sync with force=true (data may be dropped)');
+      } else if (process.env.DB_SYNC_ALTER === 'true') {
+        syncOptions.alter = true;
+        console.log('[database] Running sync with alter=true (explicit override)');
+      } else if (env !== 'production') {
+        syncOptions.alter = true;
+        console.log('[database] Running sync with alter=true (non-production default)');
+      } else {
+        console.log('[database] Running sync without automatic schema alterations (safe production mode)');
+      }
+
+      // 在执行 sync({ alter: true }) 之前，清理残留的 SQLite 中间表（例如 product_types_backup）
+      // Sequelize 在对 SQLite 执行 alter 时会创建 <table>_backup 临时表并向其中插入数据；
+      // 如果项目目录中已存在同名 backup 表（历史残留），会导致 UNIQUE 约束冲突。
+      if (dialect === 'sqlite') {
+        try {
+          console.log('[database] Looking for leftover *_backup tables to avoid ALTER conflicts...');
+          const [backupTables] = await sequelize.query("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%_backup';");
+          if (Array.isArray(backupTables) && backupTables.length > 0) {
+            for (const row of backupTables) {
+              // row may be { name: 'xxx_backup' }
+              const tname = row.name || Object.values(row)[0];
+              if (tname) {
+                console.log('[database] Dropping leftover table:', tname);
+                try {
+                  await sequelize.query(`DROP TABLE IF EXISTS \`${tname}\`;`);
+                } catch (dropErr) {
+                  console.warn('[database] Failed to drop table', tname, dropErr);
+                }
               }
             }
+          } else {
+            console.log('[database] No leftover _backup tables found.');
           }
-        } else {
-          console.log('[database] No leftover _backup tables found.');
+        } catch (cleanupErr) {
+          console.warn('[database] Error while searching/dropping backup tables:', cleanupErr);
         }
-      } catch (cleanupErr) {
-        console.warn('[database] Error while searching/dropping backup tables:', cleanupErr);
       }
+
+      // 在SQLite上运行自定义迁移以添加新字段（如果需要）
+      if (dialect === 'sqlite') {
+        try {
+          // 检查并添加评分相关字段
+          await sequelize.query(`
+            ALTER TABLE process_records ADD COLUMN rating INTEGER DEFAULT NULL
+          `).catch(() => {}); // 如果字段已存在则忽略错误
+
+          await sequelize.query(`
+            ALTER TABLE process_records ADD COLUMN ratingEmployeeId INTEGER DEFAULT NULL
+          `).catch(() => {});
+
+          await sequelize.query(`
+            ALTER TABLE process_records ADD COLUMN ratingEmployeeName TEXT DEFAULT NULL
+          `).catch(() => {});
+
+          await sequelize.query(`
+            ALTER TABLE process_records ADD COLUMN ratingTime DATETIME DEFAULT NULL
+          `).catch(() => {});
+
+          console.log('[database] Process records 表结构更新检查完成');
+        } catch (migrationError) {
+          console.log('[database] 表结构更新检查完成（可能字段已存在）');
+        }
+
+        if (syncOptions.alter) {
+          console.log('[database] SQLite detected - disabling alter sync to avoid DROP/CREATE conflicts');
+        }
+        syncOptions.alter = false;
+        syncOptions.force = false;
+      }
+
+      // 使用最小化的 sync（不使用 alter）以避免在 SQLite 上触发复杂的表重建逻辑
+      await sequelize.sync(syncOptions);
+      console.log('[database] Sequelize sync complete (safe mode for SQLite)');
     }
-
-    // 在SQLite上运行自定义迁移以添加新字段（如果需要）
-    if (sequelize.getDialect && sequelize.getDialect() === 'sqlite') {
-      try {
-        // 检查并添加评分相关字段
-        await sequelize.query(`
-          ALTER TABLE process_records ADD COLUMN rating INTEGER DEFAULT NULL
-        `).catch(() => {}); // 如果字段已存在则忽略错误
-
-        await sequelize.query(`
-          ALTER TABLE process_records ADD COLUMN ratingEmployeeId INTEGER DEFAULT NULL
-        `).catch(() => {});
-
-        await sequelize.query(`
-          ALTER TABLE process_records ADD COLUMN ratingEmployeeName TEXT DEFAULT NULL
-        `).catch(() => {});
-
-        await sequelize.query(`
-          ALTER TABLE process_records ADD COLUMN ratingTime DATETIME DEFAULT NULL
-        `).catch(() => {});
-
-        console.log('[database] Process records 表结构更新检查完成');
-      } catch (migrationError) {
-        console.log('[database] 表结构更新检查完成（可能字段已存在）');
-      }
-
-      if (syncOptions.alter) {
-        console.log('[database] SQLite detected - disabling alter sync to avoid DROP/CREATE conflicts');
-      }
-      syncOptions.alter = false;
-      syncOptions.force = false;
-    }
-
-    // 使用最小化的 sync（不使用 alter）以避免在 SQLite 上触发复杂的表重建逻辑
-    await sequelize.sync(syncOptions);
-    console.log('[database] Sequelize sync complete (safe mode for SQLite)');
 
     await runDatabaseMigrations();
     console.log('Database migrations executed');

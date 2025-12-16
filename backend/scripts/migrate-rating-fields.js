@@ -3,7 +3,8 @@
  * 为process_records表添加评分相关字段
  */
 
-const { sequelize } = require('./models');
+const path = require('path');
+const { sequelize } = require(path.join(__dirname, '../models'));
 const { QueryTypes } = require('sequelize');
 
 async function migrate() {

@@ -2,7 +2,8 @@
  * 评分功能测试脚本
  */
 
-const { sequelize, ProcessRecord, Employee, Contract, ContractProduct, Process, ProductType, ProductTypeProcess } = require('./models');
+const path = require('path');
+const { sequelize, ProcessRecord, Employee, Contract, ContractProduct, Process, ProductType, ProductTypeProcess } = require(path.join(__dirname, '../models'));
 const { Op } = require('sequelize');
 
 async function testRatingFunctionality() {
