@@ -115,18 +115,79 @@ const startServer = async () => {
       console.log('Test environment detected - waiting for database initialization...');
 
       if (dialect === 'mysql') {
-        // MySQL数据库：运行初始化脚本
-        console.log('Initializing MySQL database...');
-        const initMysqlDb = require('./scripts/init-mysql-db');
-        await initMysqlDb(); // 等待初始化完成
+        // MySQL数据库：对于测试环境，进行详细但轻量级的数据库结构检查
+        console.log('开始检查 MySQL 数据库结构...');
+        await sequelize.authenticate();
+        console.log('✓ 数据库连接成功');
+
+        // 显示数据库结构的详细信息（不进行修改操作）
+        const { QueryTypes } = require('sequelize');
+        try {
+          console.log('=== 数据库结构检测报告 ===');
+
+          // 获取所有表
+          const tables = await sequelize.query('SHOW TABLES;', {
+            type: QueryTypes.SELECT,
+            raw: true
+          });
+
+          const tableNames = tables.map(row => {
+            return row.Tables_in_shangyin ||
+                   row['Tables_in_' + (process.env.DB_NAME || 'shangyin')] ||
+                   row.table_name;
+          }).filter(name => name);
+
+          console.log(`发现 ${tableNames.length} 个表:`, JSON.stringify(tableNames, null, 2));
+
+          // 检查关键表是否存在
+          const requiredTables = [
+            'users', 'employees', 'processes', 'product_types', 'contract_records',
+            'contract_products', 'process_records', 'product_type_processes', 'employee_processes'
+          ];
+
+          const existingTables = new Set(tableNames);
+          const missingTables = requiredTables.filter(table => !existingTables.has(table));
+          const existingRequiredTables = requiredTables.filter(table => existingTables.has(table));
+
+          console.log(`\n关键表状态:`);
+          console.log(`- 已存在关键表 (${existingRequiredTables.length}/${requiredTables.length}):`, existingRequiredTables);
+          if (missingTables.length > 0) {
+            console.log(`- 缺失关键表 (${missingTables.length}):`, missingTables);
+          } else {
+            console.log('- 所有关键表都已存在');
+          }
+
+          // 显示各表的基本信息
+          for (const tableName of tableNames.slice(0, 10)) { // 只显示前10个表以避免日志过长
+            try {
+              const recordsCount = await sequelize.query(
+                `SELECT COUNT(*) as count FROM \`${tableName}\`;`,
+                { type: QueryTypes.SELECT }
+              );
+              console.log(`- 表 ${tableName}: ${recordsCount[0].count} 条记录`);
+            } catch (countError) {
+              console.log(`- 表 ${tableName}: 无法获取记录数 (${countError.message})`);
+            }
+          }
+
+          if (missingTables.length > 0) {
+            console.log(`\n⚠️  检测到缺失表: ${missingTables.join(', ')}`);
+          } else {
+            console.log('\n✓ 所有必需的表都存在');
+          }
+        } catch (structError) {
+          console.error('数据库结构检查失败:', structError.message);
+        }
+
+        // 仅执行必要的迁移，避免在生产数据库上进行耗时的表结构同步
+        console.log('\n执行数据库迁移...');
+        await runDatabaseMigrations();
+        console.log('Database migrations executed');
       } else {
         console.log('Running database sync...');
         const syncOptions = { alter: true }; // 为测试环境启用自动同步
         await sequelize.sync(syncOptions);
       }
-
-      await runDatabaseMigrations();
-      console.log('Database migrations executed');
 
       const server = app.listen(PORT, () => {
         console.log('Server running on port ' + PORT);
