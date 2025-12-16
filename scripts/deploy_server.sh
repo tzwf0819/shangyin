@@ -137,7 +137,20 @@ npm run build
 log "启动后端服务..."
 cd "$BACKEND_DIR"
 export NODE_ENV=production
-export DB_STORAGE="$DATABASE_DIR/shangyin.db"
+
+# 默认使用MySQL数据库，如果未设置DB_DIALECT为sqlite则使用MySQL
+if [ "${DB_DIALECT:-mysql}" = "mysql" ]; then
+    log "使用MySQL数据库配置 (主机: ${DB_HOST:-82.156.83.99})"
+    export DB_DIALECT="mysql"
+    export DB_HOST="${DB_HOST:-82.156.83.99}"
+    export DB_USER="${DB_USER:-shangyin}"
+    export DB_PASS="${DB_PASS:-shaoyansa}"
+    export DB_NAME="${DB_NAME:-shangyin}"
+    export DB_PORT="${DB_PORT:-3306}"
+else
+    log "使用SQLite数据库配置 (文件: $DATABASE_DIR/shangyin.db)"
+    export DB_STORAGE="$DATABASE_DIR/shangyin.db"
+fi
 
 nohup node app.js > server.log 2>&1 &
 BACKEND_PID=$!

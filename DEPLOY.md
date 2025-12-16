@@ -52,10 +52,24 @@
 
 6. 环境变量与数据库
    - 脚本会在仓库根生成一个示例 .env（如果不存在），请编辑 `/root/shangyin/.env` 设置：
+
+   使用 MySQL（默认）：
      PORT=3000
      NODE_ENV=production
+     DB_DIALECT=mysql
+     DB_HOST=82.156.83.99
+     DB_PORT=3306
+     DB_USER=shangyin
+     DB_PASS=shaoyansa
+     DB_NAME=shangyin
+
+   使用 SQLite：
+     PORT=3000
+     NODE_ENV=production
+     DB_DIALECT=sqlite
      DB_STORAGE=./shangyin-backend/backend/database/shangyin.db
-   - 确保 `shangyin-backend/backend/database` 目录存在且可写。
+
+   - 确保 `shangyin-backend/backend/database` 目录存在且可写（SQLite需要，MySQL不需要）。
 
 7. 日志与调试
    - 使用 systemd 管理：
