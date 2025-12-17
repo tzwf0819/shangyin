@@ -31,6 +31,7 @@
             <td>
               <button @click="edit(r)">编辑</button>
               <button class="danger" @click="remove(r.id)">删除</button>
+              <button v-if="r.rating === null || r.rating === undefined" @click="openRatingDialog(r)">评分</button>
             </td>
           </tr>
         </tbody>
@@ -70,14 +71,6 @@
             </div>
             <div class="field"><label>数量</label><input type="number" min="1" v-model.number="form.quantity" required /></div>
             <div class="field"><label>用时(分钟)</label><input type="number" min="0" v-model.number="form.actualTimeMinutes" required /></div>
-            <div class="field"><label>评分</label>
-              <select v-model.number="form.rating">
-                <option :value="null">无评分</option>
-                <option value="0">0分</option>
-                <option value="5">5分</option>
-                <option value="10">10分</option>
-              </select>
-            </div>
             <div class="field" style="grid-column:1/3"><label>备注</label><textarea v-model="form.notes" rows="3"></textarea></div>
           </div>
         </div>
@@ -87,13 +80,42 @@
         </div>
       </form>
     </dialog>
+
+    <!-- Rating Dialog -->
+    <dialog ref="ratingDlg">
+      <form @submit.prevent="submitRating">
+        <div class="modal-header">为生产记录评分</div>
+        <div class="modal-body">
+          <div class="grid1">
+            <div class="field"><label>评分</label>
+              <select v-model.number="ratingForm.rating" required>
+                <option value="" disabled>请选择评分</option>
+                <option value="0">0分 - 质量差、效率低、有安全问题</option>
+                <option value="5">5分 - 一般，基本符合要求</option>
+                <option value="10">10分 - 质量好、效率高、操作规范</option>
+              </select>
+            </div>
+            <div class="field"><label>评分员工</label>
+              <select v-model.number="ratingForm.raterEmployeeId" required>
+                <option value="" disabled>请选择评分员工</option>
+                <option v-for="e in employees" :key="e.id" :value="e.id">{{ e.name }}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" @click="closeRatingDialog">取消</button>
+          <button class="primary" type="submit">提交评分</button>
+        </div>
+      </form>
+    </dialog>
   </div>
-  
+
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue';
-import { listRecords, createRecord, updateRecord, deleteRecord } from '../api/production';
+import { listRecords, createRecord, updateRecord, deleteRecord, rateRecord } from '../api/production';
 import http from '../api/http';
 
 const items = ref([]);
@@ -104,13 +126,15 @@ const processes = ref([]); // 全量工序（用于筛选）
 const formProcesses = ref([]); // 表单内工序（按产品类型顺序）
 const employees = ref([]);
 const dlg = ref();
-const form = reactive({ id:null, employeeId:'', contractId:'', contractProductId:'', processId:'', quantity:1, actualTimeMinutes:0, rating: null, notes:'' });
+const ratingDlg = ref();
+const form = reactive({ id:null, employeeId:'', contractId:'', contractProductId:'', processId:'', quantity:1, actualTimeMinutes:0, notes:'' });
+const ratingForm = reactive({ recordId: null, rating: null, raterEmployeeId: null });
 
 const load = async ()=>{
   const r = await listRecords({ ...query });
   if(r.success){ items.value = r.data.records; }
 };
-const loadContracts = async ()=>{ 
+const loadContracts = async ()=>{
   const r = await http.get('/shangyin/contracts',{ params:{ pageSize:100 }});
   if(r.success) contracts.value = r.data.items || r.data.contracts || [];
 };
@@ -118,7 +142,7 @@ const loadProductsByContract = async (cid)=>{ if(!cid){contractProducts.value=[]
 const loadProcesses = async ()=>{ const r = await http.get('/shangyin/processes',{ params:{ limit:500 }}); if(r.success) processes.value = r.data.processes || r.data.items || []; };
 const loadEmployees = async ()=>{ const r = await http.get('/shangyin/employees',{ params:{ limit:500 }}); if(r.success) employees.value = r.data.employees || r.data.items || []; };
 
-const openCreate = ()=>{ 
+const openCreate = ()=>{
   Object.assign(form,{
     id:null,
     employeeId: query.employeeId || '',
@@ -130,10 +154,10 @@ const openCreate = ()=>{
     notes:''
   });
   onContractChange().then(onProductChange);
-  dlg.value.showModal(); 
+  dlg.value.showModal();
 };
 const edit = async (r)=>{
-  Object.assign(form,{ id:r.id, employeeId:r.employeeId || '', contractId:r.contractId, contractProductId:r.contractProductId, processId:r.processId, quantity:r.quantity, actualTimeMinutes:r.actualTimeMinutes, rating:r.rating, notes:r.notes||'' });
+  Object.assign(form,{ id:r.id, employeeId:r.employeeId || '', contractId:r.contractId, contractProductId:r.contractProductId, processId:r.processId, quantity:r.quantity, actualTimeMinutes:r.actualTimeMinutes, notes:r.notes||'' });
   await onContractChange();
   await onProductChange();
   dlg.value.showModal();
@@ -147,7 +171,6 @@ const save = async ()=>{
     processId:+form.processId,
     quantity:+form.quantity,
     actualTimeMinutes:+form.actualTimeMinutes,
-    rating: form.rating !== null ? +form.rating : null,
     notes:form.notes
   };
   if(form.id) await updateRecord(form.id, payload); else await createRecord(payload);
@@ -168,6 +191,37 @@ const onProductChange = async ()=>{
   formProcesses.value = processes.value;
 };
 
+// Rating functionality
+const openRatingDialog = async (record) => {
+  ratingForm.recordId = record.id;
+  ratingForm.rating = null;
+  ratingForm.raterEmployeeId = null;
+  await loadEmployees(); // Load employees for rater selection
+  ratingDlg.value.showModal();
+};
+
+const submitRating = async () => {
+  if (!ratingForm.rating || !ratingForm.raterEmployeeId) {
+    alert('请选择评分和评分员工');
+    return;
+  }
+
+  try {
+    await rateRecord(ratingForm.recordId, {
+      rating: ratingForm.rating,
+      raterEmployeeId: ratingForm.raterEmployeeId
+    });
+    alert('评分成功');
+    ratingDlg.value.close();
+    load(); // Refresh the list
+  } catch (error) {
+    console.error('评分失败:', error);
+    alert('评分失败: ' + (error.message || '未知错误'));
+  }
+};
+
+const closeRatingDialog = () => ratingDlg.value.close();
+
 const formatTime = (s)=> new Date(s).toLocaleString();
 
 onMounted(async ()=>{ await Promise.all([loadContracts(), loadProcesses(), loadEmployees()]); formProcesses.value = processes.value; load(); });
@@ -182,6 +236,7 @@ select, input, textarea { padding:6px 8px; border:1px solid var(--border,#e5e7eb
 .table-wrapper{ background:#fff; border:1px solid #e5e7eb; border-radius:8px; overflow:auto; }
 table{ width:100%; border-collapse:collapse; }
 th,td{ padding:10px 12px; border-bottom:1px solid #f0f0f0; text-align:left; font-size:13px; }
+.grid1{ display:grid; grid-template-columns: 1fr; gap:12px; }
 .grid2{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
 .modal-header{ font-weight:600; margin-bottom:8px; }
 .modal-footer{ display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
