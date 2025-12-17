@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
-const { ProcessRecord, Employee, Contract, ContractProduct, Process, sequelize } = require('../models');
+const { ProcessRecord, Employee, Contract, ContractProduct, Process, ProductType, ProductTypeProcess, EmployeeProcess, sequelize } = require('../models');
 // 计薪计算函数
 async function calcPay({ processId, quantity, actualTimeMinutes }) {
   const process = await Process.findByPk(processId);
@@ -719,7 +719,18 @@ router.get('/record', async (req, res) => {
       offset,
       limit: parseInt(limit)
     });
-    res.json({ success: true, data: { total: count, records: rows } });
+
+    // 转换数据以确保评分字段正确返回
+    const records = rows.map(record => {
+      const recordJSON = record.toJSON();
+      return {
+        ...recordJSON,
+        rating: recordJSON.rating, // 评分
+        ratingEmployeeName: recordJSON.ratingEmployeeName, // 评分员工姓名
+        ratingTime: recordJSON.ratingTime ? new Date(recordJSON.ratingTime).toISOString() : null // 评分时间
+      };
+    });
+    res.json({ success: true, data: { total: count, records: records } });
   } catch (error) {
     console.error('查询生产记录失败:', error);
     res.status(500).json({ success: false, message: '查询生产记录失败' });
@@ -803,63 +814,78 @@ router.post('/record/:id/rate', async (req, res) => {
     }
 
     // 获取产品类型
-    const productType = await ProductType.findOne({
-      include: [{
-        model: ContractProduct,
-        as: 'contractProducts',
-        where: { id: contractProduct.id },
-        required: true
-      }]
-    });
+    let productType = null;
+    try {
+      productType = await ProductType.findOne({
+        include: [{
+          model: ContractProduct,
+          as: 'contractProducts',
+          where: { id: contractProduct.id },
+          required: true
+        }]
+      });
+    } catch (error) {
+      console.error('查询产品类型失败:', error);
+    }
 
     if (productType) {
-      // 获取该产品类型的所有工序（按顺序）
-      const productTypeProcesses = await sequelize.query(
-        `SELECT ptp.processId, ptp.sequence FROM product_type_processes ptp
-         WHERE ptp.productTypeId = :productTypeId
-         ORDER BY ptp.sequence ASC`,
-        {
-          replacements: { productTypeId: productType.id },
-          type: sequelize.QueryTypes.SELECT
-        }
-      );
+      try {
+        // 获取该产品类型的所有工序（按顺序）
+        const productTypeProcesses = await ProductTypeProcess.findAll({
+          where: { productTypeId: productType.id },
+          order: [['sequence', 'ASC']],
+          attributes: ['processId', 'sequence']
+        });
 
-      if (productTypeProcesses.length > 0) {
-        // 找到当前工序的索引
-        const currentProcessIndex = productTypeProcesses.findIndex(p => p.processId === record.processId);
-        if (currentProcessIndex === -1) {
-          return res.status(400).json({
-            success: false,
-            message: '当前工序不在产品类型工序列表中'
-          });
-        }
+        if (productTypeProcesses.length > 0) {
+          // 找到当前工序的索引
+          const currentProcessIndex = productTypeProcesses.findIndex(p =>
+            Number(p.processId) === Number(record.processId)
+          );
 
-        // 检查评分员工是否有权对当前工序进行评分（即是否是下一个工序的员工）
-        const nextProcessIndex = currentProcessIndex + 1;
-        if (nextProcessIndex < productTypeProcesses.length) {
-          // 检查评分员工是否被授权执行下一个工序
-          const nextProcessId = productTypeProcesses[nextProcessIndex].processId;
-          const authorized = await EmployeeProcess.findOne({
-            where: {
-              employeeId: raterEmployeeId,
-              processId: nextProcessId
-            }
-          });
-
-          if (!authorized) {
-            return res.status(403).json({
+          if (currentProcessIndex === -1) {
+            return res.status(400).json({
               success: false,
-              message: '评分员工没有权限对当前工序进行评分'
+              message: '当前工序不在产品类型工序列表中'
             });
           }
-        } else {
-          // 如果是最后一个工序，则不允许评分
-          return res.status(400).json({
-            success: false,
-            message: '最后一个工序不能被评分'
-          });
+
+          // 检查评分员工是否有权对当前工序进行评分（即是否是下一个工序的员工）
+          const nextProcessIndex = currentProcessIndex + 1;
+          if (nextProcessIndex < productTypeProcesses.length) {
+            // 检查评分员工是否被授权执行下一个工序
+            const nextProcessId = productTypeProcesses[nextProcessIndex].processId;
+            const authorized = await EmployeeProcess.findOne({
+              where: {
+                employeeId: raterEmployeeId,
+                processId: nextProcessId
+              }
+            });
+
+            if (!authorized) {
+              return res.status(403).json({
+                success: false,
+                message: '评分员工没有权限对当前工序进行评分'
+              });
+            }
+          } else {
+            // 如果是最后一个工序，则不允许评分
+            return res.status(400).json({
+              success: false,
+              message: '最后一个工序不能被评分'
+            });
+          }
         }
+      } catch (error) {
+        console.error('验证评分权限时出错:', error);
+        return res.status(500).json({
+          success: false,
+          message: '验证评分权限时出错'
+        });
       }
+    } else {
+      // 如果产品没有关联产品类型，允许评分（为了向后兼容）
+      console.log(`产品 ${contractProduct.id} 未关联产品类型，跳过权限验证`);
     }
 
     // 更新评分信息
