@@ -64,16 +64,16 @@ jobs:
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             if [ ! -f '$PROJECT_DIR/.env' ]; then
               echo '⚠️ 创建默认 .env 文件...'
-              sudo tee '$PROJECT_DIR/.env' > /dev/null <<EOF
-            NODE_ENV=production
-            DB_DIALECT=mysql
-            DB_HOST=82.156.83.99
-            DB_PORT=3306
-            DB_USER=shangyin
-            DB_PASS=shaoyansa
-            DB_NAME=shangyin
-            JWT_SECRET=shangyin_jwt_secret_\$(date +%s)
-            EOF
+              sudo bash -c 'cat > $PROJECT_DIR/.env' << 'ENVEOF'
+NODE_ENV=production
+DB_DIALECT=mysql
+DB_HOST=82.156.83.99
+DB_PORT=3306
+DB_USER=shangyin
+DB_PASS=shaoyansa
+DB_NAME=shangyin
+JWT_SECRET=shangyin_jwt_secret_safe_key
+ENVEOF
             fi
           "
 
