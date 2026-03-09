@@ -16,7 +16,7 @@ stages:
   - name: "deploy"
     displayName: "部署到腾讯云"
     strategy: fast
-    steps:
+    tasks:
       - name: checkout
         component: checkout
         params:
