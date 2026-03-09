@@ -15,8 +15,7 @@ trigger:
 stages:
   - name: "deploy"
     displayName: "部署到腾讯云"
-    strategy:
-      failFast: true
+    strategy: fast
     jobs:
       - name: "deploy-to-server"
         displayName: "服务器部署"
