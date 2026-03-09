@@ -16,7 +16,7 @@ stages:
   - name: "deploy"
     displayName: "部署到腾讯云"
     strategy:
-      parallel: 1
+      failFast: true
     jobs:
       - name: "deploy-to-server"
         displayName: "服务器部署"
