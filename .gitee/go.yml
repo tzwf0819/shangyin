@@ -3,6 +3,7 @@
 
 version: 1.0
 name: shangyin-deploy
+displayName: 商印项目自动部署
 
 # 触发条件
 trigger:
@@ -13,10 +14,12 @@ trigger:
 # 流水线阶段
 stages:
   - name: "deploy"
+    displayName: "部署到腾讯云"
     strategy:
       parallel: 1
     jobs:
       - name: "deploy-to-server"
+        displayName: "服务器部署"
         steps:
           - name: checkout
             component: checkout
