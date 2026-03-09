@@ -26,6 +26,8 @@ jobs:
           set -euo pipefail
 
           echo "=== 🚀 开始部署商印项目 ==="
+          echo "📍 目标服务器：$SSH_HOST"
+          echo "🔌 SSH 用户：$SSH_USER"
 
           PROJECT_DIR="/opt/shangyin"
 
@@ -34,6 +36,9 @@ jobs:
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             if [ -f '$PROJECT_DIR/.env' ]; then
               sudo cp '$PROJECT_DIR/.env' '$PROJECT_DIR/.env.backup.\$(date +%Y%m%d_%H%M%S)'
+              echo '✅ 备份完成'
+            else
+              echo '⚠️ 无现有配置文件'
             fi
           "
 
@@ -43,6 +48,7 @@ jobs:
             cd '$PROJECT_DIR'
             git fetch origin main
             sudo git reset --hard origin/main
+            echo '✅ 代码更新完成'
           "
 
           # 恢复 .env 文件
@@ -85,6 +91,7 @@ jobs:
               sudo apt-get update
               sudo apt-get install -y docker-compose
             fi
+            echo '✅ Docker 环境就绪'
           "
 
           # 停止旧容器
@@ -92,12 +99,14 @@ jobs:
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             cd '$PROJECT_DIR'
             sudo docker compose down || true
+            echo '✅ 旧容器已停止'
           "
 
           # 清理悬空镜像
           echo "🧹 清理悬空镜像..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             sudo docker image prune -f || true
+            echo '✅ 清理完成'
           "
 
           # 构建并启动
@@ -131,6 +140,13 @@ jobs:
             sudo docker compose logs --tail=30
           "
 
+          # 验证服务
+          echo "🔍 验证服务..."
+          ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
+            echo '检查 admin 容器 (端口 14444)...'
+            sudo docker ps | grep shangyin-admin || echo '⚠️ admin 容器未运行'
+          "
+
           # 清理旧备份
           echo "🗑️ 清理旧备份..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
@@ -139,3 +155,4 @@ jobs:
 
           echo ""
           echo "=== ✅ 部署完成 ==="
+          echo "🌐 访问地址：https://tzwf.xyz/shangyin/"
