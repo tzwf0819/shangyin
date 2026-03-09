@@ -2,8 +2,8 @@ import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
-  // 部署在根路径，nginx 会处理 /shangyin/ 前缀
-  base: './',
+  // 构建时使用 /shangyin/ 作为基础路径
+  base: '/shangyin/',
   plugins: [vue()],
   server: {
     port: 5173,
