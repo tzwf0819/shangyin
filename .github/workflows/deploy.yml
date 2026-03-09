@@ -31,6 +31,23 @@ jobs:
 
           PROJECT_DIR="/opt/shangyin"
 
+          # 确保目录存在
+          echo "📁 检查部署目录..."
+          ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
+            if [ ! -d '$PROJECT_DIR' ]; then
+              echo '创建部署目录...'
+              sudo mkdir -p '$PROJECT_DIR'
+              sudo chown \$USER:\$USER '$PROJECT_DIR'
+            fi
+            cd '$PROJECT_DIR'
+            if [ ! -d '.git' ]; then
+              echo '初始化 git 仓库...'
+              git init
+              git remote add origin ${{ github.event.repository.clone_url }}
+            fi
+            echo '✅ 目录就绪'
+          "
+
           # 备份 .env 文件
           echo "📦 备份现有配置..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
@@ -46,8 +63,9 @@ jobs:
           echo "📥 拉取最新代码..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             cd '$PROJECT_DIR'
+            git fetch origin main || git remote add origin ${{ github.event.repository.clone_url }}
             git fetch origin main
-            sudo git reset --hard origin/main
+            git reset --hard origin/main
             echo '✅ 代码更新完成'
           "
 
@@ -73,7 +91,8 @@ jobs:
                 'DB_PASS=shaoyansa' \
                 'DB_NAME=shangyin' \
                 'JWT_SECRET=shangyin_jwt_secret_safe_key' \
-                | sudo tee '$PROJECT_DIR/.env' > /dev/null
+                | tee '$PROJECT_DIR/.env' > /dev/null
+              echo '✅ .env 已创建'
             fi
           "
 
@@ -98,14 +117,14 @@ jobs:
           echo "🛑 停止旧容器..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             cd '$PROJECT_DIR'
-            sudo docker compose down || true
+            docker compose down || true
             echo '✅ 旧容器已停止'
           "
 
           # 清理悬空镜像
           echo "🧹 清理悬空镜像..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
-            sudo docker image prune -f || true
+            docker image prune -f || true
             echo '✅ 清理完成'
           "
 
@@ -113,13 +132,13 @@ jobs:
           echo "🔨 构建 Docker 镜像..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             cd '$PROJECT_DIR'
-            sudo docker compose build --no-cache
+            docker compose build --no-cache
           "
 
           echo "🚀 启动服务..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             cd '$PROJECT_DIR'
-            sudo docker compose up -d
+            docker compose up -d
           "
 
           # 等待服务启动
@@ -130,21 +149,21 @@ jobs:
           echo "📊 容器状态:"
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             cd '$PROJECT_DIR'
-            sudo docker compose ps
+            docker compose ps
           "
 
           # 显示日志
           echo "📋 最近日志:"
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             cd '$PROJECT_DIR'
-            sudo docker compose logs --tail=30
+            docker compose logs --tail=30
           "
 
           # 验证服务
           echo "🔍 验证服务..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             echo '检查 admin 容器 (端口 14444)...'
-            sudo docker ps | grep shangyin-admin || echo '⚠️ admin 容器未运行'
+            docker ps | grep shangyin-admin || echo '⚠️ admin 容器未运行'
           "
 
           # 清理旧备份
