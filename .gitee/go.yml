@@ -26,9 +26,9 @@ stages:
       - name: 通过 SSH 部署
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.TENCENT_SSH_HOST }}
-          username: ${{ secrets.TENCENT_SSH_USER }}
-          key: ${{ secrets.TENCENT_SSH_KEY }}
+          host: ${{ vars.TENCENT_SSH_HOST }}
+          username: ${{ vars.TENCENT_SSH_USER }}
+          key: ${{ vars.TENCENT_SSH_KEY }}
           script_stop: true
           command_timeout: 30m
           script: |
