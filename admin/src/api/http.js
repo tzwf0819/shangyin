@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const http = axios.create({
-  baseURL: '/', // proxied by vite to backend
+  baseURL: '/shangyin/', // API 部署在 /shangyin/ 路径下
   timeout: 12000,
 });
 
@@ -13,7 +13,13 @@ http.interceptors.request.use(cfg => {
 });
 
 http.interceptors.response.use(
-  r => r.data,
+  r => {
+    // 如果是完整的响应对象，返回 data
+    if (r.data !== undefined && r.config.responseType !== 'arraybuffer') {
+      return r.data;
+    }
+    return r;
+  },
   e => {
     if (e.response?.status === 401) {
       localStorage.removeItem('ADMIN_TOKEN');
