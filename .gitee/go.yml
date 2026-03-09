@@ -16,107 +16,104 @@ stages:
   - name: "deploy"
     displayName: "部署到腾讯云"
     strategy: fast
-    jobs:
-      - name: "deploy-to-server"
-        displayName: "服务器部署"
-        steps:
-          - name: checkout
-            component: checkout
-            params:
-              fetch-depth: 0
+    steps:
+      - name: checkout
+        component: checkout
+        params:
+          fetch-depth: 0
 
-          - name: deploy
-            component: ssh
-            params:
-              host: $(TENCENT_SSH_HOST)
-              port: 22
-              user: $(TENCENT_SSH_USER)
-              key: $(TENCENT_SSH_KEY)
-              script: |
-                set -euo pipefail
+      - name: deploy
+        component: ssh
+        params:
+          host: $(TENCENT_SSH_HOST)
+          port: 22
+          user: $(TENCENT_SSH_USER)
+          key: $(TENCENT_SSH_KEY)
+          script: |
+            set -euo pipefail
 
-                echo "=== 🚀 开始部署商印项目 ==="
+            echo "=== 🚀 开始部署商印项目 ==="
 
-                PROJECT_DIR="/opt/shangyin"
-                cd "$PROJECT_DIR"
+            PROJECT_DIR="/opt/shangyin"
+            cd "$PROJECT_DIR"
 
-                # 备份 .env 文件
-                echo "📦 备份现有配置..."
-                if [ -f "$PROJECT_DIR/.env" ]; then
-                  sudo cp "$PROJECT_DIR/.env" "$PROJECT_DIR/.env.backup.$(date +%Y%m%d_%H%M%S)"
-                fi
+            # 备份 .env 文件
+            echo "📦 备份现有配置..."
+            if [ -f "$PROJECT_DIR/.env" ]; then
+              sudo cp "$PROJECT_DIR/.env" "$PROJECT_DIR/.env.backup.$(date +%Y%m%d_%H%M%S)"
+            fi
 
-                # 拉取最新代码
-                echo "📥 拉取最新代码..."
-                git fetch origin main
-                sudo git reset --hard origin/main
+            # 拉取最新代码
+            echo "📥 拉取最新代码..."
+            git fetch origin main
+            sudo git reset --hard origin/main
 
-                # 恢复 .env 文件
-                if [ -f "$PROJECT_DIR/.env.backup."* ]; then
-                  latest_backup=$(ls -t "$PROJECT_DIR"/.env.backup.* | head -1)
-                  sudo cp "$latest_backup" "$PROJECT_DIR/.env"
-                  echo "✅ 已恢复环境变量配置"
-                fi
+            # 恢复 .env 文件
+            if [ -f "$PROJECT_DIR/.env.backup."* ]; then
+              latest_backup=$(ls -t "$PROJECT_DIR"/.env.backup.* | head -1)
+              sudo cp "$latest_backup" "$PROJECT_DIR/.env"
+              echo "✅ 已恢复环境变量配置"
+            fi
 
-                # 检查 .env 是否存在
-                if [ ! -f "$PROJECT_DIR/.env" ]; then
-                  echo "⚠️ 创建默认 .env 文件..."
-                  sudo tee "$PROJECT_DIR/.env" > /dev/null <<EOF
-                NODE_ENV=production
-                DB_DIALECT=mysql
-                DB_HOST=82.156.83.99
-                DB_PORT=3306
-                DB_USER=shangyin
-                DB_PASS=shaoyansa
-                DB_NAME=shangyin
-                JWT_SECRET=shangyin_jwt_secret_$(date +%s)
-                EOF
-                fi
+            # 检查 .env 是否存在
+            if [ ! -f "$PROJECT_DIR/.env" ]; then
+              echo "⚠️ 创建默认 .env 文件..."
+              sudo tee "$PROJECT_DIR/.env" > /dev/null <<EOF
+            NODE_ENV=production
+            DB_DIALECT=mysql
+            DB_HOST=82.156.83.99
+            DB_PORT=3306
+            DB_USER=shangyin
+            DB_PASS=shaoyansa
+            DB_NAME=shangyin
+            JWT_SECRET=shangyin_jwt_secret_$(date +%s)
+            EOF
+            fi
 
-                # 确保 Docker 环境就绪
-                echo "🐳 检查 Docker 环境..."
-                if ! command -v docker &> /dev/null; then
-                  echo "安装 Docker..."
-                  curl -fsSL https://get.docker.com -o get-docker.sh
-                  sudo sh get-docker.sh
-                fi
+            # 确保 Docker 环境就绪
+            echo "🐳 检查 Docker 环境..."
+            if ! command -v docker &> /dev/null; then
+              echo "安装 Docker..."
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sudo sh get-docker.sh
+            fi
 
-                if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-                  echo "安装 Docker Compose..."
-                  sudo apt-get update
-                  sudo apt-get install -y docker-compose
-                fi
+            if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+              echo "安装 Docker Compose..."
+              sudo apt-get update
+              sudo apt-get install -y docker-compose
+            fi
 
-                # 停止旧容器
-                echo "🛑 停止旧容器..."
-                sudo docker compose down || true
+            # 停止旧容器
+            echo "🛑 停止旧容器..."
+            sudo docker compose down || true
 
-                # 清理悬空镜像
-                echo "🧹 清理悬空镜像..."
-                sudo docker image prune -f || true
+            # 清理悬空镜像
+            echo "🧹 清理悬空镜像..."
+            sudo docker image prune -f || true
 
-                # 构建并启动
-                echo "🔨 构建 Docker 镜像..."
-                sudo docker compose build --no-cache
+            # 构建并启动
+            echo "🔨 构建 Docker 镜像..."
+            sudo docker compose build --no-cache
 
-                echo "🚀 启动服务..."
-                sudo docker compose up -d
+            echo "🚀 启动服务..."
+            sudo docker compose up -d
 
-                # 等待服务启动
-                echo "⏳ 等待服务健康检查..."
-                sleep 15
+            # 等待服务启动
+            echo "⏳ 等待服务健康检查..."
+            sleep 15
 
-                # 检查容器状态
-                echo "📊 容器状态:"
-                sudo docker compose ps
+            # 检查容器状态
+            echo "📊 容器状态:"
+            sudo docker compose ps
 
-                # 显示日志
-                echo "📋 最近日志:"
-                sudo docker compose logs --tail=30
+            # 显示日志
+            echo "📋 最近日志:"
+            sudo docker compose logs --tail=30
 
-                # 清理旧备份
-                echo "🗑️ 清理旧备份..."
-                ls -t "$PROJECT_DIR"/.env.backup.* 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
+            # 清理旧备份
+            echo "🗑️ 清理旧备份..."
+            ls -t "$PROJECT_DIR"/.env.backup.* 2>/dev/null | tail -n +6 | xargs rm -f 2>/dev/null || true
 
-                echo ""
-                echo "=== ✅ 部署完成 ==="
+            echo ""
+            echo "=== ✅ 部署完成 ==="
