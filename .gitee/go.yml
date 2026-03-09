@@ -2,6 +2,7 @@
 # 文档：https://gitee.com/help/articles/4423
 
 version: 1.0
+name: shangyin-deploy
 
 # 触发条件
 trigger:
