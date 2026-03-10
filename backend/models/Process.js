@@ -1,3 +1,4 @@
+// models/Process.js
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
@@ -22,7 +23,7 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
-      comment: '工序编码(自动生成)'
+      comment: '工序编码 (自动生成)'
     },
     status: {
       type: DataTypes.ENUM('active', 'inactive'),
@@ -40,6 +41,32 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM('perItem', 'perHour'),
       defaultValue: 'perItem',
       comment: '绩效单位'
+    },
+    // 激光雕刻相关字段
+    isLaserEngraving: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: '是否为激光雕刻工序'
+    },
+    laserMode1PayRate: {
+      type: DataTypes.DECIMAL(10,2),
+      defaultValue: 0,
+      comment: '激光雕刻模式 1 绩效单价'
+    },
+    laserMode2PayRate: {
+      type: DataTypes.DECIMAL(10,2),
+      defaultValue: 0,
+      comment: '激光雕刻模式 2 绩效单价'
+    },
+    laserMode1Name: {
+      type: DataTypes.STRING(50),
+      defaultValue: '模式 A',
+      comment: '激光雕刻模式 1 名称'
+    },
+    laserMode2Name: {
+      type: DataTypes.STRING(50),
+      defaultValue: '模式 B',
+      comment: '激光雕刻模式 2 名称'
     }
   }, {
     tableName: 'processes',

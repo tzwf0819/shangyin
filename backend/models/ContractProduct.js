@@ -10,7 +10,7 @@ module.exports = (sequelize) => {
     contractId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      comment: '合同ID',
+      comment: '合同 ID',
     },
     productIndex: {
       type: DataTypes.INTEGER,
@@ -20,12 +20,18 @@ module.exports = (sequelize) => {
     productId: {
       type: DataTypes.STRING(120),
       allowNull: true,
-      comment: '产品ID',
+      comment: '产品 ID',
     },
     productCode: {
       type: DataTypes.STRING(120),
       allowNull: true,
       comment: '产品编号',
+    },
+    productSuffix: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: '',
+      comment: '产品编号尾号（如 -1, -2）',
     },
     productName: {
       type: DataTypes.STRING(150),
@@ -90,7 +96,7 @@ module.exports = (sequelize) => {
     productTypeId: {
       type: DataTypes.STRING(120),
       allowNull: true,
-      comment: '产品类型ID',
+      comment: '产品类型 ID',
     },
     productTypeName: {
       type: DataTypes.STRING(150),

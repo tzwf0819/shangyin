@@ -1,3 +1,4 @@
+// models/ProcessRecord.js
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
@@ -10,34 +11,34 @@ module.exports = (sequelize) => {
     employeeId: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      comment: '员工ID'
+      comment: '员工 ID'
     },
     contractId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      comment: '合同ID'
+      comment: '合同 ID'
     },
     contractProductId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      comment: '合同产品ID'
+      comment: '合同产品 ID'
     },
     processId: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      comment: '工序ID'
+      comment: '工序 ID'
     },
     quantity: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 1,
-      comment: '数量(计件)'
+      comment: '数量 (计件)'
     },
     actualTimeMinutes: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
-      comment: '实际用时(分钟)'
+      comment: '实际用时 (分钟)'
     },
     payRateSnapshot: {
       type: DataTypes.DECIMAL(10,2),
@@ -73,17 +74,24 @@ module.exports = (sequelize) => {
       allowNull: true,
       comment: '备注'
     },
+    // 激光雕刻生产方式
+    laserMode: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      defaultValue: null,
+      comment: '激光雕刻生产方式（mode1/mode2）'
+    },
     // 评分相关字段
     rating: {
       type: DataTypes.INTEGER,
       allowNull: true,
       defaultValue: null,
-      comment: '评分(0,5,10分)'
+      comment: '评分 (0,5,10 分)'
     },
     ratingEmployeeId: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      comment: '评分员工ID'
+      comment: '评分员工 ID'
     },
     ratingEmployeeName: {
       type: DataTypes.STRING(120),
@@ -94,6 +102,17 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       allowNull: true,
       comment: '评分时间'
+    },
+    // 通知相关字段
+    notificationSent: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: '是否已发送业务员通知'
+    },
+    notificationTime: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: '业务员通知发送时间'
     }
   }, {
     tableName: 'process_records',

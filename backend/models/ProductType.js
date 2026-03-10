@@ -1,3 +1,4 @@
+// models/ProductType.js
 const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
@@ -16,7 +17,24 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
-      comment: '产品类型编码(自动生成)'
+      comment: '产品类型编码 (自动生成)'
+    },
+    parentId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+      comment: '父级分类 ID（二级分类）'
+    },
+    notifyProcessId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+      comment: '通知工序 ID'
+    },
+    needNotification: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: '是否需要工序完成通知'
     },
     status: {
       type: DataTypes.ENUM('active', 'inactive'),
@@ -42,6 +60,25 @@ module.exports = (sequelize) => {
       }
     }
   });
+
+  ProductType.associate = (models) => {
+    // 自关联：父分类 - 子分类
+    ProductType.hasMany(models.ProductType, {
+      foreignKey: 'parentId',
+      as: 'children'
+    });
+
+    ProductType.belongsTo(models.ProductType, {
+      foreignKey: 'parentId',
+      as: 'parent'
+    });
+
+    // 通知工序关联
+    ProductType.belongsTo(models.Process, {
+      foreignKey: 'notifyProcessId',
+      as: 'notifyProcess'
+    });
+  };
 
   return ProductType;
 };
