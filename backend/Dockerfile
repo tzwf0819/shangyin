@@ -3,6 +3,16 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# 设置默认环境变量（使用 MySQL，不使用 sqlite3）
+ENV NODE_ENV=production
+ENV DB_DIALECT=mysql
+ENV DB_HOST=82.156.83.99
+ENV DB_PORT=3306
+ENV DB_USER=shangyin
+ENV DB_PASS=shaoyansa
+ENV DB_NAME=shangyin
+ENV PORT=3000
+
 # 复制 package 文件
 COPY package*.json ./
 
