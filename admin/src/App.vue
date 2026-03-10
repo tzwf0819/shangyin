@@ -27,6 +27,8 @@ const menu = [
   { path: '/processes', label: '工序管理' },
   { path: '/product-types', label: '产品类型' },
   { path: '/employees', label: '员工管理' },
+  { path: '/permissions', label: '权限管理' },
+  { path: '/performance-summary', label: '绩效汇总' },
   { path: '/contracts', label: '合同管理' },
   { path: '/production-records', label: '生产记录' },
   { path: '/production-progress', label: '生产进度' },

@@ -9,6 +9,8 @@ import ProductionRecords from './pages/ProductionRecords.vue';
 import WechatEmployees from './pages/WechatEmployees.vue';
 import ProductionProgress from './pages/ProductionProgress.vue';
 import EmployeePerformance from './pages/EmployeePerformance.vue';
+import Permissions from './pages/Permissions.vue';
+import PerformanceSummary from './pages/PerformanceSummary.vue';
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
@@ -17,6 +19,8 @@ const routes = [
   { path: '/processes', component: Processes },
   { path: '/product-types', component: ProductTypes },
   { path: '/employees', component: Employees },
+  { path: '/permissions', component: Permissions },
+  { path: '/performance-summary', component: PerformanceSummary },
   { path: '/contracts', component: Contracts },
   { path: '/production-records', component: ProductionRecords },
   { path: '/production-progress', component: ProductionProgress },
