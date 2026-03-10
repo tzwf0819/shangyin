@@ -3,17 +3,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# 安装构建依赖
-RUN apk add --no-cache python3 make g++ py3-setuptools
-
 # 复制 package 文件
 COPY package*.json ./
 
-# 安装依赖，跳过 sqlite3（生产环境使用 MySQL）
-RUN npm install --only=production --ignore-scripts
-
-# 手动安装 sqlite3 的预编译版本（如果失败则忽略）
-RUN npm install sqlite3@5.1.7 --ignore-scripts --optional || true
+# 安装生产依赖（不需要 sqlite3，使用 MySQL）
+RUN npm install --only=production
 
 # 复制应用代码
 COPY . .
