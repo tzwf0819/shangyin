@@ -63,6 +63,11 @@ jobs:
           echo "📥 拉取最新代码..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
             cd '$PROJECT_DIR'
+            # 清理可能的 git 锁定
+            rm -f .git/index.lock 2>/dev/null || true
+            # 重置所有本地更改
+            git checkout -- . 2>/dev/null || true
+            git clean -fd 2>/dev/null || true
             git fetch origin main || git remote add origin ${{ github.event.repository.clone_url }}
             git fetch origin main
             git reset --hard origin/main
