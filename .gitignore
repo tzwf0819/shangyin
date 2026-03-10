@@ -14,3 +14,12 @@ Thumbs.db
 .idea/
 database_backups/
 *.backup.*
+backend/database/*.db
+
+# Python GUI
+python-gui/__pycache__/
+python-gui/*.pyc
+python-gui/.venv/
+
+# Miniprogram
+miniprogram/node_modules/
