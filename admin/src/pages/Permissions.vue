@@ -74,7 +74,7 @@
 </template>
 
 <script>
-import { api } from '../api/http';
+import http from '../api/http';
 
 export default {
   name: 'Permissions',
@@ -98,7 +98,7 @@ export default {
   methods: {
     async load() {
       try {
-        const res = await api.get('/shangyin/permissions');
+        const res = await http.get('/shangyin/permissions');
         if (res.success) {
           this.permissions = res.data || [];
         }
@@ -119,9 +119,9 @@ export default {
       try {
         let res;
         if (this.form.id) {
-          res = await api.put(`/shangyin/permissions/${this.form.id}`, this.form);
+          res = await http.put(`/shangyin/permissions/${this.form.id}`, this.form);
         } else {
-          res = await api.post('/shangyin/permissions', this.form);
+          res = await http.post('/shangyin/permissions', this.form);
         }
         if (res.success) {
           alert('保存成功');

@@ -144,7 +144,7 @@
 </template>
 
 <script>
-import { api } from '../api/http';
+import http from '../api/http';
 
 export default {
   name: 'PerformanceSummary',
