@@ -86,6 +86,7 @@ app.use('/shangyin/task', require('./routes/task'));
 app.use('/shangyin/production', require('./routes/production'));
 app.use('/shangyin/qrcodes', require('./routes/qrcode'));
 app.use('/shangyin/performance', require('./routes/performance'));
+app.use('/shangyin/permissions', require('./routes/permissions'));
 
 // 全局错误处理中间件
 app.use((err, req, res, next) => {
