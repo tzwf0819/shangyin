@@ -133,6 +133,25 @@ jobs:
             echo '✅ 清理完成'
           "
 
+          # 验证代码已更新
+          echo "🔍 验证代码更新..."
+          ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
+            cd '$PROJECT_DIR'
+            echo '当前 commit:'
+            git log --oneline -1
+            echo 'backend/models/index.js 内容检查:'
+            grep -n 'ProductType.hasMany(ProductType' backend/models/index.js || echo '✅ 已删除重复的 ProductType 自关联'
+          "
+
+          # 清理旧容器和镜像
+          echo "🧹 清理旧容器和镜像..."
+          ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
+            cd '$PROJECT_DIR'
+            docker compose down --rmi all --volumes --remove-orphans 2>/dev/null || true
+            docker system prune -f 2>/dev/null || true
+            echo '✅ 清理完成'
+          "
+
           # 构建并启动
           echo "🔨 构建 Docker 镜像..."
           ssh -o StrictHostKeyChecking=no -p $SSH_PORT $SSH_USER@$SSH_HOST "
