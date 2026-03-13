@@ -7,7 +7,7 @@
           <div class="brand-logo">
             <div class="logo-icon">单</div>
           </div>
-          <h1 class="brand-title">鸿浩达 ERP</h1>
+          <h1 class="brand-title">上茚 ERP</h1>
           <p class="brand-subtitle">工厂管理系统</p>
           <div class="brand-features">
             <div class="feature-item">
@@ -95,7 +95,7 @@
           </div>
           
           <div class="form-footer">
-            <p>© 2026 鸿浩达科技 · 版权所有</p>
+            <p>© 2026 上茚科技 · 版权所有</p>
           </div>
         </div>
       </div>
