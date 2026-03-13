@@ -125,7 +125,7 @@ exports.getProductTypeById = async (req, res) => {
 // 创建产品类型
 exports.createProductType = async (req, res) => {
   try {
-    const { name, status = 'active', processes = [] } = req.body;
+    const { name, status = 'active', processes = [], parentId, notifyProcessId, needNotification = false } = req.body;
 
     // 验证输入数据
     const validationErrors = validateProductTypeData({ name, status });
@@ -173,7 +173,10 @@ exports.createProductType = async (req, res) => {
     const productType = await ProductType.create({
       name: name.trim(),
       code,
-      status
+      status,
+      parentId: parentId || null,
+      notifyProcessId: notifyProcessId || null,
+      needNotification
     });
 
     // 处理工序关联（支持携带 sequenceOrder）
@@ -234,7 +237,7 @@ exports.createProductType = async (req, res) => {
 exports.updateProductType = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, status, processes = [] } = req.body;
+    const { name, status, processes = [], parentId, notifyProcessId, needNotification } = req.body;
 
     if (!id || isNaN(id)) {
       return res.status(400).json({
@@ -281,6 +284,9 @@ exports.updateProductType = async (req, res) => {
     const updateData = {};
     if (name) updateData.name = name.trim();
     if (status) updateData.status = status;
+    if (parentId !== undefined) updateData.parentId = parentId || null;
+    if (notifyProcessId !== undefined) updateData.notifyProcessId = notifyProcessId || null;
+    if (needNotification !== undefined) updateData.needNotification = needNotification;
 
     await productType.update(updateData);
 

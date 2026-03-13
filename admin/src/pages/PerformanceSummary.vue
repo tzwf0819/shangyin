@@ -178,7 +178,7 @@ export default {
     },
     async loadEmployees() {
       try {
-        const res = await api.get('/shangyin/employees', { status: 'active' });
+        const res = await http.get('/shangyin/employees', { status: 'active' });
         if (res.success) {
           this.employees = res.data.employees || [];
         }
@@ -200,7 +200,7 @@ export default {
           params.employeeId = this.filters.employeeId;
         }
 
-        const res = await api.get('/shangyin/performance/summary', params);
+        const res = await http.get('/shangyin/performance/summary', params);
         if (res.success) {
           this.summaryData = res.data || [];
           this.calculateTotal();
@@ -220,7 +220,7 @@ export default {
           params.employeeId = this.filters.employeeId;
         }
 
-        const res = await api.get('/shangyin/performance/process-stats', params);
+        const res = await http.get('/shangyin/performance/process-stats', params);
         if (res.success) {
           this.processStatsData = res.data || [];
         }
@@ -238,7 +238,7 @@ export default {
     },
     async viewDetail(item) {
       try {
-        const res = await api.get(`/shangyin/performance/employee/${item.employeeId}`, {
+        const res = await http.get(`/shangyin/performance/employee/${item.employeeId}`, {
           startDate: this.filters.startDate,
           endDate: this.filters.endDate
         });

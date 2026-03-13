@@ -139,7 +139,7 @@ export default {
     async remove(id) {
       if (!confirm('确定删除此权限？')) return;
       try {
-        const res = await api.delete(`/shangyin/permissions/${id}`);
+        const res = await http.delete(`/shangyin/permissions/${id}`);
         if (res.success) {
           alert('删除成功');
           this.load();

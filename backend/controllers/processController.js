@@ -105,7 +105,11 @@ exports.getProcessById = async (req, res) => {
 // 创建工序
 exports.createProcess = async (req, res) => {
   try {
-  const { name, status = 'active', description = '', payRate = 0, payRateUnit = 'perItem' } = req.body;
+  const { 
+    name, status = 'active', description = '', payRate = 0, payRateUnit = 'perItem',
+    isLaserEngraving = false, laserMode1PayRate = 0, laserMode2PayRate = 0,
+    laserMode1Name = '模式 A', laserMode2Name = '模式 B'
+  } = req.body;
 
     // 验证输入数据
     const validationErrors = validateProcessData({ name, status });
@@ -162,7 +166,12 @@ exports.createProcess = async (req, res) => {
       code,
       status,
       payRate,
-      payRateUnit
+      payRateUnit,
+      isLaserEngraving,
+      laserMode1PayRate,
+      laserMode2PayRate,
+      laserMode1Name,
+      laserMode2Name
     });
 
     res.status(201).json({
@@ -183,7 +192,11 @@ exports.createProcess = async (req, res) => {
 exports.updateProcess = async (req, res) => {
   try {
   const { id } = req.params;
-  const { name, status, description, payRate, payRateUnit } = req.body;
+  const { 
+    name, status, description, payRate, payRateUnit,
+    isLaserEngraving, laserMode1PayRate, laserMode2PayRate,
+    laserMode1Name, laserMode2Name
+  } = req.body;
 
     if (!id || isNaN(id)) {
       return res.status(400).json({
@@ -243,6 +256,11 @@ exports.updateProcess = async (req, res) => {
   if (status) updateData.status = status;
   if (payRate !== undefined) updateData.payRate = payRate;
   if (payRateUnit !== undefined) updateData.payRateUnit = payRateUnit;
+  if (isLaserEngraving !== undefined) updateData.isLaserEngraving = isLaserEngraving;
+  if (laserMode1PayRate !== undefined) updateData.laserMode1PayRate = laserMode1PayRate;
+  if (laserMode2PayRate !== undefined) updateData.laserMode2PayRate = laserMode2PayRate;
+  if (laserMode1Name !== undefined) updateData.laserMode1Name = laserMode1Name;
+  if (laserMode2Name !== undefined) updateData.laserMode2Name = laserMode2Name;
 
     await process.update(updateData);
 
