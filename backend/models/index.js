@@ -98,22 +98,6 @@ ContractProduct.belongsTo(Contract, {
   constraints: false,
 });
 
-// 产品类型自关联（二级分类）
-ProductType.hasMany(ProductType, {
-  foreignKey: 'parentId',
-  as: 'children'
-});
-ProductType.belongsTo(ProductType, {
-  foreignKey: 'parentId',
-  as: 'parent'
-});
-
-// 产品类型与通知工序关联
-ProductType.belongsTo(Process, {
-  foreignKey: 'notifyProcessId',
-  as: 'notifyProcess'
-});
-
 // 生产记录关联
 ProcessRecord.belongsTo(Employee, { foreignKey: { name: 'employeeId', allowNull: true }, as: 'employee', constraints: false });
 Employee.hasMany(ProcessRecord, { foreignKey: { name: 'employeeId', allowNull: true }, as: 'processRecords', constraints: false });
@@ -123,16 +107,6 @@ ProcessRecord.belongsTo(ContractProduct, { foreignKey: 'contractProductId', as: 
 ContractProduct.hasMany(ProcessRecord, { foreignKey: 'contractProductId', as: 'processRecords' });
 ProcessRecord.belongsTo(Process, { foreignKey: 'processId', as: 'process' });
 Process.hasMany(ProcessRecord, { foreignKey: 'processId', as: 'processRecords' });
-
-// 通知日志关联
-NotificationLog.belongsTo(Contract, {
-  foreignKey: 'contractId',
-  as: 'contract'
-});
-NotificationLog.belongsTo(Process, {
-  foreignKey: 'processId',
-  as: 'process'
-});
 
 const models = {
   User,
