@@ -1,6 +1,7 @@
 // routes/admin.js
 const express = require('express');
 const router = express.Router();
+const { verifyAdmin } = require('../middleware/adminAuth');
 const {
   getDashboardStats,
   getAllEmployeesAdmin,
@@ -20,6 +21,9 @@ const {
   deleteContract,
   importContracts
 } = require('../controllers/contractController');
+
+// 所有admin路由都需要管理员权限
+router.use(verifyAdmin);
 
 // 管理员面板统计数据
 router.get('/dashboard/stats', getDashboardStats);
@@ -52,4 +56,3 @@ router.delete('/contracts/:id', deleteContract);
 router.post('/contracts/import', importContracts);
 
 module.exports = router;
-

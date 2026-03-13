@@ -1,6 +1,7 @@
 // routes/productType.js
 const express = require('express');
 const router = express.Router();
+const { verifyAdmin } = require('../middleware/adminAuth');
 const {
   getAllProductTypes,
   getProductTypeById,
@@ -12,6 +13,9 @@ const {
   removeProcessFromProductType,
   updateProcessOrder
 } = require('../controllers/productTypeController');
+
+// 所有产品类型路由都需要管理员权限
+router.use(verifyAdmin);
 
 // 获取所有产品类型
 router.get('/', getAllProductTypes);

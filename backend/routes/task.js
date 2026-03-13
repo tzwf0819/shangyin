@@ -1,6 +1,10 @@
 // routes/task.js
 const express = require('express');
 const router = express.Router();
+const { verifyAdmin } = require('../middleware/adminAuth');
+
+// 所有任务路由都需要管理员权限
+router.use(verifyAdmin);
 
 // TODO: 实现任务相关的控制器
 // const { getTasks, createTask, completeTask } = require('../controllers/taskController');

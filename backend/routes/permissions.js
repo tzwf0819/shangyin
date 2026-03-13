@@ -4,6 +4,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { verifyAdmin } = require('../middleware/adminAuth');
 const {
   getPermissions,
   createPermission,
@@ -13,6 +14,9 @@ const {
   assignPermissions,
   checkPermission
 } = require('../controllers/permissionController');
+
+// 所有权限路由都需要管理员权限
+router.use(verifyAdmin);
 
 // 获取权限列表
 router.get('/', getPermissions);

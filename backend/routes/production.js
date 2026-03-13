@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
+const { verifyAdmin } = require('../middleware/adminAuth');
 const { ProcessRecord, Employee, Contract, ContractProduct, Process, ProductType, ProductTypeProcess, EmployeeProcess, sequelize } = require('../models');
+
+// 所有生产记录路由都需要管理员权限
+router.use(verifyAdmin);
+
 // 计薪计算函数
 async function calcPay({ processId, quantity, actualTimeMinutes }) {
   const process = await Process.findByPk(processId);

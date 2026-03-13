@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { verifyAdmin } = require('../middleware/adminAuth');
 const { QueryTypes } = require('sequelize');
 const sequelize = require('../models').sequelize;
+
+// 所有绩效路由都需要管理员权限
+router.use(verifyAdmin);
 
 // 获取员工绩效概览
 router.get('/employee/:employeeId/overview', async (req, res) => {
