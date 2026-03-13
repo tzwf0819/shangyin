@@ -124,20 +124,6 @@ ContractProduct.hasMany(ProcessRecord, { foreignKey: 'contractProductId', as: 'p
 ProcessRecord.belongsTo(Process, { foreignKey: 'processId', as: 'process' });
 Process.hasMany(ProcessRecord, { foreignKey: 'processId', as: 'processRecords' });
 
-// 员工与权限关联
-Employee.belongsToMany(Permission, {
-  through: EmployeePermission,
-  foreignKey: 'employeeId',
-  otherKey: 'permissionId',
-  as: 'permissions'
-});
-Permission.belongsToMany(Employee, {
-  through: EmployeePermission,
-  foreignKey: 'permissionId',
-  otherKey: 'employeeId',
-  as: 'employees'
-});
-
 // 通知日志关联
 NotificationLog.belongsTo(Contract, {
   foreignKey: 'contractId',
