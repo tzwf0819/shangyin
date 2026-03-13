@@ -5,21 +5,21 @@
       <div class="login-brand">
         <div class="brand-content">
           <div class="brand-logo">
-            <div class="logo-icon">📋</div>
+            <div class="logo-icon">单</div>
           </div>
           <h1 class="brand-title">鸿浩达 ERP</h1>
           <p class="brand-subtitle">工厂管理系统</p>
           <div class="brand-features">
             <div class="feature-item">
-              <span class="feature-icon">⚡</span>
+              <span class="feature-icon">快</span>
               <span>高效生产管理</span>
             </div>
             <div class="feature-item">
-              <span class="feature-icon">🔒</span>
+              <span class="feature-icon">锁</span>
               <span>安全可靠</span>
             </div>
             <div class="feature-item">
-              <span class="feature-icon">📊</span>
+              <span class="feature-icon">表</span>
               <span>数据可视化</span>
             </div>
           </div>
@@ -40,7 +40,7 @@
                 <span>用户名</span>
               </label>
               <div class="input-wrapper">
-                <span class="input-icon">👤</span>
+                <span class="input-icon">人</span>
                 <input
                   v-model="form.username"
                   type="text"
@@ -56,7 +56,7 @@
                 <span>密码</span>
               </label>
               <div class="input-wrapper">
-                <span class="input-icon">🔒</span>
+                <span class="input-icon">锁</span>
                 <input
                   v-model="form.password"
                   :type="showPassword ? 'text' : 'password'"
@@ -70,7 +70,7 @@
                   @click="showPassword = !showPassword"
                   :disabled="loading"
                 >
-                  <span>{{ showPassword ? '🙈' : '👁️' }}</span>
+                  <span>{{ showPassword ? '隐' : '显' }}</span>
                 </button>
               </div>
             </div>
@@ -90,7 +90,7 @@
           </form>
           
           <div v-if="error" class="error-message">
-            <span class="error-icon">⚠️</span>
+            <span class="error-icon">[!]</span>
             <span>{{ error }}</span>
           </div>
           

@@ -11,12 +11,12 @@
           @input="debounceLoad"
         />
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>🔄</span>
+          <span>刷</span>
           <span>重置</span>
         </button>
       </div>
       <button class="btn btn-primary" @click="openCreate">
-        <span>➕</span>
+        <span>+</span>
         <span>新建角色</span>
       </button>
     </div>
@@ -56,10 +56,10 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="openEdit(item)" title="编辑">
-                    <span>✏️</span>
+                    <span>编</span>
                   </button>
                   <button class="btn-icon" @click="remove(item.id)" title="删除">
-                    <span>🗑️</span>
+                    <span>删</span>
                   </button>
                 </div>
               </td>
@@ -67,7 +67,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="5" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">🔐</div>
+                  <div class="empty-icon">锁</div>
                   <div class="empty-title">暂无角色</div>
                   <div class="empty-description">点击上方按钮创建第一个角色</div>
                 </div>

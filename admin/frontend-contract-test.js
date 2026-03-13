@@ -37,13 +37,13 @@ async function testCreateContract() {
         const result = await response.json();
         
         if (response.ok) {
-            console.log('✅ 前端合同创建成功:', result);
+            console.log('[OK] 前端合同创建成功:', result);
         } else {
-            console.error('❌ 前端合同创建失败:', result);
+            console.error('[X] 前端合同创建失败:', result);
         }
         
     } catch (error) {
-        console.error('❌ 前端API请求失败:', error);
+        console.error('[X] 前端API请求失败:', error);
     }
 }
 

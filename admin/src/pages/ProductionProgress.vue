@@ -18,7 +18,7 @@
           <option value="delayed">延期</option>
         </select>
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>🔄</span>
+          <span>刷</span>
           <span>重置</span>
         </button>
       </div>
@@ -27,28 +27,28 @@
     <!-- 进度概览 -->
     <div class="progress-overview">
       <div class="overview-card">
-        <div class="overview-icon" style="background: #0078d420; color: #0078d4;">📋</div>
+        <div class="overview-icon" style="background: #0078d420; color: #0078d4;">单</div>
         <div class="overview-info">
           <div class="overview-value">{{ overview.total }}</div>
           <div class="overview-label">总任务</div>
         </div>
       </div>
       <div class="overview-card">
-        <div class="overview-icon" style="background: #107c1020; color: #107c10;">✅</div>
+        <div class="overview-icon" style="background: #107c1020; color: #107c10;">[OK]</div>
         <div class="overview-info">
           <div class="overview-value">{{ overview.completed }}</div>
           <div class="overview-label">已完成</div>
         </div>
       </div>
       <div class="overview-card">
-        <div class="overview-icon" style="background: #ffc10720; color: #856404;">⏳</div>
+        <div class="overview-icon" style="background: #ffc10720; color: #856404;">...</div>
         <div class="overview-info">
           <div class="overview-value">{{ overview.inProgress }}</div>
           <div class="overview-label">进行中</div>
         </div>
       </div>
       <div class="overview-card">
-        <div class="overview-icon" style="background: #a8000020; color: #a80000;">⚠️</div>
+        <div class="overview-icon" style="background: #a8000020; color: #a80000;">[!]</div>
         <div class="overview-info">
           <div class="overview-value">{{ overview.delayed }}</div>
           <div class="overview-label">延期</div>
@@ -103,10 +103,10 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="openProgressModal(item)" title="更新进度">
-                    <span>📊</span>
+                    <span>表</span>
                   </button>
                   <button class="btn-icon" @click="viewDetail(item)" title="查看详情">
-                    <span>👁️</span>
+                    <span>看</span>
                   </button>
                 </div>
               </td>
@@ -114,7 +114,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="8" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">📋</div>
+                  <div class="empty-icon">单</div>
                   <div class="empty-title">暂无生产进度</div>
                   <div class="empty-description">暂无生产任务数据</div>
                 </div>

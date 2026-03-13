@@ -9,11 +9,11 @@
       <header class="app-header">
         <div class="header-left">
           <button class="menu-toggle" @click="sidebarCollapsed = !sidebarCollapsed">
-            <span>☰</span>
+            <span class="icon-menu">三</span>
           </button>
           <div class="header-brand">
-            <span class="brand-icon">📋</span>
-            <span class="brand-text">鸿浩达 ERP</span>
+            <span class="brand-icon">茚</span>
+            <span class="brand-text">上茚 ERP</span>
           </div>
         </div>
         
@@ -41,38 +41,38 @@
               @keyup.enter="handleSearch"
             />
             <button class="search-btn" @click="handleSearch">
-              <span>🔍</span>
+              <span class="icon-search">搜</span>
             </button>
           </div>
           
           <div class="header-actions">
             <button class="action-btn" title="通知">
-              <span>🔔</span>
+              <span class="icon-bell">铃</span>
               <span v-if="notificationCount" class="badge">{{ notificationCount }}</span>
             </button>
             <button class="action-btn" title="帮助">
-              <span>❓</span>
+              <span class="icon-help">?</span>
             </button>
             
             <div class="user-menu">
               <button class="user-btn" @click="showUserMenu = !showUserMenu">
-                <span class="user-avatar">👤</span>
+                <span class="user-avatar">管</span>
                 <span class="user-name">管理员</span>
-                <span class="user-arrow">▼</span>
+                <span class="user-arrow">v</span>
               </button>
               
               <div v-if="showUserMenu" class="user-dropdown">
                 <div class="dropdown-item" @click="goToProfile">
-                  <span>👤</span>
+                  <span class="dropdown-icon">人</span>
                   <span>个人资料</span>
                 </div>
                 <div class="dropdown-item" @click="goToSettings">
-                  <span>⚙️</span>
+                  <span class="dropdown-icon">设</span>
                   <span>系统设置</span>
                 </div>
                 <div class="dropdown-divider"></div>
                 <div class="dropdown-item logout" @click="handleLogout">
-                  <span>🚪</span>
+                  <span class="dropdown-icon">退</span>
                   <span>退出登录</span>
                 </div>
               </div>
@@ -164,27 +164,27 @@ const menuGroups = [
   {
     name: '核心功能',
     items: [
-      { path: '/dashboard', label: '仪表盘', icon: '📊' },
-      { path: '/contracts', label: '合同管理', icon: '📄' },
-      { path: '/production-records', label: '生产记录', icon: '📝' },
-      { path: '/production-progress', label: '生产进度', icon: '📋' }
+      { path: '/dashboard', label: '仪表盘', icon: '统' },
+      { path: '/contracts', label: '合同管理', icon: '同' },
+      { path: '/production-records', label: '生产记录', icon: '记' },
+      { path: '/production-progress', label: '生产进度', icon: '进' }
     ]
   },
   {
     name: '基础数据',
     items: [
-      { path: '/processes', label: '工序管理', icon: '⚙️' },
-      { path: '/product-types', label: '产品类型', icon: '📦' },
-      { path: '/employees', label: '员工管理', icon: '👥' },
-      { path: '/wechat-employees', label: '微信员工', icon: '💬' }
+      { path: '/processes', label: '工序管理', icon: '工' },
+      { path: '/product-types', label: '产品类型', icon: '品' },
+      { path: '/employees', label: '员工管理', icon: '员' },
+      { path: '/wechat-employees', label: '微信员工', icon: '微' }
     ]
   },
   {
     name: '系统管理',
     items: [
-      { path: '/permissions', label: '权限管理', icon: '🔐' },
-      { path: '/performance-summary', label: '绩效汇总', icon: '📈' },
-      { path: '/employee-performance', label: '员工绩效', icon: '📉' }
+      { path: '/permissions', label: '权限管理', icon: '权' },
+      { path: '/performance-summary', label: '绩效汇总', icon: '汇' },
+      { path: '/employee-performance', label: '员工绩效', icon: '效' }
     ]
   }
 ];
@@ -273,9 +273,15 @@ if (typeof window !== 'undefined') {
   background: transparent;
   border: 1px solid var(--border-secondary);
   border-radius: var(--radius-md);
-  font-size: 18px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: all var(--transition-fast);
+}
+
+.icon-menu {
+  font-weight: bold;
+  letter-spacing: 1px;
 }
 
 .menu-toggle:hover {
@@ -290,7 +296,16 @@ if (typeof window !== 'undefined') {
 }
 
 .brand-icon {
-  font-size: 28px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary);
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
 }
 
 .brand-text {
@@ -370,6 +385,8 @@ if (typeof window !== 'undefined') {
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all var(--transition-fast);
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .search-btn:hover {
@@ -392,9 +409,16 @@ if (typeof window !== 'undefined') {
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
-  font-size: 18px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: background var(--transition-fast);
+}
+
+.icon-bell, .icon-help {
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .action-btn:hover {
@@ -444,7 +468,23 @@ if (typeof window !== 'undefined') {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 50%;
+}
+
+.dropdown-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .user-name {
@@ -586,7 +626,16 @@ if (typeof window !== 'undefined') {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.nav-item.active .nav-icon {
+  background: var(--color-primary);
+  color: white;
 }
 
 .nav-label {
@@ -661,14 +710,64 @@ if (typeof window !== 'undefined') {
   background: var(--bg-page);
 }
 
+/* PC端优化 */
+.app-wrapper {
+  min-width: 1200px;
+}
+
+.app-main {
+  min-width: 900px;
+}
+
+.main-content {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* 大屏幕优化 */
+@media (min-width: 1400px) {
+  .app-sidebar {
+    width: 280px;
+  }
+  
+  .app-sidebar.collapsed {
+    width: 72px;
+  }
+  
+  .sidebar-nav {
+    padding: 20px 16px;
+  }
+  
+  .nav-item {
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+  
+  .main-content {
+    padding: 32px;
+  }
+}
+
 /* 响应式适配 */
 @media (max-width: 1200px) {
   .header-center {
     display: none;
   }
+  
+  .app-wrapper {
+    min-width: auto;
+  }
+  
+  .app-main {
+    min-width: auto;
+  }
 }
 
 @media (max-width: 768px) {
+  .app-wrapper {
+    min-width: auto;
+  }
+  
   .app-sidebar {
     position: fixed;
     left: 0;
@@ -684,6 +783,10 @@ if (typeof window !== 'undefined') {
   
   .header-search {
     display: none;
+  }
+  
+  .brand-text {
+    font-size: 16px;
   }
 }
 </style>

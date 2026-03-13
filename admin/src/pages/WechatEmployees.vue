@@ -23,7 +23,7 @@
           <option value="inactive">未绑定</option>
         </select>
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>🔄</span>
+          <span>刷</span>
           <span>重置</span>
         </button>
       </div>
@@ -67,7 +67,7 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="openEdit(item)" title="编辑">
-                    <span>✏️</span>
+                    <span>编</span>
                   </button>
                   <button
                     v-if="item.openId"
@@ -75,7 +75,7 @@
                     @click="unbind(item)"
                     title="解绑微信"
                   >
-                    <span>🔗</span>
+                    <span>链</span>
                   </button>
                 </div>
               </td>
@@ -83,7 +83,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="7" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">💬</div>
+                  <div class="empty-icon">信</div>
                   <div class="empty-title">暂无微信员工</div>
                   <div class="empty-description">员工通过小程序绑定后会自动显示</div>
                 </div>

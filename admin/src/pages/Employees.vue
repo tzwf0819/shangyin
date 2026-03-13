@@ -16,12 +16,12 @@
           <option value="inactive">离职</option>
         </select>
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>🔄</span>
+          <span>刷</span>
           <span>重置</span>
         </button>
       </div>
       <button class="btn btn-primary" @click="openCreate">
-        <span>➕</span>
+        <span>+</span>
         <span>添加员工</span>
       </button>
     </div>
@@ -61,13 +61,13 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="openEdit(item)" title="编辑">
-                    <span>✏️</span>
+                    <span>编</span>
                   </button>
                   <button class="btn-icon" @click="toggleStatus(item)" :title="item.status === 'active' ? '设为离职' : '设为在职'">
-                    <span>{{ item.status === 'active' ? '🚪' : '✅' }}</span>
+                    <span>{{ item.status === 'active' ? '门' : '[OK]' }}</span>
                   </button>
                   <button class="btn-icon" @click="remove(item.id)" title="删除">
-                    <span>🗑️</span>
+                    <span>删</span>
                   </button>
                 </div>
               </td>
@@ -75,7 +75,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="7" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">👥</div>
+                  <div class="empty-icon">群</div>
                   <div class="empty-title">暂无员工</div>
                   <div class="empty-description">点击上方按钮添加第一位员工</div>
                 </div>

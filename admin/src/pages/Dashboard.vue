@@ -21,19 +21,19 @@
       <div class="section-title">快捷操作</div>
       <div class="quick-grid">
         <button class="quick-card" @click="$router.push('/contracts')">
-          <div class="quick-icon" style="background: #0078d420; color: #0078d4;">📄</div>
+          <div class="quick-icon" style="background: #0078d420; color: #0078d4;">文</div>
           <div class="quick-text">新建合同</div>
         </button>
         <button class="quick-card" @click="$router.push('/employees')">
-          <div class="quick-icon" style="background: #107c1020; color: #107c10;">👤</div>
+          <div class="quick-icon" style="background: #107c1020; color: #107c10;">人</div>
           <div class="quick-text">添加员工</div>
         </button>
         <button class="quick-card" @click="$router.push('/processes')">
-          <div class="quick-icon" style="background: #ffc10720; color: #856404;">⚙️</div>
+          <div class="quick-icon" style="background: #ffc10720; color: #856404;">设</div>
           <div class="quick-text">添加工序</div>
         </button>
         <button class="quick-card" @click="$router.push('/product-types')">
-          <div class="quick-icon" style="background: #a8000020; color: #a80000;">📦</div>
+          <div class="quick-icon" style="background: #a8000020; color: #a80000;">包</div>
           <div class="quick-text">添加产品</div>
         </button>
       </div>
@@ -57,7 +57,7 @@
         </div>
         <div class="info-row">
           <span class="info-label">运行状态</span>
-          <span class="info-value status-online">🟢 正常运行</span>
+          <span class="info-value status-online">[OK] 正常运行</span>
         </div>
       </div>
     </div>
@@ -69,10 +69,10 @@ import { ref, onMounted } from 'vue';
 import http from '../api/http';
 
 const stats = ref([
-  { key: 'productTypes', label: '产品类型', value: '-', icon: '📦', color: '#0078d4' },
-  { key: 'processes', label: '工序数量', value: '-', icon: '⚙️', color: '#107c10' },
-  { key: 'employees', label: '员工人数', value: '-', icon: '👥', color: '#ffc107' },
-  { key: 'contracts', label: '合同数量', value: '-', icon: '📄', color: '#a80000' }
+  { key: 'productTypes', label: '产品类型', value: '-', icon: '包', color: '#0078d4' },
+  { key: 'processes', label: '工序数量', value: '-', icon: '设', color: '#107c10' },
+  { key: 'employees', label: '员工人数', value: '-', icon: '群', color: '#ffc107' },
+  { key: 'contracts', label: '合同数量', value: '-', icon: '文', color: '#a80000' }
 ]);
 
 const load = async () => {

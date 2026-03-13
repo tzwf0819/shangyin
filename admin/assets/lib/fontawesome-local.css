@@ -40,21 +40,21 @@
 }
 
 /* 简化版图标，使用Unicode符号替代 */
-.fas.fa-chart-pie:before { content: "📊"; font-family: inherit; }
-.fas.fa-cubes:before { content: "📦"; font-family: inherit; }
-.fas.fa-diagram-project:before { content: "🔧"; font-family: inherit; }
-.fas.fa-users:before { content: "👥"; font-family: inherit; }
-.fas.fa-file-contract:before { content: "📄"; font-family: inherit; }
+.fas.fa-chart-pie:before { content: "图"; font-family: inherit; }
+.fas.fa-cubes:before { content: "包"; font-family: inherit; }
+.fas.fa-diagram-project:before { content: "工"; font-family: inherit; }
+.fas.fa-users:before { content: "群"; font-family: inherit; }
+.fas.fa-file-contract:before { content: "文"; font-family: inherit; }
 .fas.fa-circle-info:before { content: "ℹ️"; font-family: inherit; }
-.fas.fa-rotate:before { content: "🔄"; font-family: inherit; }
-.fas.fa-plus:before { content: "➕"; font-family: inherit; }
-.fas.fa-filter:before { content: "🔍"; font-family: inherit; }
-.fas.fa-eraser:before { content: "🧹"; font-family: inherit; }
-.fas.fa-trash:before { content: "🗑️"; font-family: inherit; }
-.fas.fa-edit:before { content: "✏️"; font-family: inherit; }
-.fas.fa-eye:before { content: "👁️"; font-family: inherit; }
-.fas.fa-check:before { content: "✅"; font-family: inherit; }
-.fas.fa-times:before { content: "❌"; font-family: inherit; }
+.fas.fa-rotate:before { content: "刷"; font-family: inherit; }
+.fas.fa-plus:before { content: "+"; font-family: inherit; }
+.fas.fa-filter:before { content: "筛"; font-family: inherit; }
+.fas.fa-eraser:before { content: "清"; font-family: inherit; }
+.fas.fa-trash:before { content: "删"; font-family: inherit; }
+.fas.fa-edit:before { content: "编"; font-family: inherit; }
+.fas.fa-eye:before { content: "看"; font-family: inherit; }
+.fas.fa-check:before { content: "[OK]"; font-family: inherit; }
+.fas.fa-times:before { content: "[X]"; font-family: inherit; }
 .fas.fa-spinner:before { content: "⏳"; font-family: inherit; }
-.fas.fa-minus-circle:before { content: "➖"; font-family: inherit; }
-.fas.fa-upload:before { content: "📤"; font-family: inherit; }
+.fas.fa-minus-circle:before { content: "-"; font-family: inherit; }
+.fas.fa-upload:before { content: "传"; font-family: inherit; }

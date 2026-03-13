@@ -16,11 +16,11 @@
         </div>
         <button class="btn btn-primary" @click="loadData" :disabled="loading">
           <span v-if="loading" class="spinner spinner-sm"></span>
-          <span v-else>🔍 查询</span>
+          <span v-else>搜 查询</span>
         </button>
       </div>
       <button class="btn btn-secondary" @click="exportData">
-        <span>📥 导出</span>
+        <span>下 导出</span>
       </button>
     </div>
 
@@ -88,7 +88,7 @@
             <tr v-if="dataList.length === 0 && !loading">
               <td colspan="8" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">👤</div>
+                  <div class="empty-icon">人</div>
                   <div class="empty-title">暂无绩效记录</div>
                   <div class="empty-description">请选择员工并设置时间范围后查询</div>
                 </div>
