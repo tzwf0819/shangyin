@@ -1,447 +1,344 @@
 <template>
-  <div>
-    <div class="toolbar">
-      <input v-model="query.keyword" placeholder="搜索名称/编码" @keyup.enter="load" />
-      <button class="primary" @click="openCreate">新增类型</button>
+  <div class="page-container">
+    <!-- 页面头部 -->
+    <div class="page-header-actions">
+      <div class="search-bar">
+        <input
+          v-model="filter.name"
+          type="text"
+          class="search-input"
+          placeholder="搜索产品类型..."
+          @input="debounceLoad"
+        />
+        <button class="btn btn-secondary" @click="resetFilter">
+          <span>🔄</span>
+          <span>重置</span>
+        </button>
+      </div>
+      <button class="btn btn-primary" @click="openCreate">
+        <span>➕</span>
+        <span>添加产品类型</span>
+      </button>
     </div>
-    
-    <!-- 产品类型表格 -->
-    <div class="table-wrapper" v-if="items.length">
-      <table>
-        <thead>
-          <tr>
-            <th>名称</th>
-            <th>父级分类</th>
-            <th>通知工序</th>
-            <th>工序数量</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="t in items" :key="t.id">
-            <td>
-              {{ t.name }}
-              <span v-if="t.parent" class="tag tag-child">子类</span>
-            </td>
-            <td>{{ t.parent?.name || '-' }}</td>
-            <td>
-              <span v-if="t.needNotification && t.notifyProcess" class="tag tag-notify">
-                {{ t.notifyProcess.name }}
-              </span>
-              <span v-else class="muted">-</span>
-            </td>
-            <td>{{ (t.processes||[]).length }}</td>
-            <td>
-              <button @click="edit(t)">编辑</button>
-              <button class="danger" @click="remove(t.id)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="empty" v-else>暂无产品类型</div>
 
-    <!-- 新增/编辑对话框 -->
-    <dialog ref="dlg">
-      <form @submit.prevent="save">
-        <div class="modal-header">{{ form.id ? '编辑产品类型' : '新增产品类型' }}</div>
-        <div class="modal-body">
-          <!-- 名称 -->
-          <div class="field">
-            <label>名称 *</label>
-            <input v-model="form.name" required placeholder="输入产品类型名称" />
-          </div>
-          
-          <!-- 父级分类 -->
-          <div class="field">
-            <label>父级分类</label>
-            <select v-model="form.parentId">
-              <option :value="null">-- 顶级分类 --</option>
-              <option v-for="pt in topLevelTypes" :key="pt.id" :value="pt.id" :disabled="pt.id === form.id">
-                {{ pt.name }}
-              </option>
-            </select>
-            <small class="hint">选择父级分类可创建二级分类</small>
-          </div>
-          
-          <!-- 通知工序设置 -->
-          <div class="field">
-            <label>
-              <input type="checkbox" v-model="form.needNotification" />
-              启用工序完成通知
-            </label>
-            <small class="hint">启用后，当生产执行到指定工序时会通知业务员</small>
-          </div>
-          
-          <div class="field" v-if="form.needNotification">
-            <label>通知工序 *</label>
-            <select v-model="form.notifyProcessId" required>
-              <option :value="null">-- 选择工序 --</option>
-              <option v-for="p in processes" :key="p.id" :value="p.id">
-                {{ p.name }}
-              </option>
-            </select>
-            <small class="hint">当产品完成此工序时，将发送通知给业务员</small>
-          </div>
-          
-          <!-- 工序选择 -->
-          <div class="field">
-            <label>关联工序 / 排序 (拖动排序)</label>
-            <div class="process-selector">
-              <div class="process-available">
-                <div class="section-title">可选工序</div>
-                <div class="process-list">
-                  <label v-for="p in availableProcesses" :key="p.id" class="process-item">
-                    <input type="checkbox" :value="p.id" v-model="selectedProcessIds" />
-                    <span>{{ p.name }}</span>
-                  </label>
+    <!-- 数据表格 -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 80px">ID</th>
+              <th>名称</th>
+              <th>描述</th>
+              <th style="width: 120px">创建时间</th>
+              <th style="width: 150px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in list" :key="item.id">
+              <td>{{ item.id }}</td>
+              <td><strong>{{ item.name }}</strong></td>
+              <td>{{ item.description || '-' }}</td>
+              <td>{{ formatDate(item.createdAt) }}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-icon" @click="openEdit(item)" title="编辑">
+                    <span>✏️</span>
+                  </button>
+                  <button class="btn-icon" @click="remove(item.id)" title="删除">
+                    <span>🗑️</span>
+                  </button>
                 </div>
-              </div>
-              <div class="process-selected">
-                <div class="section-title">
-                  已选顺序 (拖动排序)
-                  <span v-if="orderedSelected.length" class="reset-link" @click="resetOrder">重置</span>
+              </td>
+            </tr>
+            <tr v-if="list.length === 0 && !loading">
+              <td colspan="5" class="empty-cell">
+                <div class="empty-state">
+                  <div class="empty-icon">📦</div>
+                  <div class="empty-title">暂无产品类型</div>
+                  <div class="empty-description">点击上方按钮添加第一条产品类型</div>
                 </div>
-                <ul class="sortable-list">
-                  <li v-for="(op,i) in orderedSelected" :key="op.id"
-                      draggable="true"
-                      @dragstart="dragStart(i)"
-                      @dragover.prevent
-                      @drop="drop(i)"
-                      class="sortable-item">
-                    <span>{{ i+1 }}. {{ op.name }}</span>
-                    <span class="drag-handle">☰</span>
-                  </li>
-                  <li v-if="!orderedSelected.length" class="empty-item">无已选工序</li>
-                </ul>
-              </div>
+              </td>
+            </tr>
+            <tr v-if="loading">
+              <td colspan="5" class="loading-cell">
+                <div class="spinner spinner-sm"></div>
+                <span>加载中...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 分页 -->
+      <div class="card-footer" v-if="pagination.total > pagination.pageSize">
+        <div class="pagination">
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page === 1"
+            @click="changePage(pagination.page - 1)"
+          >
+            上一页
+          </button>
+          <span class="pagination-info">
+            第 {{ pagination.page }} / {{ Math.ceil(pagination.total / pagination.pageSize) }} 页
+          </span>
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page * pagination.pageSize >= pagination.total"
+            @click="changePage(pagination.page + 1)"
+          >
+            下一页
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div v-if="modalVisible" class="modal-overlay" @click.self="closeModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">{{ isEdit ? '编辑产品类型' : '添加产品类型' }}</h3>
+          <button class="modal-close" @click="closeModal">×</button>
+        </div>
+        <form @submit.prevent="save">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">
+                名称 <span class="required">*</span>
+              </label>
+              <input
+                v-model="form.name"
+                type="text"
+                placeholder="请输入产品类型名称"
+                required
+              />
             </div>
-            <small class="hint">左侧勾选工序，右侧可拖动排序</small>
+            <div class="form-group">
+              <label class="form-label">描述</label>
+              <textarea
+                v-model="form.description"
+                rows="3"
+                placeholder="产品类型描述（可选）"
+              ></textarea>
+            </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" @click="close">取消</button>
-          <button class="primary" type="submit">保存</button>
-        </div>
-      </form>
-    </dialog>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              取消
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="saving">
+              <span v-if="saving" class="spinner spinner-sm"></span>
+              <span>保存</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch, computed } from 'vue';
-import { listProductTypes, createProductType, updateProductType, deleteProductType } from '../api/productTypes';
-import { listProcesses } from '../api/processes';
+import { ref, reactive, onMounted } from 'vue';
+import http from '../api/http';
 
-const query = reactive({ page:1, limit:50, keyword:'' });
-const items = ref([]);
-const processes = ref([]);
-const dlg = ref();
-const form = reactive({ 
-  id:null, 
-  name:'',
-  parentId: null,
-  notifyProcessId: null,
-  needNotification: false,
-  processes:[] 
-});
-const selectedProcessIds = ref([]);
-const orderedSelected = ref([]);
-let dragIndex = -1;
+const list = ref([]);
+const loading = ref(false);
+const modalVisible = ref(false);
+const isEdit = ref(false);
+const saving = ref(false);
 
-// 计算顶级分类（用于父级选择）
-const topLevelTypes = computed(() => {
-  return items.value.filter(t => !t.parentId);
-});
+const filter = reactive({ name: '' });
+const pagination = reactive({ page: 1, pageSize: 20, total: 0 });
+const form = reactive({ id: null, name: '', description: '' });
 
-// 计算可选工序（排除已选的）
-const availableProcesses = computed(() => {
-  return processes.value;
-});
-
-const load = async () => { 
-  const r = await listProductTypes(query); 
-  if(r.success){ 
-    items.value = r.data.productTypes; 
-  } 
+let debounceTimer = null;
+const debounceLoad = () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => load(), 300);
 };
 
-const loadProcesses = async () => { 
-  const r = await listProcesses({ limit:500 }); 
-  if(r.success) processes.value = r.data.processes; 
-};
-
-const openCreate = () => { 
-  Object.assign(form, {
-    id:null, 
-    name:'',
-    parentId: null,
-    notifyProcessId: null,
-    needNotification: false,
-    processes:[]
-  }); 
-  selectedProcessIds.value = []; 
-  orderedSelected.value = []; 
-  dlg.value.showModal(); 
-};
-
-const edit = (t) => { 
-  Object.assign(form, {
-    id: t.id,
-    name: t.name,
-    parentId: t.parentId || null,
-    notifyProcessId: t.notifyProcessId || null,
-    needNotification: t.needNotification || false,
-    processes: t.processes || []
-  }); 
-  selectedProcessIds.value = (t.processes||[]).map(p=>p.id); 
-  orderedSelected.value = (t.processes||[]).map(p=>({ id:p.id, name:p.name })); 
-  dlg.value.showModal(); 
-};
-
-const close = () => dlg.value.close();
-
-const syncOrder = () => {
-  orderedSelected.value = selectedProcessIds.value
-    .map(id => orderedSelected.value.find(o=>o.id===id) || processes.value.find(p=>p.id===id) || { id, name: '工序'+id })
-    .filter(Boolean);
-};
-
-watch(selectedProcessIds, syncOrder);
-
-const dragStart = (i) => { dragIndex = i; };
-
-const drop = (i) => {
-  if(dragIndex===-1 || dragIndex===i) return;
-  const arr = [...orderedSelected.value];
-  const [m] = arr.splice(dragIndex,1);
-  arr.splice(i,0,m);
-  orderedSelected.value = arr;
-  dragIndex = -1;
-};
-
-const resetOrder = () => { 
-  orderedSelected.value = [...orderedSelected.value]; 
-};
-
-const save = async () => {
-  const procs = orderedSelected.value.map((o,idx)=>({ id:o.id, sequenceOrder: idx+1 }));
-  const payload = {
-    name: form.name,
-    parentId: form.parentId,
-    notifyProcessId: form.needNotification ? form.notifyProcessId : null,
-    needNotification: form.needNotification,
-    processes: procs
-  };
-  
-  if(form.id) {
-    await updateProductType(form.id, payload);
-  } else {
-    await createProductType(payload);
-  }
-  close(); 
+const resetFilter = () => {
+  filter.name = '';
+  pagination.page = 1;
   load();
 };
 
-const remove = async (id) => { 
-  if(!confirm('确认删除?')) return; 
-  await deleteProductType(id); 
-  load(); 
+const changePage = (page) => {
+  pagination.page = page;
+  load();
 };
 
-onMounted(()=>{ load(); loadProcesses(); });
+const formatDate = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('zh-CN');
+};
+
+const load = async () => {
+  loading.value = true;
+  try {
+    const params = { page: pagination.page, pageSize: pagination.pageSize };
+    if (filter.name) params.name = filter.name;
+    const res = await http.get('/shangyin/product-types', { params });
+    list.value = res.data.rows || res.data || [];
+    pagination.total = res.data.count || list.value.length;
+  } catch (e) {
+    alert('加载失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    loading.value = false;
+  }
+};
+
+const openCreate = () => {
+  isEdit.value = false;
+  Object.assign(form, { id: null, name: '', description: '' });
+  modalVisible.value = true;
+};
+
+const openEdit = (item) => {
+  isEdit.value = true;
+  Object.assign(form, item);
+  modalVisible.value = true;
+};
+
+const closeModal = () => {
+  modalVisible.value = false;
+};
+
+const save = async () => {
+  saving.value = true;
+  try {
+    if (isEdit.value) {
+      await http.put(`/shangyin/product-types/${form.id}`, form);
+    } else {
+      await http.post('/shangyin/product-types', form);
+    }
+    closeModal();
+    load();
+  } catch (e) {
+    alert('保存失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    saving.value = false;
+  }
+};
+
+const remove = async (id) => {
+  if (!confirm('确定删除？')) return;
+  try {
+    await http.delete(`/shangyin/product-types/${id}`);
+    load();
+  } catch (e) {
+    alert('删除失败：' + (e.response?.data?.message || e.message));
+  }
+};
+
+onMounted(load);
 </script>
 
 <style scoped>
-.toolbar {
+.page-header-actions {
   display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  gap: var(--space-4);
 }
-.toolbar input {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-}
-.toolbar button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.toolbar button.primary {
-  background: #3BA372;
-  color: #fff;
-}
-.table-wrapper {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-thead {
-  background: #f5f5f5;
-}
-th, td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-.tag {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  margin-left: 8px;
-}
-.tag-child {
-  background: #e6f7ec;
-  color: #3BA372;
-}
-.tag-notify {
-  background: #fff2e8;
-  color: #fa8c16;
-}
-.muted {
-  color: #999;
-}
-.empty {
-  text-align: center;
-  padding: 60px 0;
-  color: #999;
-}
-dialog {
-  border: none;
-  border-radius: 8px;
-  padding: 0;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
-}
-.modal-header {
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-  font-size: 18px;
-  font-weight: bold;
-}
-.modal-body {
-  padding: 20px;
-}
-.field {
-  margin-bottom: 16px;
-}
-.field label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-}
-.field input[type="text"],
-.field input[type="time"],
-.field select,
-.field textarea {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-.field input[type="checkbox"] {
-  margin-right: 8px;
-}
-.hint {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #999;
-}
-.process-selector {
+
+.search-bar {
   display: flex;
-  gap: 16px;
-  align-items: flex-start;
-}
-.process-available,
-.process-selected {
+  align-items: center;
+  gap: var(--space-3);
   flex: 1;
-  min-width: 200px;
+  max-width: 500px;
 }
-.section-title {
-  font-size: 12px;
-  margin-bottom: 8px;
-  color: #666;
+
+.search-input {
+  flex: 1;
+  height: 40px;
+}
+
+.table-actions {
   display: flex;
-  justify-content: space-between;
+  gap: var(--space-2);
 }
-.reset-link {
-  color: #2563eb;
-  cursor: pointer;
-}
-.process-list {
-  max-height: 200px;
-  overflow: auto;
-  border: 1px solid #ddd;
-  padding: 8px;
-  border-radius: 6px;
-}
-.process-item {
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 4px 0;
-  font-size: 13px;
-}
-.sortable-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  min-height: 200px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
-.sortable-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  font-size: 13px;
-  border-bottom: 1px solid #eee;
-  background: #fff;
-  cursor: move;
-}
-.drag-handle {
-  opacity: 0.4;
-}
-.empty-item {
-  padding: 10px;
-  font-size: 13px;
-  color: #999;
-  text-align: center;
-}
-.modal-footer {
-  padding: 20px;
-  border-top: 1px solid #eee;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-button {
-  padding: 8px 16px;
+  justify-content: center;
+  background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
+  font-size: 16px;
   cursor: pointer;
+  transition: background var(--transition-fast);
 }
-button.primary {
-  background: #3BA372;
-  color: #fff;
+
+.btn-icon:hover {
+  background: var(--bg-hover);
 }
-button.danger {
-  background: #dc2626;
-  color: #fff;
+
+.empty-cell {
+  padding: var(--space-10) !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.empty-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.loading-cell {
+  padding: var(--space-10) !important;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.pagination-info {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.required {
+  color: var(--color-error);
+}
+
+@media (max-width: 768px) {
+  .page-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-bar {
+    max-width: none;
+  }
 }
 </style>

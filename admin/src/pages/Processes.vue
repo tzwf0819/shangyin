@@ -1,186 +1,244 @@
 <template>
-  <div class="process-page">
-    <!-- 查询工具栏 -->
-    <div class="query-bar">
-      <div class="form-row">
-        <div class="form-field">
-          <label>工序名称:</label>
-          <input v-model="query.keyword" placeholder="搜索名称或编码" @keyup.enter="load" />
-        </div>
-        <div class="form-field">
-          <button class="primary" @click="load">查询</button>
-          <button class="primary" @click="openCreate">新增工序</button>
+  <div class="page-container">
+    <!-- 页面头部 -->
+    <div class="page-header-actions">
+      <div class="search-bar">
+        <input
+          v-model="filter.name"
+          type="text"
+          class="search-input"
+          placeholder="搜索工序名称..."
+          @input="debounceLoad"
+        />
+        <button class="btn btn-secondary" @click="resetFilter">
+          <span>🔄</span>
+          <span>重置</span>
+        </button>
+      </div>
+      <button class="btn btn-primary" @click="openCreate">
+        <span>➕</span>
+        <span>添加工序</span>
+      </button>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 80px">ID</th>
+              <th>名称</th>
+              <th>单价</th>
+              <th>数量单位</th>
+              <th style="width: 150px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in list" :key="item.id">
+              <td>{{ item.id }}</td>
+              <td>{{ item.name }}</td>
+              <td>¥{{ item.unitPrice }}</td>
+              <td>{{ item.quantityUnit || '-' }}</td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-icon" @click="openEdit(item)" title="编辑">
+                    <span>✏️</span>
+                  </button>
+                  <button class="btn-icon" @click="remove(item.id)" title="删除">
+                    <span>🗑️</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="list.length === 0 && !loading">
+              <td colspan="5" class="empty-cell">
+                <div class="empty-state">
+                  <div class="empty-icon">📋</div>
+                  <div class="empty-title">暂无数据</div>
+                  <div class="empty-description">点击上方按钮添加第一条工序</div>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="loading">
+              <td colspan="5" class="loading-cell">
+                <div class="spinner spinner-sm"></div>
+                <span>加载中...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 分页 -->
+      <div class="card-footer" v-if="pagination.total > pagination.pageSize">
+        <div class="pagination">
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page === 1"
+            @click="changePage(pagination.page - 1)"
+          >
+            上一页
+          </button>
+          <span class="pagination-info">
+            第 {{ pagination.page }} / {{ Math.ceil(pagination.total / pagination.pageSize) }} 页
+          </span>
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page * pagination.pageSize >= pagination.total"
+            @click="changePage(pagination.page + 1)"
+          >
+            下一页
+          </button>
         </div>
       </div>
     </div>
-    
-    <!-- 数据表格 -->
-    <div class="data-grid">
-      <table>
-        <thead>
-          <tr>
-            <th>名称</th>
-            <th>激光雕刻</th>
-            <th>绩效单价</th>
-            <th>单位</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="p in items" :key="p.id">
-            <td>{{ p.name }}</td>
-            <td>
-              <span v-if="p.isLaserEngraving" class="tag tag-laser">是</span>
-              <span v-else class="muted">-</span>
-            </td>
-            <td>{{ p.payRate }}</td>
-            <td>{{ p.payRateUnit === 'perItem' ? '件' : '小时' }}</td>
-            <td>
-              <button @click="edit(p)">编辑</button>
-              <button class="danger" @click="remove(p.id)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="empty" v-if="!items.length">暂无工序数据</div>
 
-    <!-- 新增/编辑对话框 -->
-    <dialog ref="dlg">
-      <form @submit.prevent="save">
-        <div class="modal-header">{{ form.id ? '编辑工序' : '新增工序' }}</div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-field">
-              <label class="required">名称:</label>
-              <input v-model="form.name" required />
-            </div>
-            <div class="form-field">
-              <label>绩效单价:</label>
-              <input type="number" step="0.01" v-model.number="form.payRate" required />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label>单位:</label>
-              <select v-model="form.payRateUnit">
-                <option value="perItem">件</option>
-                <option value="perHour">小时</option>
-              </select>
-            </div>
-            <div class="form-field">
-              <label>描述:</label>
-              <input v-model="form.description" />
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field checkbox-field">
-              <input type="checkbox" v-model="form.isLaserEngraving" id="isLaser" />
-              <label for="isLaser">激光雕刻工序</label>
-            </div>
-          </div>
-          <div class="laser-config" v-if="form.isLaserEngraving">
-            <div class="group-title">激光雕刻配置</div>
-            <div class="form-row">
-              <div class="form-field">
-                <label>模式1名称:</label>
-                <input v-model="form.laserMode1Name" placeholder="例如：模式 A" />
-              </div>
-              <div class="form-field">
-                <label>模式1单价:</label>
-                <input type="number" step="0.01" v-model.number="form.laserMode1PayRate" />
-              </div>
+    <!-- 编辑弹窗 -->
+    <div v-if="modalVisible" class="modal-overlay" @click.self="closeModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">{{ isEdit ? '编辑工序' : '添加工序' }}</h3>
+          <button class="modal-close" @click="closeModal">×</button>
+        </div>
+        <form @submit.prevent="save">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">
+                名称 <span class="required">*</span>
+              </label>
+              <input
+                v-model="form.name"
+                type="text"
+                placeholder="请输入工序名称"
+                required
+              />
             </div>
             <div class="form-row">
-              <div class="form-field">
-                <label>模式2名称:</label>
-                <input v-model="form.laserMode2Name" placeholder="例如：模式 B" />
+              <div class="form-group">
+                <label class="form-label">
+                  单价 <span class="required">*</span>
+                </label>
+                <input
+                  v-model.number="form.unitPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  required
+                />
               </div>
-              <div class="form-field">
-                <label>模式2单价:</label>
-                <input type="number" step="0.01" v-model.number="form.laserMode2PayRate" />
+              <div class="form-group">
+                <label class="form-label">数量单位</label>
+                <input
+                  v-model="form.quantityUnit"
+                  type="text"
+                  placeholder="如：个、件、米"
+                />
               </div>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" @click="close">取消</button>
-          <button class="primary" type="submit">保存</button>
-        </div>
-      </form>
-    </dialog>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              取消
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="saving">
+              <span v-if="saving" class="spinner spinner-sm"></span>
+              <span>保存</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { listProcesses, createProcess, updateProcess, deleteProcess } from '../api/processes';
+import http from '../api/http';
 
-const query = reactive({ page:1, limit:50, keyword:'' });
-const items = ref([]);
-const dlg = ref();
-const form = reactive({ 
-  id:null, 
-  name:'', 
-  payRate:0, 
-  payRateUnit:'perItem', 
-  description:'', 
-  isLaserEngraving:false, 
-  laserMode1PayRate:0, 
-  laserMode2PayRate:0, 
-  laserMode1Name:'模式 A', 
-  laserMode2Name:'模式 B' 
-});
+const list = ref([]);
+const loading = ref(false);
+const modalVisible = ref(false);
+const isEdit = ref(false);
+const saving = ref(false);
 
-const load = async () => {
-  const r = await listProcesses(query); 
-  if(r.success){ 
-    items.value = r.data.processes; 
-  }
+const filter = reactive({ name: '' });
+const pagination = reactive({ page: 1, pageSize: 20, total: 0 });
+const form = reactive({ id: null, name: '', unitPrice: 0, quantityUnit: '' });
+
+let debounceTimer = null;
+const debounceLoad = () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => load(), 300);
 };
 
-const openCreate = () => { 
-  Object.assign(form,{ 
-    id:null, name:'', payRate:0, payRateUnit:'perItem', description:'', 
-    isLaserEngraving:false, laserMode1PayRate:0, laserMode2PayRate:0, 
-    laserMode1Name:'模式 A', laserMode2Name:'模式 B'
-  }); 
-  dlg.value.showModal(); 
-};
-
-const edit = (p) => { 
-  Object.assign(form,p); 
-  dlg.value.showModal(); 
-};
-
-const close = () => dlg.value.close();
-
-const save = async () => {
-  const payload = { 
-    name:form.name, payRate:form.payRate, payRateUnit:form.payRateUnit, 
-    status:'active', description:form.description,
-    isLaserEngraving:form.isLaserEngraving, laserMode1PayRate:form.laserMode1PayRate, 
-    laserMode2PayRate:form.laserMode2PayRate,
-    laserMode1Name:form.laserMode1Name, laserMode2Name:form.laserMode2Name
-  };
-  if(form.id) await updateProcess(form.id,payload); 
-  else await createProcess(payload);
-  close(); 
+const resetFilter = () => {
+  filter.name = '';
+  pagination.page = 1;
   load();
 };
 
-const remove = async (id) => {
-  if(!confirm('确认删除?')) return;
+const changePage = (page) => {
+  pagination.page = page;
+  load();
+};
+
+const load = async () => {
+  loading.value = true;
   try {
-    const result = await deleteProcess(id);
-    if (result.success) {
-      load();
-      alert('工序删除成功');
+    const params = { page: pagination.page, pageSize: pagination.pageSize };
+    if (filter.name) params.name = filter.name;
+    const res = await http.get('/shangyin/processes', { params });
+    list.value = res.data.rows || res.data || [];
+    pagination.total = res.data.count || list.value.length;
+  } catch (e) {
+    alert('加载失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    loading.value = false;
+  }
+};
+
+const openCreate = () => {
+  isEdit.value = false;
+  Object.assign(form, { id: null, name: '', unitPrice: 0, quantityUnit: '' });
+  modalVisible.value = true;
+};
+
+const openEdit = (item) => {
+  isEdit.value = true;
+  Object.assign(form, item);
+  modalVisible.value = true;
+};
+
+const closeModal = () => {
+  modalVisible.value = false;
+};
+
+const save = async () => {
+  saving.value = true;
+  try {
+    if (isEdit.value) {
+      await http.put(`/shangyin/processes/${form.id}`, form);
     } else {
-      alert(result.message || '删除失败');
+      await http.post('/shangyin/processes', form);
     }
-  } catch (error) {
-    alert('删除工序失败: ' + (error.response?.data?.message || error.message));
+    closeModal();
+    load();
+  } catch (e) {
+    alert('保存失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    saving.value = false;
+  }
+};
+
+const remove = async (id) => {
+  if (!confirm('确定删除？')) return;
+  try {
+    await http.delete(`/shangyin/processes/${id}`);
+    load();
+  } catch (e) {
+    alert('删除失败：' + (e.response?.data?.message || e.message));
   }
 };
 
@@ -188,145 +246,119 @@ onMounted(load);
 </script>
 
 <style scoped>
-.process-page {
-  height: 100%;
-}
-
-/* 查询栏 */
-.query-bar {
-  background: #e8e8e8;
-  border: 1px solid #a0a0a0;
-  padding: 8px;
-  margin-bottom: 8px;
-}
-
-.query-bar .form-row {
-  margin-bottom: 0;
-}
-
-/* 数据网格 */
-.data-grid {
-  background: #ffffff;
-  border: 1px solid #a0a0a0;
-  overflow: auto;
-  max-height: calc(100% - 60px);
-}
-
-.data-grid table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.data-grid th {
-  background: #d4d4d4;
-  padding: 6px 8px;
-  text-align: left;
-  border: 1px solid #a0a0a0;
-  font-weight: bold;
-}
-
-.data-grid td {
-  padding: 6px 8px;
-  border: 1px solid #c0c0c0;
-}
-
-.data-grid tr:hover {
-  background: #e8f4fc;
-}
-
-/* 标签 */
-.tag {
-  display: inline-block;
-  padding: 1px 6px;
-  background: #e6f7ec;
-  border: 1px solid #3BA372;
-  color: #3BA372;
-  font-size: 11px;
-}
-
-.muted {
-  color: #999;
-}
-
-.empty {
-  text-align: center;
-  padding: 40px 0;
-  color: #999;
-  background: #ffffff;
-  border: 1px solid #a0a0a0;
-  margin-top: 8px;
-}
-
-/* 复选框字段 */
-.checkbox-field {
+.page-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  gap: var(--space-4);
 }
 
-.checkbox-field label {
-  margin-bottom: 0;
-}
-
-/* 激光配置 */
-.laser-config {
-  border: 1px solid #c0c0c0;
-  background: #ffffff;
-  margin-top: 12px;
-  padding: 8px;
-}
-
-.group-title {
-  background: #d4d4d4;
-  padding: 4px 8px;
-  margin: -8px -8px 8px -8px;
-  font-weight: bold;
-  font-size: 12px;
-  border-bottom: 1px solid #c0c0c0;
-}
-
-/* 对话框 */
-dialog {
-  border: 1px solid #a0a0a0;
-  border-radius: 2px;
-  padding: 0;
-  width: 550px;
-  max-width: 90vw;
-  max-height: 85vh;
-  overflow: auto;
-  background: #f0f0f0;
-}
-
-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.modal-header {
-  background: linear-gradient(to bottom, #e8e8e8, #d0d0d0);
-  padding: 8px 12px;
-  border-bottom: 1px solid #a0a0a0;
-  font-size: 13px;
-  font-weight: bold;
-}
-
-.modal-body {
-  padding: 12px;
-  background: #f0f0f0;
-}
-
-.modal-footer {
-  padding: 8px 12px;
-  border-top: 1px solid #a0a0a0;
-  background: #e8e8e8;
+.search-bar {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  max-width: 500px;
 }
 
-.required::before {
-  content: "*";
-  color: #ff0000;
-  margin-right: 2px;
+.search-input {
+  flex: 1;
+  height: 40px;
+}
+
+.table-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.btn-icon:hover {
+  background: var(--bg-hover);
+}
+
+.empty-cell {
+  padding: var(--space-10) !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.empty-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.loading-cell {
+  padding: var(--space-10) !important;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.pagination-info {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.required {
+  color: var(--color-error);
+}
+
+@media (max-width: 768px) {
+  .page-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-bar {
+    max-width: none;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

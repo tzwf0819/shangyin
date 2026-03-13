@@ -1,0 +1,687 @@
+/* MUJI Design System CSS */
+/* ================================ */
+/* Minimalism Style - Inspired by MUJI */
+
+:root {
+  /* MUJI Colors - Natural & Minimal */
+  --muji-bg: #FAFAF8;
+  --muji-bg-warm: #F5F5F0;
+  --muji-white: #FFFFFF;
+  --muji-cream: #F9F7F2;
+  
+  /* Gray Scale - Warm Tones */
+  --muji-gray-50: #FAFAF8;
+  --muji-gray-100: #F5F5F0;
+  --muji-gray-200: #E8E8E3;
+  --muji-gray-300: #D4D4CF;
+  --muji-gray-400: #B8B8B3;
+  --muji-gray-500: #9A9A95;
+  --muji-gray-600: #7A7A75;
+  --muji-gray-700: #5A5A55;
+  --muji-gray-800: #4A4A48;
+  --muji-gray-900: #2A2A28;
+  
+  /* Wood/Natural Accent Colors */
+  --muji-wood: #C4A77D;
+  --muji-wood-dark: #A68B5B;
+  --muji-wood-light: #E8DCC8;
+  --muji-brown: #8B7355;
+  
+  /* Text Colors */
+  --muji-text-primary: #333333;
+  --muji-text-secondary: #666666;
+  --muji-text-muted: #999999;
+  
+  /* Status Colors - Muted */
+  --muji-success: #7A9E7E;
+  --muji-success-light: #E8F0E9;
+  --muji-warning: #C9A96E;
+  --muji-warning-light: #F5EFE4;
+  --muji-error: #B87A7A;
+  --muji-error-light: #F0E4E4;
+  --muji-info: #7A8B9E;
+  --muji-info-light: #E4E8F0;
+  
+  /* Typography */
+  --muji-font-family: 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', sans-serif;
+  --muji-font-size-xs: 12px;
+  --muji-font-size-sm: 13px;
+  --muji-font-size-base: 14px;
+  --muji-font-size-lg: 16px;
+  --muji-font-size-xl: 18px;
+  --muji-font-size-2xl: 22px;
+  --muji-font-size-3xl: 28px;
+  
+  /* Spacing - Generous */
+  --muji-spacing-xs: 4px;
+  --muji-spacing-sm: 8px;
+  --muji-spacing-md: 16px;
+  --muji-spacing-lg: 24px;
+  --muji-spacing-xl: 32px;
+  --muji-spacing-2xl: 48px;
+  --muji-spacing-3xl: 64px;
+  
+  /* Border Radius - Minimal */
+  --muji-radius-sm: 2px;
+  --muji-radius-md: 4px;
+  --muji-radius-lg: 6px;
+  --muji-radius-xl: 8px;
+  
+  /* Borders */
+  --muji-border-light: 1px solid var(--muji-gray-200);
+  --muji-border: 1px solid var(--muji-gray-300);
+  
+  /* Shadows - Very Subtle */
+  --muji-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --muji-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --muji-shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.08);
+  
+  /* Transitions */
+  --muji-transition: all 0.2s ease;
+}
+
+/* Reset and Base Styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--muji-font-family);
+  font-size: var(--muji-font-size-base);
+  line-height: 1.6;
+  color: var(--muji-text-primary);
+  background-color: var(--muji-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[v-cloak] {
+  display: none !important;
+}
+
+/* MUJI Header - Clean & Minimal */
+.muji-header {
+  background: var(--muji-white);
+  border-bottom: var(--muji-border);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.muji-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--muji-spacing-xl);
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 64px;
+}
+
+.muji-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--muji-spacing-md);
+}
+
+.muji-logo {
+  width: 36px;
+  height: 36px;
+  background: var(--muji-bg-warm);
+  border: 1px solid var(--muji-gray-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: var(--muji-font-size-sm);
+  color: var(--muji-text-primary);
+}
+
+.muji-brand-name {
+  font-size: var(--muji-font-size-lg);
+  font-weight: 500;
+  color: var(--muji-text-primary);
+  letter-spacing: 0.5px;
+}
+
+.muji-brand-subtitle {
+  font-size: var(--muji-font-size-xs);
+  color: var(--muji-text-muted);
+  font-weight: 400;
+}
+
+/* Navigation */
+.muji-nav {
+  display: flex;
+  gap: var(--muji-spacing-xs);
+}
+
+.muji-nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--muji-spacing-sm);
+  padding: var(--muji-spacing-sm) var(--muji-spacing-md);
+  background: none;
+  border: none;
+  color: var(--muji-text-secondary);
+  font-size: var(--muji-font-size-sm);
+  font-weight: 400;
+  cursor: pointer;
+  transition: var(--muji-transition);
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.muji-nav-item:hover {
+  color: var(--muji-text-primary);
+  background: var(--muji-gray-100);
+}
+
+.muji-nav-item.active {
+  color: var(--muji-text-primary);
+  border-bottom-color: var(--muji-wood);
+  background: var(--muji-gray-100);
+}
+
+.muji-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--muji-spacing-md);
+}
+
+/* Main Content */
+.muji-main {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--muji-spacing-xl);
+  min-height: calc(100vh - 64px);
+}
+
+.muji-section {
+  margin-bottom: var(--muji-spacing-2xl);
+}
+
+.muji-section-header {
+  margin-bottom: var(--muji-spacing-lg);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--muji-spacing-md);
+}
+
+.muji-section-title {
+  font-size: var(--muji-font-size-2xl);
+  font-weight: 400;
+  color: var(--muji-text-primary);
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.muji-section-subtitle {
+  font-size: var(--muji-font-size-base);
+  color: var(--muji-text-secondary);
+  margin: var(--muji-spacing-xs) 0 0 0;
+  font-weight: 400;
+}
+
+.muji-section-actions {
+  display: flex;
+  gap: var(--muji-spacing-sm);
+}
+
+/* MUJI Cards - Minimal */
+.muji-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--muji-spacing-lg);
+  margin-bottom: var(--muji-spacing-2xl);
+}
+
+.muji-card {
+  background: var(--muji-white);
+  border: var(--muji-border-light);
+  padding: var(--muji-spacing-lg);
+  transition: var(--muji-transition);
+}
+
+.muji-card:hover {
+  border-color: var(--muji-gray-400);
+  box-shadow: var(--muji-shadow-md);
+}
+
+.muji-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--muji-spacing-sm);
+  margin-bottom: var(--muji-spacing-md);
+}
+
+.muji-card-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--muji-wood);
+  font-size: 16px;
+}
+
+.muji-card-title {
+  font-size: var(--muji-font-size-sm);
+  font-weight: 400;
+  color: var(--muji-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.muji-card-content {
+  flex: 1;
+}
+
+.muji-stat-number {
+  font-size: var(--muji-font-size-3xl);
+  font-weight: 300;
+  color: var(--muji-text-primary);
+  margin-bottom: var(--muji-spacing-xs);
+  letter-spacing: -1px;
+}
+
+.muji-stat-label {
+  font-size: var(--muji-font-size-xs);
+  color: var(--muji-text-muted);
+}
+
+/* MUJI Buttons */
+.muji-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--muji-spacing-sm);
+  padding: var(--muji-spacing-sm) var(--muji-spacing-md);
+  font-size: var(--muji-font-size-sm);
+  font-weight: 400;
+  border: var(--muji-border);
+  background: var(--muji-white);
+  color: var(--muji-text-primary);
+  cursor: pointer;
+  transition: var(--muji-transition);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.muji-button:hover {
+  background: var(--muji-gray-100);
+  border-color: var(--muji-gray-400);
+}
+
+.muji-button-primary {
+  background: var(--muji-wood);
+  border-color: var(--muji-wood);
+  color: var(--muji-white);
+}
+
+.muji-button-primary:hover {
+  background: var(--muji-wood-dark);
+  border-color: var(--muji-wood-dark);
+}
+
+.muji-button-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: var(--muji-border);
+  background: var(--muji-white);
+  color: var(--muji-text-secondary);
+  cursor: pointer;
+  transition: var(--muji-transition);
+}
+
+.muji-button-icon:hover {
+  background: var(--muji-gray-100);
+  color: var(--muji-text-primary);
+}
+
+.muji-button-danger {
+  color: var(--muji-error);
+  border-color: var(--muji-error);
+}
+
+.muji-button-danger:hover {
+  background: var(--muji-error-light);
+}
+
+/* MUJI Tables */
+.muji-table-container {
+  overflow-x: auto;
+  border: var(--muji-border-light);
+  background: var(--muji-white);
+}
+
+.muji-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--muji-white);
+}
+
+.muji-table th {
+  background: var(--muji-gray-100);
+  color: var(--muji-text-secondary);
+  font-weight: 500;
+  font-size: var(--muji-font-size-xs);
+  text-align: left;
+  padding: var(--muji-spacing-md);
+  border-bottom: var(--muji-border);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.muji-table td {
+  padding: var(--muji-spacing-md);
+  border-bottom: 1px solid var(--muji-gray-200);
+  font-size: var(--muji-font-size-sm);
+  vertical-align: middle;
+  color: var(--muji-text-primary);
+}
+
+.muji-table tbody tr:hover {
+  background: var(--muji-gray-50);
+}
+
+.muji-table-primary {
+  font-weight: 500;
+  color: var(--muji-text-primary);
+}
+
+.muji-table-actions {
+  display: flex;
+  gap: var(--muji-spacing-xs);
+}
+
+.muji-table-empty {
+  text-align: center;
+  color: var(--muji-text-muted);
+  font-size: var(--muji-font-size-sm);
+  padding: var(--muji-spacing-xl);
+}
+
+/* MUJI Badges */
+.muji-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--muji-spacing-xs) var(--muji-spacing-sm);
+  font-size: var(--muji-font-size-xs);
+  font-weight: 400;
+  background: var(--muji-gray-100);
+  color: var(--muji-text-secondary);
+  letter-spacing: 0.5px;
+}
+
+.muji-badge-success {
+  background: var(--muji-success-light);
+  color: var(--muji-success);
+}
+
+.muji-badge-warning {
+  background: var(--muji-warning-light);
+  color: var(--muji-warning);
+}
+
+.muji-badge-error {
+  background: var(--muji-error-light);
+  color: var(--muji-error);
+}
+
+/* Form Elements */
+.muji-input {
+  width: 100%;
+  padding: var(--muji-spacing-sm) var(--muji-spacing-md);
+  border: var(--muji-border);
+  background: var(--muji-white);
+  font-size: var(--muji-font-size-sm);
+  color: var(--muji-text-primary);
+  transition: var(--muji-transition);
+  font-family: inherit;
+}
+
+.muji-input:focus {
+  outline: none;
+  border-color: var(--muji-wood);
+}
+
+.muji-input::placeholder {
+  color: var(--muji-text-muted);
+}
+
+.muji-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--muji-spacing-md) center;
+  padding-right: var(--muji-spacing-xl);
+}
+
+.muji-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.muji-form-label {
+  display: block;
+  font-size: var(--muji-font-size-xs);
+  color: var(--muji-text-secondary);
+  margin-bottom: var(--muji-spacing-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.muji-form-group {
+  margin-bottom: var(--muji-spacing-md);
+}
+
+/* Modal */
+.muji-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.muji-modal {
+  background: var(--muji-white);
+  width: 90%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: var(--muji-shadow-lg);
+}
+
+.muji-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--muji-spacing-lg);
+  border-bottom: var(--muji-border-light);
+}
+
+.muji-modal-header h3 {
+  margin: 0;
+  font-size: var(--muji-font-size-lg);
+  font-weight: 400;
+  color: var(--muji-text-primary);
+}
+
+.muji-modal-close {
+  background: none;
+  border: none;
+  color: var(--muji-text-muted);
+  font-size: var(--muji-font-size-lg);
+  cursor: pointer;
+  padding: var(--muji-spacing-xs);
+  transition: var(--muji-transition);
+}
+
+.muji-modal-close:hover {
+  color: var(--muji-text-primary);
+}
+
+.muji-modal-body {
+  padding: var(--muji-spacing-lg);
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.muji-modal-actions {
+  display: flex;
+  gap: var(--muji-spacing-md);
+  justify-content: flex-end;
+  padding: var(--muji-spacing-md) var(--muji-spacing-lg);
+  border-top: var(--muji-border-light);
+  background: var(--muji-gray-50);
+}
+
+/* Toast */
+.muji-toast {
+  position: fixed;
+  top: var(--muji-spacing-xl);
+  right: var(--muji-spacing-xl);
+  display: flex;
+  align-items: center;
+  gap: var(--muji-spacing-sm);
+  padding: var(--muji-spacing-md) var(--muji-spacing-lg);
+  background: var(--muji-white);
+  border: var(--muji-border);
+  font-size: var(--muji-font-size-sm);
+  box-shadow: var(--muji-shadow-lg);
+  z-index: 10000;
+  animation: muji-slide-in 0.3s ease-out;
+}
+
+.muji-toast-success {
+  border-left: 3px solid var(--muji-success);
+}
+
+.muji-toast-error {
+  border-left: 3px solid var(--muji-error);
+}
+
+@keyframes muji-slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Loading */
+.muji-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(250, 250, 248, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.muji-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--muji-gray-300);
+  border-top-color: var(--muji-wood);
+  animation: muji-spin 1s linear infinite;
+}
+
+@keyframes muji-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Empty State */
+.muji-empty {
+  text-align: center;
+  padding: var(--muji-spacing-3xl) var(--muji-spacing-xl);
+  color: var(--muji-text-muted);
+}
+
+.muji-empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--muji-spacing-md);
+  color: var(--muji-gray-400);
+}
+
+.muji-empty-text {
+  font-size: var(--muji-font-size-sm);
+}
+
+/* Divider */
+.muji-divider {
+  height: 1px;
+  background: var(--muji-gray-200);
+  margin: var(--muji-spacing-lg) 0;
+}
+
+/* List */
+.muji-list {
+  list-style: none;
+  padding: 0;
+}
+
+.muji-list-item {
+  padding: var(--muji-spacing-md);
+  border-bottom: 1px solid var(--muji-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.muji-list-item:last-child {
+  border-bottom: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .muji-header-content {
+    padding: 0 var(--muji-spacing-md);
+    height: 56px;
+  }
+  
+  .muji-nav {
+    display: none;
+  }
+  
+  .muji-main {
+    padding: var(--muji-spacing-md);
+  }
+  
+  .muji-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .muji-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .muji-section-title {
+    font-size: var(--muji-font-size-xl);
+  }
+  
+  .muji-stat-number {
+    font-size: var(--muji-font-size-2xl);
+  }
+}

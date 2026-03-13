@@ -1,72 +1,76 @@
-/* Sony Design System CSS */
-/* ================================ */
+/* Industrial ERP Design System CSS */
+/* ================================= */
+/* Professional Enterprise Style */
 
 :root {
-  /* Sony Colors */
-  --sony-primary: #0E4ECA;
-  --sony-primary-dark: #0A3AA0;
-  --sony-primary-light: #E8F1FF;
-  --sony-secondary: #FF6B00;
-  --sony-secondary-dark: #E55A00;
-  --sony-secondary-light: #FFF2E8;
+  /* ERP Primary Colors */
+  --erp-primary: #2563eb;
+  --erp-primary-dark: #1d4ed8;
+  --erp-primary-light: #dbeafe;
+  --erp-primary-hover: #1e40af;
+  
+  /* Dark Sidebar */
+  --erp-sidebar-bg: #111827;
+  --erp-sidebar-hover: #1f2937;
+  --erp-sidebar-active: #374151;
+  --erp-sidebar-text: #9ca3af;
+  --erp-sidebar-text-active: #ffffff;
   
   /* Gray Scale */
-  --sony-gray-50: #FAFAFA;
-  --sony-gray-100: #F5F5F5;
-  --sony-gray-200: #EEEEEE;
-  --sony-gray-300: #E0E0E0;
-  --sony-gray-400: #BDBDBD;
-  --sony-gray-500: #9E9E9E;
-  --sony-gray-600: #757575;
-  --sony-gray-700: #616161;
-  --sony-gray-800: #424242;
-  --sony-gray-900: #212121;
+  --erp-gray-50: #f9fafb;
+  --erp-gray-100: #f3f4f6;
+  --erp-gray-200: #e5e7eb;
+  --erp-gray-300: #d1d5db;
+  --erp-gray-400: #9ca3af;
+  --erp-gray-500: #6b7280;
+  --erp-gray-600: #4b5563;
+  --erp-gray-700: #374151;
+  --erp-gray-800: #1f2937;
+  --erp-gray-900: #111827;
   
   /* Status Colors */
-  --sony-success: #4CAF50;
-  --sony-success-light: #E8F5E8;
-  --sony-warning: #FF9800;
-  --sony-warning-light: #FFF3E0;
-  --sony-error: #F44336;
-  --sony-error-light: #FFEBEE;
-  --sony-info: #2196F3;
-  --sony-info-light: #E3F2FD;
+  --erp-success: #059669;
+  --erp-success-light: #d1fae5;
+  --erp-warning: #d97706;
+  --erp-warning-light: #fef3c7;
+  --erp-error: #dc2626;
+  --erp-error-light: #fee2e2;
+  --erp-info: #0891b2;
+  --erp-info-light: #cffafe;
   
   /* Typography */
-  --sony-font-family: 'Roboto', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  --sony-font-size-xs: 12px;
-  --sony-font-size-sm: 14px;
-  --sony-font-size-base: 16px;
-  --sony-font-size-lg: 18px;
-  --sony-font-size-xl: 20px;
-  --sony-font-size-2xl: 24px;
-  --sony-font-size-3xl: 32px;
+  --erp-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --erp-font-size-xs: 11px;
+  --erp-font-size-sm: 12px;
+  --erp-font-size-base: 13px;
+  --erp-font-size-lg: 14px;
+  --erp-font-size-xl: 16px;
+  --erp-font-size-2xl: 18px;
+  --erp-font-size-3xl: 20px;
   
   /* Spacing */
-  --sony-spacing-xs: 4px;
-  --sony-spacing-sm: 8px;
-  --sony-spacing-md: 16px;
-  --sony-spacing-lg: 24px;
-  --sony-spacing-xl: 32px;
-  --sony-spacing-2xl: 48px;
+  --erp-spacing-xs: 4px;
+  --erp-spacing-sm: 8px;
+  --erp-spacing-md: 12px;
+  --erp-spacing-lg: 16px;
+  --erp-spacing-xl: 20px;
+  --erp-spacing-2xl: 24px;
   
   /* Border Radius */
-  --sony-radius-sm: 4px;
-  --sony-radius-md: 8px;
-  --sony-radius-lg: 12px;
-  --sony-radius-xl: 16px;
+  --erp-radius-sm: 3px;
+  --erp-radius-md: 4px;
+  --erp-radius-lg: 6px;
   
   /* Shadows */
-  --sony-shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
-  --sony-shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
-  --sony-shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
-  --sony-shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.18);
+  --erp-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --erp-shadow-md: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --erp-shadow-lg: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   
   /* Transitions */
-  --sony-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --erp-transition: all 0.15s ease-in-out;
 }
 
-/* Reset and Base Styles */
+/* Reset */
 * {
   margin: 0;
   padding: 0;
@@ -74,22 +78,21 @@
 }
 
 body {
-  font-family: var(--sony-font-family);
-  font-size: var(--sony-font-size-base);
-  line-height: 1.6;
-  color: var(--sony-gray-800);
-  background-color: var(--sony-gray-50);
+  font-family: var(--erp-font-family);
+  font-size: var(--erp-font-size-base);
+  line-height: 1.5;
+  color: var(--erp-gray-800);
+  background-color: var(--erp-gray-100);
 }
 
 [v-cloak] {
   display: none !important;
 }
 
-/* Sony Header */
+/* ERP Header - Light */
 .sony-header {
-  background: linear-gradient(135deg, var(--sony-primary) 0%, var(--sony-primary-dark) 100%);
-  color: white;
-  box-shadow: var(--sony-shadow-md);
+  background: white;
+  border-bottom: 1px solid var(--erp-gray-200);
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -99,10 +102,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--sony-spacing-xl);
+  padding: 0 var(--erp-spacing-xl);
   max-width: 1400px;
   margin: 0 auto;
-  height: 72px;
+  height: 56px;
 }
 
 .sony-brand {
@@ -113,176 +116,201 @@ body {
 .sony-logo {
   display: flex;
   align-items: center;
-  gap: var(--sony-spacing-md);
+  gap: var(--erp-spacing-md);
 }
 
 .sony-logo-icon {
-  width: 48px;
-  height: 48px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: var(--sony-radius-lg);
+  width: 36px;
+  height: 36px;
+  background: var(--erp-primary);
+  border-radius: var(--erp-radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: var(--sony-font-size-lg);
-  backdrop-filter: blur(10px);
+  font-weight: 600;
+  font-size: 14px;
+  color: white;
 }
 
 .sony-brand-name {
-  font-size: var(--sony-font-size-xl);
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: 0.5px;
+  color: var(--erp-gray-900);
 }
 
 .sony-brand-subtitle {
-  font-size: var(--sony-font-size-sm);
-  opacity: 0.8;
-  font-weight: 400;
+  font-size: 12px;
+  color: var(--erp-gray-500);
 }
 
 .sony-nav {
   display: flex;
-  gap: var(--sony-spacing-sm);
+  gap: var(--erp-spacing-xs);
 }
 
 .sony-nav-item {
   display: flex;
   align-items: center;
-  gap: var(--sony-spacing-sm);
-  padding: var(--sony-spacing-sm) var(--sony-spacing-md);
+  gap: var(--erp-spacing-sm);
+  padding: var(--erp-spacing-sm) var(--erp-spacing-md);
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: var(--sony-font-size-sm);
+  color: var(--erp-gray-600);
+  font-size: var(--erp-font-size-sm);
   font-weight: 500;
-  border-radius: var(--sony-radius-md);
   cursor: pointer;
-  transition: var(--sony-transition);
+  transition: var(--erp-transition);
   white-space: nowrap;
+  border-radius: var(--erp-radius-md);
 }
 
 .sony-nav-item:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
+  background: var(--erp-gray-100);
+  color: var(--erp-gray-900);
 }
 
 .sony-nav-item.active {
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  backdrop-filter: blur(10px);
+  background: var(--erp-primary-light);
+  color: var(--erp-primary);
 }
 
 .sony-header-actions {
   display: flex;
   align-items: center;
-  gap: var(--sony-spacing-md);
+  gap: var(--erp-spacing-md);
 }
 
 .sony-connection-status {
   display: flex;
   align-items: center;
-  gap: var(--sony-spacing-xs);
-  font-size: var(--sony-font-size-sm);
-  opacity: 0.8;
+  gap: var(--erp-spacing-xs);
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-gray-500);
 }
 
 .sony-connection-status.connected {
-  opacity: 1;
+  color: var(--erp-success);
 }
 
 .sony-connection-status .fa-circle {
   font-size: 8px;
-  color: var(--sony-error);
+  color: var(--erp-error);
 }
 
 .sony-connection-status.connected .fa-circle {
-  color: var(--sony-success);
+  color: var(--erp-success);
 }
 
-/* Sony Main Content */
+/* ERP Main Content */
 .sony-main {
   max-width: 1400px;
   margin: 0 auto;
-  padding: var(--sony-spacing-xl);
-  min-height: calc(100vh - 72px);
+  padding: var(--erp-spacing-xl);
+  min-height: calc(100vh - 56px);
 }
 
 .sony-section {
-  margin-bottom: var(--sony-spacing-2xl);
+  margin-bottom: var(--erp-spacing-2xl);
 }
 
 .sony-section-header {
-  margin-bottom: var(--sony-spacing-lg);
+  margin-bottom: var(--erp-spacing-lg);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: var(--sony-spacing-md);
+  gap: var(--erp-spacing-md);
 }
 
 .sony-section-title {
-  font-size: var(--sony-font-size-3xl);
+  font-size: var(--erp-font-size-xl);
   font-weight: 600;
-  color: var(--sony-gray-900);
+  color: var(--erp-gray-900);
   margin: 0;
 }
 
 .sony-section-subtitle {
-  font-size: var(--sony-font-size-base);
-  color: var(--sony-gray-600);
-  margin: var(--sony-spacing-xs) 0 0 0;
+  font-size: var(--erp-font-size-base);
+  color: var(--erp-gray-500);
+  margin: var(--erp-spacing-xs) 0 0 0;
 }
 
 .sony-section-actions {
   display: flex;
-  gap: var(--sony-spacing-sm);
+  gap: var(--erp-spacing-sm);
 }
 
-/* Sony Cards */
+/* ERP Cards */
 .sony-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--sony-spacing-lg);
-  margin-bottom: var(--sony-spacing-2xl);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--erp-spacing-lg);
+  margin-bottom: var(--erp-spacing-2xl);
 }
 
 .sony-card {
   background: white;
-  border-radius: var(--sony-radius-lg);
-  box-shadow: var(--sony-shadow-sm);
-  border: 1px solid var(--sony-gray-200);
-  overflow: hidden;
-  transition: var(--sony-transition);
+  border: 1px solid var(--erp-gray-200);
+  border-radius: var(--erp-radius-md);
+  box-shadow: var(--erp-shadow-sm);
+  padding: var(--erp-spacing-lg);
+  transition: var(--erp-transition);
 }
 
 .sony-card:hover {
-  box-shadow: var(--sony-shadow-md);
-  transform: translateY(-2px);
+  box-shadow: var(--erp-shadow-md);
+  border-color: var(--erp-gray-300);
 }
 
 .sony-card-stats {
-  padding: var(--sony-spacing-lg);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--erp-spacing-md);
 }
 
 .sony-card-header {
   display: flex;
   align-items: center;
-  gap: var(--sony-spacing-sm);
-  margin-bottom: var(--sony-spacing-md);
+  gap: var(--erp-spacing-sm);
+  margin-bottom: var(--erp-spacing-md);
 }
 
 .sony-card-icon {
-  width: 24px;
-  height: 24px;
-  color: var(--sony-primary);
-  font-size: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--erp-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.sony-card-icon.primary {
+  background: var(--erp-primary-light);
+  color: var(--erp-primary);
+}
+
+.sony-card-icon.success {
+  background: var(--erp-success-light);
+  color: var(--erp-success);
+}
+
+.sony-card-icon.warning {
+  background: var(--erp-warning-light);
+  color: var(--erp-warning);
+}
+
+.sony-card-icon.error {
+  background: var(--erp-error-light);
+  color: var(--erp-error);
 }
 
 .sony-card-title {
-  font-size: var(--sony-font-size-base);
-  font-weight: 500;
-  color: var(--sony-gray-700);
+  font-size: var(--erp-font-size-xs);
+  font-weight: 600;
+  color: var(--erp-gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .sony-card-content {
@@ -290,42 +318,55 @@ body {
 }
 
 .sony-stat-number {
-  font-size: var(--sony-font-size-3xl);
+  font-size: var(--erp-font-size-3xl);
   font-weight: 700;
-  color: var(--sony-primary);
-  margin-bottom: var(--sony-spacing-xs);
+  color: var(--erp-gray-900);
+  margin-bottom: var(--erp-spacing-xs);
+  line-height: 1.2;
 }
 
 .sony-stat-label {
-  font-size: var(--sony-font-size-sm);
-  color: var(--sony-gray-600);
+  font-size: var(--erp-font-size-xs);
+  color: var(--erp-gray-500);
 }
 
-/* Sony Buttons */
+/* ERP Buttons */
 .sony-button {
   display: inline-flex;
   align-items: center;
-  gap: var(--sony-spacing-sm);
-  padding: var(--sony-spacing-sm) var(--sony-spacing-md);
-  font-size: var(--sony-font-size-sm);
+  justify-content: center;
+  gap: var(--erp-spacing-sm);
+  padding: var(--erp-spacing-sm) var(--erp-spacing-md);
+  font-size: var(--erp-font-size-sm);
   font-weight: 500;
-  border: none;
-  border-radius: var(--sony-radius-md);
+  border-radius: var(--erp-radius-md);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: var(--sony-transition);
-  text-decoration: none;
+  transition: var(--erp-transition);
   white-space: nowrap;
+  text-decoration: none;
 }
 
 .sony-button-primary {
-  background: var(--sony-primary);
+  background: var(--erp-primary);
+  border-color: var(--erp-primary);
   color: white;
 }
 
 .sony-button-primary:hover {
-  background: var(--sony-primary-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--sony-shadow-md);
+  background: var(--erp-primary-dark);
+  border-color: var(--erp-primary-dark);
+}
+
+.sony-button-secondary {
+  background: white;
+  border-color: var(--erp-gray-300);
+  color: var(--erp-gray-700);
+}
+
+.sony-button-secondary:hover {
+  background: var(--erp-gray-50);
+  border-color: var(--erp-gray-400);
 }
 
 .sony-button-icon {
@@ -334,188 +375,233 @@ body {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: none;
-  border-radius: var(--sony-radius-sm);
-  background: var(--sony-gray-100);
-  color: var(--sony-gray-600);
+  padding: 0;
+  border: 1px solid var(--erp-gray-300);
+  background: white;
+  color: var(--erp-gray-500);
+  border-radius: var(--erp-radius-md);
   cursor: pointer;
-  transition: var(--sony-transition);
+  transition: var(--erp-transition);
 }
 
 .sony-button-icon:hover {
-  background: var(--sony-gray-200);
-  color: var(--sony-gray-800);
+  background: var(--erp-gray-100);
+  color: var(--erp-gray-700);
 }
 
 .sony-button-danger {
-  background: var(--sony-error-light);
-  color: var(--sony-error);
-}
-
-.sony-button-danger:hover {
-  background: var(--sony-error);
+  background: var(--erp-error);
+  border-color: var(--erp-error);
   color: white;
 }
 
-/* Sony Tables */
+.sony-button-danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+}
+
+/* ERP Tables */
 .sony-table-container {
   overflow-x: auto;
-  border-radius: var(--sony-radius-lg);
+  border: 1px solid var(--erp-gray-200);
+  border-radius: var(--erp-radius-md);
+  background: white;
 }
 
 .sony-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
+  font-size: var(--erp-font-size-sm);
 }
 
 .sony-table th {
-  background: var(--sony-gray-50);
-  color: var(--sony-gray-700);
+  background: var(--erp-gray-50);
+  color: var(--erp-gray-600);
   font-weight: 600;
-  font-size: var(--sony-font-size-sm);
   text-align: left;
-  padding: var(--sony-spacing-md);
-  border-bottom: 2px solid var(--sony-gray-200);
+  padding: var(--erp-spacing-md);
+  border-bottom: 1px solid var(--erp-gray-200);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 .sony-table td {
-  padding: var(--sony-spacing-md);
-  border-bottom: 1px solid var(--sony-gray-200);
-  font-size: var(--sony-font-size-sm);
+  padding: var(--erp-spacing-md);
+  border-bottom: 1px solid var(--erp-gray-200);
+  color: var(--erp-gray-800);
   vertical-align: middle;
 }
 
 .sony-table tbody tr:hover {
-  background: var(--sony-gray-50);
+  background: var(--erp-gray-50);
 }
 
 .sony-table-primary {
-  font-weight: 600;
-  color: var(--sony-primary);
+  font-weight: 500;
+  color: var(--erp-gray-900);
 }
 
 .sony-table-actions {
   display: flex;
-  gap: var(--sony-spacing-xs);
+  gap: var(--erp-spacing-xs);
 }
 
 .sony-table-empty {
   text-align: center;
-  color: var(--sony-gray-500);
-  font-style: italic;
-  padding: var(--sony-spacing-xl);
+  color: var(--erp-gray-400);
+  font-size: var(--erp-font-size-sm);
+  padding: var(--erp-spacing-xl);
 }
 
-/* Sony Badges */
+/* ERP Badges */
 .sony-badge {
   display: inline-flex;
   align-items: center;
-  padding: var(--sony-spacing-xs) var(--sony-spacing-sm);
-  font-size: var(--sony-font-size-xs);
-  font-weight: 500;
-  border-radius: var(--sony-radius-sm);
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--erp-radius-sm);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.sony-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
 }
 
 .sony-badge-success {
-  background: var(--sony-success-light);
-  color: var(--sony-success);
+  background: var(--erp-success-light);
+  color: var(--erp-success);
+}
+
+.sony-badge-success::before {
+  background: var(--erp-success);
 }
 
 .sony-badge-warning {
-  background: var(--sony-warning-light);
-  color: var(--sony-warning);
+  background: var(--erp-warning-light);
+  color: var(--erp-warning);
+}
+
+.sony-badge-warning::before {
+  background: var(--erp-warning);
 }
 
 .sony-badge-info {
-  background: var(--sony-info-light);
-  color: var(--sony-info);
+  background: var(--erp-info-light);
+  color: var(--erp-info);
 }
 
-/* Sony Loading */
+.sony-badge-info::before {
+  background: var(--erp-info);
+}
+
+/* Form Elements */
+.sony-input {
+  width: 100%;
+  padding: var(--erp-spacing-sm) var(--erp-spacing-md);
+  border: 1px solid var(--erp-gray-300);
+  border-radius: var(--erp-radius-md);
+  font-size: var(--erp-font-size-sm);
+  transition: var(--erp-transition);
+  background: white;
+  font-family: inherit;
+}
+
+.sony-input:focus {
+  outline: none;
+  border-color: var(--erp-primary);
+  box-shadow: 0 0 0 3px var(--erp-primary-light);
+}
+
+.sony-form-group {
+  margin-bottom: var(--erp-spacing-md);
+}
+
+.sony-form-group label {
+  display: block;
+  margin-bottom: var(--erp-spacing-xs);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--erp-gray-600);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Loading */
 .sony-loading-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
-  backdrop-filter: blur(4px);
-}
-
-.sony-loading-spinner {
-  text-align: center;
+  gap: 12px;
 }
 
 .sony-spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--sony-gray-200);
-  border-top: 4px solid var(--sony-primary);
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--erp-gray-200);
+  border-top-color: var(--erp-primary);
   border-radius: 50%;
-  animation: sony-spin 1s linear infinite;
-  margin: 0 auto var(--sony-spacing-md) auto;
+  animation: erp-spin 1s linear infinite;
+}
+
+@keyframes erp-spin {
+  to { transform: rotate(360deg); }
 }
 
 .sony-loading-text {
-  font-size: var(--sony-font-size-sm);
-  color: var(--sony-gray-600);
+  font-size: var(--erp-font-size-sm);
+  color: var(--erp-gray-600);
 }
 
-@keyframes sony-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Sony Toast */
+/* Toast */
 .sony-toast {
   position: fixed;
-  top: var(--sony-spacing-xl);
-  right: var(--sony-spacing-xl);
+  top: var(--erp-spacing-xl);
+  right: var(--erp-spacing-xl);
   display: flex;
-  align-items: center;
-  gap: var(--sony-spacing-sm);
-  padding: var(--sony-spacing-md) var(--sony-spacing-lg);
-  border-radius: var(--sony-radius-md);
-  font-size: var(--sony-font-size-sm);
-  font-weight: 500;
-  box-shadow: var(--sony-shadow-lg);
+  align-items: flex-start;
+  gap: var(--erp-spacing-md);
+  padding: var(--erp-spacing-md) var(--erp-spacing-lg);
+  background: white;
+  border-left: 4px solid var(--erp-primary);
+  border-radius: var(--erp-radius-md);
+  box-shadow: var(--erp-shadow-lg);
+  font-size: var(--erp-font-size-sm);
   z-index: 10000;
-  animation: sony-toast-slide-in 0.3s ease-out;
+  animation: erp-slide-in 0.2s ease-out;
+  min-width: 300px;
+  max-width: 400px;
 }
 
-.sony-toast-success {
-  background: var(--sony-success);
-  color: white;
+.sony-toast-success { border-left-color: var(--erp-success); }
+.sony-toast-error { border-left-color: var(--erp-error); }
+
+@keyframes erp-slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
-.sony-toast-error {
-  background: var(--sony-error);
-  color: white;
-}
-
-@keyframes sony-toast-slide-in {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* Responsive Design */
+/* Responsive */
 @media (max-width: 768px) {
   .sony-header-content {
-    padding: 0 var(--sony-spacing-md);
-    height: 64px;
+    padding: 0 var(--erp-spacing-md);
+    height: 56px;
   }
   
   .sony-nav {
@@ -523,7 +609,7 @@ body {
   }
   
   .sony-main {
-    padding: var(--sony-spacing-md);
+    padding: var(--erp-spacing-md);
   }
   
   .sony-section-header {
@@ -535,187 +621,129 @@ body {
     grid-template-columns: 1fr;
   }
   
-  .sony-table-container {
-    border-radius: 0;
-    margin: 0 -var(--sony-spacing-md);
-  }
-}
-
-@media (max-width: 480px) {
-  .sony-logo-text {
-    display: none;
-  }
-  
   .sony-section-title {
-    font-size: var(--sony-font-size-2xl);
+    font-size: var(--erp-font-size-lg);
   }
   
   .sony-stat-number {
-    font-size: var(--sony-font-size-2xl);
+    font-size: var(--erp-font-size-2xl);
   }
 }
 
-/* ===========================================
-   Modal 模态框样式
-=========================================== */
+/* Modal */
 .sony-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-    animation: sonyFadeIn 0.2s ease-out;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
 }
 
 .sony-modal {
-    background: white;
-    border-radius: var(--sony-radius-lg);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    width: 90%;
-    max-width: 500px;
-    max-height: 90vh;
-    overflow: hidden;
-    animation: sonySlideUp 0.3s ease-out;
+  background: white;
+  border-radius: var(--erp-radius-lg);
+  box-shadow: var(--erp-shadow-lg);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .sony-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--sony-spacing-lg);
-    border-bottom: 2px solid var(--sony-gray-100);
-    background: linear-gradient(135deg, var(--sony-primary), var(--sony-secondary));
-    color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--erp-spacing-lg);
+  border-bottom: 1px solid var(--erp-gray-200);
+  background: var(--erp-gray-50);
 }
 
 .sony-modal-header h3 {
-    margin: 0;
-    font-size: var(--sony-font-size-lg);
-    font-weight: 600;
+  margin: 0;
+  font-size: var(--erp-font-size-lg);
+  font-weight: 600;
+  color: var(--erp-gray-900);
 }
 
 .sony-modal-close {
-    background: none;
-    border: none;
-    color: white;
-    font-size: var(--sony-font-size-lg);
-    cursor: pointer;
-    padding: var(--sony-spacing-xs);
-    border-radius: var(--sony-radius-sm);
-    transition: var(--sony-transition);
+  background: none;
+  border: none;
+  color: var(--erp-gray-400);
+  font-size: 18px;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--erp-radius-sm);
 }
 
 .sony-modal-close:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.1);
+  background: var(--erp-gray-100);
+  color: var(--erp-gray-700);
 }
 
 .sony-modal-body {
-    padding: var(--sony-spacing-lg);
-    max-height: 70vh;
-    overflow-y: auto;
-}
-
-.sony-form-group {
-    margin-bottom: var(--sony-spacing-lg);
-}
-
-.sony-form-group label {
-    display: block;
-    margin-bottom: var(--sony-spacing-xs);
-    font-weight: 600;
-    color: var(--sony-gray-700);
-    font-size: var(--sony-font-size-sm);
-}
-
-.sony-input {
-    width: 100%;
-    padding: var(--sony-spacing-md);
-    border: 2px solid var(--sony-gray-300);
-    border-radius: var(--sony-radius-md);
-    font-size: var(--sony-font-size-sm);
-    transition: var(--sony-transition);
-    background: white;
-    box-sizing: border-box;
-}
-
-.sony-input:focus {
-    outline: none;
-    border-color: var(--sony-primary);
-    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
-}
-
-.sony-input[type="textarea"], 
-.sony-input textarea {
-    min-height: 80px;
-    resize: vertical;
-    font-family: inherit;
+  padding: var(--erp-spacing-lg);
+  max-height: 60vh;
+  overflow-y: auto;
 }
 
 .sony-modal-actions {
-    display: flex;
-    gap: var(--sony-spacing-md);
-    justify-content: flex-end;
-    margin-top: var(--sony-spacing-xl);
-    padding-top: var(--sony-spacing-lg);
-    border-top: 1px solid var(--sony-gray-200);
+  display: flex;
+  gap: var(--erp-spacing-md);
+  justify-content: flex-end;
+  margin-top: var(--erp-spacing-xl);
+  padding-top: var(--erp-spacing-lg);
+  border-top: 1px solid var(--erp-gray-200);
 }
 
-@keyframes sonySlideUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px) scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes sonyFadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-
-/* Apple 风格可拖拽列表 */
+/* Draggable List */
 .apple-draggable-list {
   list-style: none;
   padding: 0;
-  margin: var(--sony-spacing-sm) 0;
+  margin: var(--erp-spacing-sm) 0;
   max-height: 200px;
   overflow-y: auto;
-  border: 1px solid var(--sony-gray-300);
-  border-radius: var(--sony-radius-md);
-  background: var(--sony-gray-50);
+  border: 1px solid var(--erp-gray-300);
+  border-radius: var(--erp-radius-md);
+  background: var(--erp-gray-50);
 }
+
 .apple-draggable-list li {
   display: flex;
   align-items: center;
-  padding: var(--sony-spacing-sm) var(--sony-spacing-md);
+  padding: var(--erp-spacing-sm) var(--erp-spacing-md);
   background: white;
-  border-bottom: 1px solid var(--sony-gray-200);
+  border-bottom: 1px solid var(--erp-gray-200);
   cursor: grab;
-  transition: background var(--sony-transition);
+  transition: background var(--erp-transition);
 }
+
 .apple-draggable-list li:last-child {
   border-bottom: none;
 }
+
 .apple-draggable-list li.dragging {
   opacity: 0.6;
-  background: var(--sony-primary-light);
+  background: var(--erp-primary-light);
 }
+
 .drag-handle {
-  margin-right: var(--sony-spacing-md);
+  margin-right: var(--erp-spacing-md);
   cursor: grab;
-  font-size: var(--sony-font-size-base);
+  color: var(--erp-gray-400);
+}
+
+.drag-handle:hover {
+  color: var(--erp-gray-600);
 }

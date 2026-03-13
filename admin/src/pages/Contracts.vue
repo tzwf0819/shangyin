@@ -1,803 +1,390 @@
-﻿﻿﻿﻿﻿﻿﻿<template>
-  <div>
-    <div class="toolbar">
-      <input v-model="query.keyword" placeholder="合同编号/甲方/乙方" @keyup.enter="load" />
-      <button class="primary" @click="openEdit()">新增合同</button>
-      <button @click="openImport">批量导入</button>
+<template>
+  <div class="page-container">
+    <!-- 页面头部 -->
+    <div class="page-header-actions">
+      <div class="search-bar">
+        <input
+          v-model="filter.contractNo"
+          type="text"
+          class="search-input"
+          placeholder="搜索合同编号..."
+          @input="debounceLoad"
+        />
+        <select v-model="filter.status" @change="load">
+          <option value="">全部状态</option>
+          <option value="draft">草稿</option>
+          <option value="signed">已签订</option>
+          <option value="in_progress">进行中</option>
+          <option value="completed">已完成</option>
+          <option value="cancelled">已取消</option>
+        </select>
+        <button class="btn btn-secondary" @click="resetFilter">
+          <span>🔄</span>
+          <span>重置</span>
+        </button>
+      </div>
+      <button class="btn btn-primary" @click="openCreate">
+        <span>➕</span>
+        <span>新建合同</span>
+      </button>
     </div>
 
-    <div class="table-wrapper" v-if="items.length">
-      <table>
-        <thead>
-          <tr>
-            <th>合同编号</th>
-            <th>甲方</th>
-            <th>乙方</th>
-            <th>签订时间</th>
-            <th>新木箱</th>
-            <th>新图纸</th>
-            <th>图纸审核</th>
-            <th>产品数</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="c in items" :key="c.id">
-            <td>{{ c.contractNumber }}</td>
-            <td>{{ c.partyAName || '-' }}</td>
-            <td>{{ c.partyBName || '-' }}</td>
-            <td>{{ c.signedDate || '-' }}</td>
-            <td><input type="checkbox" disabled :checked="c.isNewWoodBox" /></td>
-            <td><input type="checkbox" disabled :checked="c.isNewDrawing" /></td>
-            <td><input type="checkbox" disabled :checked="c.isDrawingReviewed" /></td>
-            <td>{{ (c.products || []).length }}</td>
-            <td>
-              <button @click="openEdit(c)">编辑</button>
-              <button @click="viewQRCode(c.id)">查看二维码</button>
-              <button class="danger" @click="remove(c.id)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- 数据表格 -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 140px">合同编号</th>
+              <th>客户名称</th>
+              <th style="width: 120px">签订日期</th>
+              <th style="width: 120px">总金额</th>
+              <th style="width: 100px">状态</th>
+              <th style="width: 150px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in list" :key="item.id">
+              <td><strong>{{ item.contractNo }}</strong></td>
+              <td>{{ item.customerName }}</td>
+              <td>{{ formatDate(item.signDate) }}</td>
+              <td>¥{{ formatMoney(item.totalAmount) }}</td>
+              <td>
+                <span class="badge" :class="getStatusClass(item.status)">
+                  {{ getStatusText(item.status) }}
+                </span>
+              </td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-icon" @click="viewDetail(item)" title="查看">
+                    <span>👁️</span>
+                  </button>
+                  <button class="btn-icon" @click="openEdit(item)" title="编辑">
+                    <span>✏️</span>
+                  </button>
+                  <button class="btn-icon" @click="remove(item.id)" title="删除">
+                    <span>🗑️</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="list.length === 0 && !loading">
+              <td colspan="6" class="empty-cell">
+                <div class="empty-state">
+                  <div class="empty-icon">📄</div>
+                  <div class="empty-title">暂无合同</div>
+                  <div class="empty-description">点击上方按钮创建第一份合同</div>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="loading">
+              <td colspan="6" class="loading-cell">
+                <div class="spinner spinner-sm"></div>
+                <span>加载中...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 分页 -->
+      <div class="card-footer" v-if="pagination.total > pagination.pageSize">
+        <div class="pagination">
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page === 1"
+            @click="changePage(pagination.page - 1)"
+          >
+            上一页
+          </button>
+          <span class="pagination-info">
+            第 {{ pagination.page }} / {{ Math.ceil(pagination.total / pagination.pageSize) }} 页
+          </span>
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page * pagination.pageSize >= pagination.total"
+            @click="changePage(pagination.page + 1)"
+          >
+            下一页
+          </button>
+        </div>
+      </div>
     </div>
-    <div v-else class="empty">暂无合同</div>
 
-    <dialog ref="dlgEdit" class="dialog-large">
-      <form @submit.prevent="saveEdit">
-        <div class="modal-header">{{ form.id ? '编辑合同' : '新增合同' }}</div>
-        <div class="modal-body">
-          <section>
-            <h3>基本信息</h3>
-            <div class="grid">
-              <label>合同编号<input v-model="form.contractNumber" required /></label>
-              <label>甲方<input v-model="form.partyAName" /></label>
-              <label>乙方<input v-model="form.partyBName" /></label>
-              <label>签订时间<input v-model="form.signedDate" placeholder="例如 2025-09-30" /></label>
-              <label>签订地点<input v-model="form.signedLocation" /></label>
+    <!-- 合同弹窗 -->
+    <div v-if="modalVisible" class="modal-overlay" @click.self="closeModal">
+      <div class="modal modal-lg">
+        <div class="modal-header">
+          <h3 class="modal-title">{{ isEdit ? '编辑合同' : '新建合同' }}</h3>
+          <button class="modal-close" @click="closeModal">×</button>
+        </div>
+        <form @submit.prevent="save">
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">
+                  合同编号 <span class="required">*</span>
+                </label>
+                <input v-model="form.contractNo" type="text" placeholder="如：HT-2026-001" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">
+                  客户名称 <span class="required">*</span>
+                </label>
+                <input v-model="form.customerName" type="text" placeholder="请输入客户名称" required />
+              </div>
             </div>
-            <div class="checkbox-row">
-              <label><input type="checkbox" v-model="form.isNewWoodBox" /> 是否新木箱</label>
-              <label><input type="checkbox" v-model="form.isNewDrawing" /> 是否新图纸</label>
-              <label><input type="checkbox" v-model="form.isDrawingReviewed" /> 图纸已审核</label>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">签订日期</label>
+                <input v-model="form.signDate" type="date" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">交货日期</label>
+                <input v-model="form.deliveryDate" type="date" />
+              </div>
             </div>
-          </section>
 
-          <section>
-            <h3>条款</h3>
-            <div class="grid clauses">
-              <label v-for="field in clauseFields" :key="field">
-                {{ clauseLabels[field] }}
-                <textarea v-model="form[field]" rows="2"></textarea>
+            <div class="form-group">
+              <label class="form-label">合同状态</label>
+              <select v-model="form.status">
+                <option value="draft">草稿</option>
+                <option value="signed">已签订</option>
+                <option value="in_progress">进行中</option>
+                <option value="completed">已完成</option>
+                <option value="cancelled">已取消</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                合同明细
+                <button type="button" class="btn btn-sm btn-secondary" @click="addItem">
+                  <span>➕</span>
+                  <span>添加产品</span>
+                </button>
               </label>
-            </div>
-          </section>
-
-          <section class="grid">
-            <h3 class="full">甲方信息</h3>
-            <label>甲单位名称<input v-model="form.partyACompanyName" /></label>
-            <label>甲单位地址<input v-model="form.partyAAddress" /></label>
-            <label>甲联系人<input v-model="form.partyAContact" /></label>
-            <label>甲电话传真<input v-model="form.partyAPhoneFax" /></label>
-            <label>甲开户银行<input v-model="form.partyABank" /></label>
-            <label>甲行号<input v-model="form.partyABankNo" /></label>
-            <label>甲账号<input v-model="form.partyABankAccount" /></label>
-            <label>甲税号<input v-model="form.partyATaxNumber" /></label>
-          </section>
-
-          <section class="grid">
-            <h3 class="full">乙方信息</h3>
-            <label>乙单位名称<input v-model="form.partyBCompanyName" /></label>
-            <label>乙单位地址<input v-model="form.partyBAddress" /></label>
-            <label>乙联系人<input v-model="form.partyBContact" /></label>
-            <label>乙电话传真<input v-model="form.partyBPhoneFax" /></label>
-            <label>乙开户银行<input v-model="form.partyBBank" /></label>
-            <label>乙行号<input v-model="form.partyBBankNo" /></label>
-            <label>乙账号<input v-model="form.partyBBankAccount" /></label>
-            <label>乙税号<input v-model="form.partyBTaxNumber" /></label>
-          </section>
-
-          <section>
-            <h3>备注</h3>
-            <textarea v-model="form.remark" rows="3"></textarea>
-          </section>
-
-          <section>
-            <h3>合同产品</h3>
-            <div v-for="(product, index) in form.products" :key="index" class="product-card">
-              <header>
-                <span>产品 {{ index + 1 }}</span>
-                <button type="button" class="danger" @click="removeProduct(index)">移除</button>
-              </header>
-              <div class="grid">
-                <label>
-                  产品类型
-                  <select v-model="product.productTypeId" @change="onProductTypeSelected(product)" :disabled="!productTypes.length">
-                    <option value="">请选择产品类型</option>
-                    <option v-for="type in productTypes" :key="type.id" :value="String(type.id)">
-                      {{ type.name }}{{ type.code ? '（' + type.code + '）' : '' }}
+              <div class="items-list">
+                <div v-for="(item, index) in form.items" :key="index" class="item-row">
+                  <select v-model="item.productTypeId" required>
+                    <option value="">选择产品</option>
+                    <option v-for="pt in productTypes" :key="pt.id" :value="pt.id">
+                      {{ pt.name }}
                     </option>
                   </select>
-                  <small v-if="!productTypes.length" class="muted">暂无产品类型，请先到“产品类型”页面创建。</small>
-                  <small v-else-if="product.productType && !product.productTypeId" class="muted">当前合同记录的类型“{{ product.productType }}”未匹配，请重新选择。</small>
-                </label>
-                <label>产品编号<input v-model="product.productCode" /></label>
-                <label>产品名称<input v-model="product.productName" required /></label>
-                <label>规格<input v-model="product.specification" /></label>
-                <label>雕宽<input v-model="product.carveWidth" /></label>
-                <label>网型<input v-model="product.meshType" /></label>
-                <label>线数<input v-model="product.lineCount" /></label>
-                <label>容积率<input v-model="product.volumeRatio" /></label>
-                <label>数量<input v-model="product.quantity" /></label>
-                <label>单价<input v-model="product.unitPrice" /></label>
-                <label>交货期限<input v-model="product.deliveryDeadline" /></label>
-                <label>总金额<input v-model="product.totalAmount" /></label>
-              </div>
-            </div>
-            <button type="button" @click="addProduct">+ 添加产品</button>
-          </section>
-        </div>
-        <div class="modal-footer">
-          <button type="button" @click="closeEdit">取消</button>
-          <button class="primary" type="submit">保存</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog ref="dlgImport">
-      <form @submit.prevent="doImport">
-        <div class="modal-header">批量导入合同(JSON)</div>
-        <div class="modal-body">
-          <textarea v-model="importText" rows="12"></textarea>
-          <small class="muted">示例：{"contracts":[{"合同编号":"HT-001","甲方":"甲方公司","乙方":"乙方公司","是否新木箱":true,"条款一":"...","products":[{"产品名称":"产品A","产品类型":"类型A","数量":"10"}]}]}</small>
-        </div>
-        <div class="modal-footer">
-          <button type="button" @click="dlgImport.value.close()">取消</button>
-          <button class="primary" type="submit">导入</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog ref="dlgQRCode">
-      <div class="modal-header">
-        合同二维码
-        <span v-if="qrDialogState.contract?.contractNumber" class="qr-contract-number">
-          （{{ qrDialogState.contract.contractNumber }}）
-        </span>
-      </div>
-      <div class="modal-body qrcode-container">
-        <section class="qr-section">
-          <h3>合同</h3>
-          <div v-if="qrDialogState.contractImage" class="qrcode-image">
-            <img :src="qrDialogState.contractImage" alt="合同二维码" />
-          </div>
-          <div class="loading" v-else-if="qrDialogState.loading">加载中...</div>
-          <div class="qr-empty" v-else>暂无合同二维码</div>
-        </section>
-
-        <section class="qr-section">
-          <h3>合同产品二维码</h3>
-          <div v-if="qrDialogState.loading && !qrDialogState.products.length" class="loading">加载中...</div>
-          <div v-else-if="!qrDialogState.products.length" class="qr-empty">暂无产品信息</div>
-          <div class="qr-grid" v-else>
-            <div
-              v-for="productEntry in qrDialogState.products"
-              :key="productEntry.product.id || productEntry.productIndex"
-              class="qr-card"
-            >
-              <div class="qr-title">
-                {{ productEntry.product.productName || '未命名产品' }}
-              </div>
-              <div v-if="productEntry.image" class="qrcode-image">
-                <img
-                  :src="productEntry.image"
-                  :alt="`${productEntry.product.productName || '产品'}二维码`"
-                />
-              </div>
-              <div class="qr-empty" v-else>{{ productEntry.error || '二维码生成失败' }}</div>
-              <div class="qr-meta">
-                <span v-if="productEntry.product.productCode">编号：{{ productEntry.product.productCode }}</span>
-                <span v-else-if="productEntry.product.productId">编号：{{ productEntry.product.productId }}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="qr-section">
-          <h3>工序二维码</h3>
-          <div v-if="qrDialogState.loading && !qrDialogState.products.length" class="loading">加载中...</div>
-          <div v-else-if="!qrDialogState.products.length" class="qr-empty">暂无产品工序信息</div>
-          <div v-else class="process-blocks">
-            <div
-              v-for="productEntry in qrDialogState.products"
-              :key="`process-${productEntry.product.id || productEntry.productIndex}`"
-              class="process-block"
-            >
-              <div class="process-product-title">
-                {{ productEntry.product.productName || '未命名产品' }}
-              </div>
-              <div v-if="productEntry.processError" class="qr-empty">{{ productEntry.processError }}</div>
-              <div v-else-if="!productEntry.processes.length" class="qr-empty">未配置工序</div>
-              <div class="qr-grid process-grid" v-else>
-                <div
-                  v-for="processEntry in productEntry.processes"
-                  :key="processEntry.process.id"
-                  class="qr-card process-card"
-                >
-                  <div class="qr-title">{{ processEntry.process.name || '工序' }}</div>
-                  <div v-if="processEntry.image" class="qrcode-image">
-                    <img :src="processEntry.image" :alt="`${processEntry.process.name || '工序'}二维码`" />
-                  </div>
-                  <div class="qr-empty" v-else>{{ processEntry.error || '二维码生成失败' }}</div>
+                  <input v-model.number="item.quantity" type="number" min="1" placeholder="数量" required />
+                  <input v-model.number="item.unitPrice" type="number" step="0.01" min="0" placeholder="单价" required />
+                  <button type="button" class="btn-icon" @click="removeItem(index)">
+                    <span>🗑️</span>
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
 
-        <div v-if="qrDialogState.error" class="qr-error">{{ qrDialogState.error }}</div>
+            <div class="form-group">
+              <label class="form-label">备注</label>
+              <textarea v-model="form.remark" rows="3" placeholder="合同备注信息..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <div class="footer-left">
+              <span class="total-amount">合计: ¥{{ formatMoney(calculateTotal) }}</span>
+            </div>
+            <div class="footer-right">
+              <button type="button" class="btn btn-secondary" @click="closeModal">
+                取消
+              </button>
+              <button type="submit" class="btn btn-primary" :disabled="saving">
+                <span v-if="saving" class="spinner spinner-sm"></span>
+                <span>保存</span>
+              </button>
+            </div>
+          </div>
+        </form>
       </div>
-      <div class="modal-footer">
-        <button type="button" @click="closeQRCode">关闭</button>
-        <button class="primary" @click="downloadQRCode" :disabled="!qrDialogState.contractImage">下载合同二维码</button>
-      </div>
-    </dialog>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import {
-  listContracts,
-  getContract,
-  createContract,
-  updateContract,
-  deleteContract,
-  importContracts,
-} from '../api/contracts';
-import { listProductTypes, getProductTypeProcesses } from '../api/productTypes';
-import { getContractQRCode, getContractProductQRCode, getProcessQRCode } from '../api/qrcodes';
+import { ref, reactive, onMounted, computed } from 'vue';
+import http from '../api/http';
 
-const clauseFields = Array.from({ length: 10 }, (_, i) => `clause${i + 1}`);
-const clauseLabels = clauseFields.reduce((acc, field, index) => {
-  acc[field] = `条款${index + 1}`;
-  return acc;
-}, {});
-
-const contractImportMap = {
-  '合同编号': 'contractNumber',
-  '甲方': 'partyAName',
-  '乙方': 'partyBName',
-  '签订时间': 'signedDate',
-  '签订地点': 'signedLocation',
-  '是否新木箱': 'isNewWoodBox',
-  '甲单位名称': 'partyACompanyName',
-  '甲单位地址': 'partyAAddress',
-  '甲联系人': 'partyAContact',
-  '甲电话传真': 'partyAPhoneFax',
-  '甲开户银行': 'partyABank',
-  '甲行号': 'partyABankNo',
-  '甲账号': 'partyABankAccount',
-  '甲税号': 'partyATaxNumber',
-  '乙单位名称': 'partyBCompanyName',
-  '乙单位地址': 'partyBAddress',
-  '乙联系人': 'partyBContact',
-  '乙电话传真': 'partyBPhoneFax',
-  '乙开户银行': 'partyBBank',
-  '乙行号': 'partyBBankNo',
-  '乙账号': 'partyBBankAccount',
-  '乙税号': 'partyBTaxNumber',
-  '是否新图纸': 'isNewDrawing',
-  '是否图纸审核': 'isDrawingReviewed',
-  '备注': 'remark',
-};
-clauseFields.forEach((field, index) => {
-  contractImportMap[`条款${index + 1}`] = field;
-});
-
-const productImportMap = {
-  '产品类型': 'productType',
-  '产品类型名称': 'productTypeName',
-  '产品类型ID': 'productTypeId',
-  '产品类型编码': 'productTypeCode',
-  '类型编码': 'productTypeCode',
-  '产品编号': 'productCode',
-  '产品名称': 'productName',
-  '规格': 'specification',
-  '雕宽': 'carveWidth',
-  '网型': 'meshType',
-  '线数': 'lineCount',
-  '容积比': 'volumeRatio',
-  '容积率': 'volumeRatio',
-  '数量': 'quantity',
-  '单价': 'unitPrice',
-  '交货期限': 'deliveryDeadline',
-  '总金额': 'totalAmount',
-};
-
-const mapImportedContract = (raw) => {
-  if (!raw || typeof raw !== 'object') return {};
-  const mapped = {};
-  Object.keys(raw).forEach((key) => {
-    const target = contractImportMap[key] || key;
-    mapped[target] = raw[key];
-  });
-  ['isNewWoodBox', 'isNewDrawing', 'isDrawingReviewed'].forEach((field) => {
-    if (Object.prototype.hasOwnProperty.call(mapped, field)) {
-      const value = mapped[field];
-      if (typeof value === 'boolean') return;
-      if (value === null || value === undefined || value === '') {
-        mapped[field] = false;
-      } else {
-        const text = String(value).trim().toLowerCase();
-        mapped[field] = ['1', 'true', 'yes', 'y', '是', '√', 'checked'].includes(text);
-      }
-    }
-  });
-  const products = Array.isArray(raw.products) ? raw.products : [];
-  mapped.products = products.map((product) => {
-    const target = { ...defaultProduct() };
-    Object.keys(product || {}).forEach((key) => {
-      const mappedKey = productImportMap[key] || key;
-      target[mappedKey] = product[key];
-    });
-    if (target.productType && !target.productTypeName) {
-      target.productTypeName = target.productType;
-    }
-    if (target.productTypeName && !target.productType) {
-      target.productType = target.productTypeName;
-    }
-    return target;
-  });
-  return mapped;
-};
-
-const defaultContract = () => ({
-  id: null,
-  contractNumber: '',
-  partyAName: '',
-  partyBName: '',
-  signedDate: '',
-  signedLocation: '',
-  isNewWoodBox: false,
-  isNewDrawing: false,
-  isDrawingReviewed: false,
-  partyACompanyName: '',
-  partyAAddress: '',
-  partyAContact: '',
-  partyAPhoneFax: '',
-  partyABank: '',
-  partyABankNo: '',
-  partyABankAccount: '',
-  partyATaxNumber: '',
-  partyBCompanyName: '',
-  partyBAddress: '',
-  partyBContact: '',
-  partyBPhoneFax: '',
-  partyBBank: '',
-  partyBBankNo: '',
-  partyBBankAccount: '',
-  partyBTaxNumber: '',
-  remark: '',
-  products: [],
-  ...clauseFields.reduce((acc, field) => ({ ...acc, [field]: '' }), {}),
-});
-
-const defaultProduct = () => ({
-  productTypeId: '',
-  productType: '',
-  productTypeName: '',
-  productTypeCode: '',
-  productCode: '',
-  productName: '',
-  specification: '',
-  carveWidth: '',
-  meshType: '',
-  lineCount: '',
-  volumeRatio: '',
-  quantity: '',
-  unitPrice: '',
-  deliveryDeadline: '',
-  totalAmount: '',
-});
-
-const query = reactive({ page: 1, limit: 20, keyword: '' });
-const items = ref([]);
-const form = reactive(defaultContract());
-const dlgEdit = ref();
-const dlgImport = ref();
-const importText = ref('{\n  "contracts": [\n    {\n      "合同编号": "HT-001",\n      "甲方": "甲方公司",\n      "乙方": "乙方公司",\n      "是否新木箱": true,\n      "条款一": "双方共同遵守...",\n      "products": [\n        { "产品名称": "产品A", "产品类型": "类型A", "数量": "10" }\n      ]\n    }\n  ]\n}');
-
+const list = ref([]);
 const productTypes = ref([]);
-let productTypesLoaded = false;
+const loading = ref(false);
+const modalVisible = ref(false);
+const isEdit = ref(false);
+const saving = ref(false);
 
-const applyProductTypeSelection = (product) => {
-  if (!product) return;
-  const matched = productTypes.value.find((type) => String(type.id) === String(product.productTypeId));
-  if (matched) {
-    product.productTypeId = String(matched.id);
-    product.productType = matched.name || '';
-    product.productTypeName = matched.name || '';
-    product.productTypeCode = matched.code || '';
-    return;
-  }
+const filter = reactive({ contractNo: '', status: '' });
+const pagination = reactive({ page: 1, pageSize: 20, total: 0 });
+const form = reactive({
+  id: null,
+  contractNo: '',
+  customerName: '',
+  signDate: '',
+  deliveryDate: '',
+  status: 'draft',
+  remark: '',
+  items: []
+});
 
-  if (product.productType) {
-    const fallback = productTypes.value.find((type) =>
-      type.name === product.productType ||
-      type.code === product.productType ||
-      (product.productTypeCode && type.code === product.productTypeCode)
-    );
-    if (fallback) {
-      product.productTypeId = String(fallback.id);
-      product.productType = fallback.name || '';
-      product.productTypeName = fallback.name || '';
-      product.productTypeCode = fallback.code || '';
-      return;
-    }
-  }
+const calculateTotal = computed(() => {
+  return form.items.reduce((sum, item) => sum + (item.quantity * item.unitPrice || 0), 0);
+});
 
-  if (product.productTypeName && !product.productType) {
-    product.productType = product.productTypeName;
-  }
-
-  if (!product.productTypeId && !product.productType) {
-    product.productTypeName = '';
-    product.productTypeCode = '';
-  }
-  if (product.productTypeId && Number.isNaN(Number(product.productTypeId))) {
-    product.productTypeId = '';
-  }
+let debounceTimer = null;
+const debounceLoad = () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => load(), 300);
 };
 
-const applyProductTypeSelections = (products = []) => {
-  (products || []).forEach((item) => applyProductTypeSelection(item));
+const resetFilter = () => {
+  filter.contractNo = '';
+  filter.status = '';
+  pagination.page = 1;
+  load();
 };
 
-const loadProductTypes = async (force = false) => {
-  if (productTypesLoaded && !force) {
-    applyProductTypeSelections(form.products);
-    return;
-  }
-  try {
-    const response = await listProductTypes({ page: 1, limit: 500 });
-    if (response.success) {
-      productTypes.value = response.data?.productTypes || [];
-      productTypesLoaded = true;
-    } else {
-      productTypesLoaded = false;
-    }
-  } catch (error) {
-    console.error('加载产品类型失败:', error);
-    productTypesLoaded = false;
-  } finally {
-    applyProductTypeSelections(form.products);
-  }
+const changePage = (page) => {
+  pagination.page = page;
+  load();
 };
 
-const onProductTypeSelected = (product) => {
-  applyProductTypeSelection(product);
+const formatDate = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('zh-CN');
+};
+
+const formatMoney = (amount) => {
+  if (amount === null || amount === undefined) return '0.00';
+  return Number(amount).toFixed(2);
+};
+
+const getStatusText = (status) => {
+  const map = {
+    draft: '草稿',
+    signed: '已签订',
+    in_progress: '进行中',
+    completed: '已完成',
+    cancelled: '已取消'
+  };
+  return map[status] || status;
+};
+
+const getStatusClass = (status) => {
+  const map = {
+    draft: 'badge-default',
+    signed: 'badge-info',
+    in_progress: 'badge-warning',
+    completed: 'badge-success',
+    cancelled: 'badge-error'
+  };
+  return map[status] || 'badge-default';
 };
 
 const load = async () => {
-  const response = await listContracts(query);
-  if (response.success) {
-    items.value = response.data.items || [];
-  }
-};
-
-const openEdit = async (contract = null) => {
-  await loadProductTypes();
-  Object.assign(form, defaultContract());
-  if (contract) {
-    Object.assign(form, JSON.parse(JSON.stringify(contract)));
-    form.isNewWoodBox = Boolean(form.isNewWoodBox);
-    form.isNewDrawing = Boolean(form.isNewDrawing);
-    form.isDrawingReviewed = Boolean(form.isDrawingReviewed);
-    clauseFields.forEach((field) => {
-      if (!Object.prototype.hasOwnProperty.call(form, field) || form[field] === null) {
-        form[field] = '';
-      }
-    });
-    form.products = (form.products || []).map((product) => ({ ...defaultProduct(), ...product }));
-  }
-  if (!form.products.length) {
-    form.products.push(defaultProduct());
-  }
-  applyProductTypeSelections(form.products);
-  dlgEdit.value.showModal();
-};
-
-const closeEdit = () => {
+  loading.value = true;
   try {
-    dlgEdit.value.close();
-  } catch (error) {
-    console.warn('close dialog failed', error);
+    const params = { page: pagination.page, pageSize: pagination.pageSize };
+    if (filter.contractNo) params.contractNo = filter.contractNo;
+    if (filter.status) params.status = filter.status;
+    const res = await http.get('/shangyin/contracts', { params });
+    list.value = res.data.rows || res.data || [];
+    pagination.total = res.data.count || list.value.length;
+  } catch (e) {
+    alert('加载失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    loading.value = false;
   }
 };
 
-const addProduct = () => {
-  form.products.push(defaultProduct());
-};
-
-const removeProduct = (index) => {
-  form.products.splice(index, 1);
-  if (!form.products.length) {
-    form.products.push(defaultProduct());
+const loadProductTypes = async () => {
+  try {
+    const res = await http.get('/shangyin/product-types');
+    productTypes.value = res.data.rows || res.data || [];
+  } catch (e) {
+    console.warn('加载产品类型失败', e);
   }
 };
 
-const normalisePayload = () => {
-  const payload = { ...form };
-  payload.products = (form.products || []).map((product) => {
-    const copy = { ...product };
-    applyProductTypeSelection(copy);
-    copy.productTypeId = copy.productTypeId ? String(copy.productTypeId) : '';
-    return copy;
+const openCreate = () => {
+  isEdit.value = false;
+  Object.assign(form, {
+    id: null,
+    contractNo: '',
+    customerName: '',
+    signDate: '',
+    deliveryDate: '',
+    status: 'draft',
+    remark: '',
+    items: []
   });
-  return payload;
+  modalVisible.value = true;
 };
 
-const saveEdit = async () => {
+const openEdit = (item) => {
+  isEdit.value = true;
+  Object.assign(form, item);
+  // 确保 items 存在
+  if (!form.items) form.items = [];
+  modalVisible.value = true;
+};
+
+const viewDetail = (item) => {
+  // 查看详情逻辑
+  alert('合同详情功能开发中...\n\n合同编号: ' + item.contractNo);
+};
+
+const closeModal = () => {
+  modalVisible.value = false;
+};
+
+const addItem = () => {
+  form.items.push({
+    productTypeId: '',
+    quantity: 1,
+    unitPrice: 0
+  });
+};
+
+const removeItem = (index) => {
+  form.items.splice(index, 1);
+};
+
+const save = async () => {
+  if (form.items.length === 0) {
+    alert('请至少添加一个产品');
+    return;
+  }
+  
+  saving.value = true;
   try {
-    const payload = normalisePayload();
-    if (form.id) {
-      await updateContract(form.id, payload);
+    const data = { ...form, totalAmount: calculateTotal.value };
+    if (isEdit.value) {
+      await http.put(`/shangyin/contracts/${form.id}`, data);
     } else {
-      await createContract(payload);
+      await http.post('/shangyin/contracts', data);
     }
-    closeEdit();
-    await load();
-  } catch (error) {
-    const message = error?.response?.data?.message || '保存失败';
-    alert(message);
+    closeModal();
+    load();
+  } catch (e) {
+    alert('保存失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    saving.value = false;
   }
 };
 
 const remove = async (id) => {
-  if (!confirm('确认删除该合同？删除后将无法恢复。')) return;
+  if (!confirm('确定删除此合同？')) return;
   try {
-    await deleteContract(id);
-    await load();
-  } catch (error) {
-    const message = error?.response?.data?.message || '删除失败';
-    alert(message);
+    await http.delete(`/shangyin/contracts/${id}`);
+    load();
+  } catch (e) {
+    alert('删除失败：' + (e.response?.data?.message || e.message));
   }
-};
-
-const openImport = () => {
-  dlgImport.value.showModal();
-};
-
-const doImport = async () => {
-  try {
-    const json = JSON.parse(importText.value || '{}');
-    const contracts = json.contracts || [];
-    if (!Array.isArray(contracts) || !contracts.length) {
-      throw new Error('格式错误：contracts 为空');
-    }
-    const normalizedContracts = contracts.map(mapImportedContract);
-    const response = await importContracts(normalizedContracts);
-    const { successCount = 0, failureCount = 0 } = response.data || {};
-    alert(`导入完成：成功 ${successCount} 条，失败 ${failureCount} 条`);
-    dlgImport.value.close();
-    await load();
-  } catch (error) {
-    alert(error?.message || '导入失败，请检查 JSON 格式');
-  }
-};
-
-const dlgQRCode = ref();
-const currentContractId = ref('');
-const qrDialogState = reactive({
-  loading: false,
-  contractImage: '',
-  contract: null,
-  products: [],
-  error: '',
-});
-
-const productTypeProcessCache = new Map();
-const processQRCodeCache = new Map();
-
-const resetQrDialogState = () => {
-  qrDialogState.loading = false;
-  qrDialogState.contractImage = '';
-  qrDialogState.contract = null;
-  qrDialogState.products = [];
-  qrDialogState.error = '';
-};
-
-const toPositiveInteger = (value) => {
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-};
-
-const loadProcessesForProductType = async (productTypeId) => {
-  if (!productTypeId) {
-    return [];
-  }
-  if (productTypeProcessCache.has(productTypeId)) {
-    return productTypeProcessCache.get(productTypeId);
-  }
-  const response = await getProductTypeProcesses(productTypeId);
-  if (!response?.success) {
-    const message = response?.message || '获取产品类型工序失败';
-    throw new Error(message);
-  }
-  const processes = (response.data?.processes || [])
-    .map((process, index) => ({
-      id: process.id,
-      name: process.name,
-      description: process.description,
-      payRate: process.payRate,
-      payRateUnit: process.payRateUnit,
-      status: process.status,
-      sequenceOrder:
-        (process.ProductTypeProcess && process.ProductTypeProcess.sequenceOrder) ?? index,
-    }))
-    .sort((a, b) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0));
-  productTypeProcessCache.set(productTypeId, processes);
-  return processes;
-};
-
-const fetchProcessQRCodeImage = async (processId) => {
-  if (!processId) {
-    return { image: '', error: '缺少工序ID' };
-  }
-  if (processQRCodeCache.has(processId)) {
-    return processQRCodeCache.get(processId);
-  }
-  let image = '';
-  let error = '';
-  try {
-    const response = await getProcessQRCode(processId);
-    if (response?.success && response.data) {
-      const { dataUrl, qrCodeUrl } = response.data;
-      image = dataUrl || qrCodeUrl || '';
-      if (!image) {
-        error = '二维码缺少图像数据';
-      }
-    } else {
-      error = response?.message || '获取二维码失败';
-    }
-  } catch (fetchError) {
-    error = fetchError?.message || '获取二维码失败';
-  }
-  const result = { image, error };
-  processQRCodeCache.set(processId, result);
-  return result;
-};
-
-const buildProductEntries = async (contract) => {
-  const products = Array.isArray(contract?.products) ? contract.products : [];
-  const entries = [];
-  for (let index = 0; index < products.length; index += 1) {
-    const product = products[index] || {};
-    const entry = {
-      product,
-      productIndex: index,
-      image: '',
-      error: '',
-      processes: [],
-      processError: '',
-    };
-
-    if (product?.id) {
-      try {
-        const response = await getContractProductQRCode(product.id);
-        if (response?.success && response.data) {
-          const { dataUrl, qrCodeUrl } = response.data;
-          entry.image = dataUrl || qrCodeUrl || '';
-          if (!entry.image) {
-            entry.error = '二维码缺少图像数据';
-          }
-        } else {
-          entry.error = response?.message || '获取二维码失败';
-        }
-      } catch (error) {
-        entry.error = error?.message || '获取二维码失败';
-      }
-    } else {
-      entry.error = '缺少产品ID，无法生成二维码';
-    }
-
-    const productTypeId = toPositiveInteger(product?.productTypeId);
-    if (!productTypeId) {
-      entry.processError = '未设置产品类型，无法获取工序';
-    } else {
-      try {
-        const processes = await loadProcessesForProductType(productTypeId);
-        if (Array.isArray(processes) && processes.length) {
-          entry.processes = await Promise.all(
-            processes.map(async (process) => {
-              const { image, error } = await fetchProcessQRCodeImage(process.id);
-              return { process, image, error };
-            }),
-          );
-        }
-      } catch (error) {
-        entry.processError = error?.message || '获取工序信息失败';
-      }
-    }
-
-    entries.push(entry);
-  }
-  return entries;
-};
-
-const viewQRCode = async (contractId) => {
-  if (!contractId) {
-    alert('合同ID无效');
-    return;
-  }
-  currentContractId.value = contractId;
-  resetQrDialogState();
-  dlgQRCode.value.showModal();
-  qrDialogState.loading = true;
-
-  const errors = [];
-
-  try {
-    const [qrResult, contractResult] = await Promise.allSettled([
-      getContractQRCode(contractId),
-      getContract(contractId),
-    ]);
-
-    if (qrResult.status === 'fulfilled') {
-      const response = qrResult.value;
-      if (response?.success && response.data) {
-        const { dataUrl, qrCodeUrl } = response.data;
-        qrDialogState.contractImage = dataUrl || qrCodeUrl || '';
-        if (!qrDialogState.contractImage) {
-          errors.push('合同二维码缺少图像数据');
-        }
-      } else {
-        errors.push(response?.message || '获取合同二维码失败');
-      }
-    } else {
-      errors.push(qrResult.reason?.message || '获取合同二维码失败');
-    }
-
-    if (contractResult.status === 'fulfilled') {
-      const response = contractResult.value;
-      if (response?.success && response.data?.contract) {
-        qrDialogState.contract = response.data.contract;
-        qrDialogState.products = await buildProductEntries(qrDialogState.contract);
-      } else {
-        errors.push(response?.message || '获取合同详情失败');
-      }
-    } else {
-      errors.push(contractResult.reason?.message || '获取合同详情失败');
-    }
-  } catch (error) {
-    errors.push(error?.message || '加载二维码信息失败');
-  } finally {
-    qrDialogState.loading = false;
-    qrDialogState.error = errors.filter(Boolean).join('；');
-  }
-};
-
-const closeQRCode = () => {
-  try {
-    dlgQRCode.value.close();
-  } catch (error) {
-    console.warn('关闭二维码对话框失败', error);
-  } finally {
-    resetQrDialogState();
-    currentContractId.value = '';
-  }
-};
-
-const downloadQRCode = () => {
-  if (!qrDialogState.contractImage) return;
-
-  const link = document.createElement('a');
-  link.href = qrDialogState.contractImage;
-  const fileId = currentContractId.value || (qrDialogState.contract?.contractNumber ?? 'contract');
-  link.download = `contract-qrcode-${fileId}.png`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
 };
 
 onMounted(() => {
@@ -807,208 +394,168 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.table-wrapper {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow-x: auto;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-th,
-td {
-  padding: 8px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 13px;
-  text-align: left;
-}
-.dialog-large {
-  width: min(960px, 95%);
-}
-.modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-height: 70vh;
-  overflow-y: auto;
-}
-.grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-.grid textarea,
-.grid input {
-  width: 100%;
-}
-.checkbox-row {
-  display: flex;
-  gap: 16px;
-}
-.checkbox-row label {
+.page-header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-.product-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 12px;
-  margin-bottom: 12px;
-  background: #f8fafc;
-}
-.product-card header {
-  display: flex;
   justify-content: space-between;
+  margin-bottom: var(--space-5);
+  gap: var(--space-4);
+}
+
+.search-bar {
+  display: flex;
   align-items: center;
-  margin-bottom: 8px;
-  font-weight: 600;
+  gap: var(--space-3);
+  flex: 1;
+  max-width: 600px;
 }
-section h3 {
-  font-size: 15px;
-  margin-bottom: 8px;
+
+.search-input {
+  flex: 1;
+  height: 40px;
 }
-section h3.full {
-  grid-column: 1 / -1;
-}
-textarea {
-  width: 100%;
-  font-family: inherit;
-}
-.muted {
-  color: #64748b;
-}
-.primary {
-  background: #2563eb;
-  color: #fff;
-  border: none;
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-.danger {
-  background: #dc2626;
-  color: #fff;
-  border: none;
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.empty {
-  color: #64748b;
-  font-size: 13px;
-}
-.loading {
-  color: #64748b;
-  font-size: 13px;
-  text-align: center;
-  padding: 12px;
-}
-.qrcode-container {
+
+.table-actions {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  gap: var(--space-2);
 }
-.qr-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  background: #f8fafc;
-}
-.qr-section > h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-.qr-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-}
-.qr-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-}
-.process-card {
-  background: #f1f5f9;
-}
-.qr-title {
-  font-weight: 600;
-  font-size: 14px;
-}
-.qr-meta {
-  font-size: 12px;
-  color: #64748b;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.qrcode-image {
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  background: #fff;
-  min-height: 160px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
 }
-.qrcode-image img {
-  max-width: 160px;
-  width: 100%;
+
+.btn-icon:hover {
+  background: var(--bg-hover);
 }
-.qr-empty {
-  padding: 12px;
-  text-align: center;
-  color: #64748b;
-  font-size: 13px;
-  border: 1px dashed #cbd5f5;
-  border-radius: 6px;
-  background: #fff;
+
+.empty-cell {
+  padding: var(--space-10) !important;
 }
-.qr-error {
-  color: #dc2626;
-  font-size: 13px;
-}
-.qr-contract-number {
-  font-size: 13px;
-  color: #64748b;
-  margin-left: 8px;
-}
-.process-blocks {
+
+.empty-state {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
 }
-.process-block {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
 }
-.process-product-title {
+
+.empty-title {
+  font-size: var(--text-lg);
   font-weight: 600;
-  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
 }
-.process-grid {
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+
+.empty-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.loading-cell {
+  padding: var(--space-10) !important;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.pagination-info {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.modal-lg {
+  max-width: 800px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.required {
+  color: var(--color-error);
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.item-row {
+  display: grid;
+  grid-template-columns: 1fr 100px 120px 40px;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  background: var(--bg-surface-secondary);
+  border-radius: var(--radius-md);
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.total-amount {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .page-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-bar {
+    max-width: none;
+    flex-wrap: wrap;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .item-row {
+    grid-template-columns: 1fr 80px 100px 40px;
+  }
+  
+  .modal-footer {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+  
+  .footer-left,
+  .footer-right {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
 }
 </style>

@@ -1,431 +1,461 @@
 <template>
-  <div class="employee-page">
-    <!-- 查询工具栏 -->
-    <div class="query-bar">
-      <div class="form-row">
-        <div class="form-field">
-          <label>姓名/编码:</label>
-          <input v-model="query.keyword" placeholder="输入姓名或编码" @keyup.enter="load" />
-        </div>
-        <div class="form-field">
-          <label>状态:</label>
-          <select v-model="query.status" @change="load">
-            <option value="">全部</option>
-            <option value="active">在职</option>
-            <option value="inactive">离职</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <label>员工类型:</label>
-          <select v-model="query.employeeType" @change="load">
-            <option value="">全部</option>
-            <option value="worker">工人</option>
-            <option value="salesman">业务员</option>
-          </select>
-        </div>
-        <div class="form-field">
-          <button class="primary" @click="load">查询</button>
-          <button class="primary" @click="openCreate">新增员工</button>
+  <div class="page-container">
+    <!-- 页面头部 -->
+    <div class="page-header-actions">
+      <div class="search-bar">
+        <input
+          v-model="filter.name"
+          type="text"
+          class="search-input"
+          placeholder="搜索员工姓名..."
+          @input="debounceLoad"
+        />
+        <select v-model="filter.status" @change="load">
+          <option value="">全部状态</option>
+          <option value="active">在职</option>
+          <option value="inactive">离职</option>
+        </select>
+        <button class="btn btn-secondary" @click="resetFilter">
+          <span>🔄</span>
+          <span>重置</span>
+        </button>
+      </div>
+      <button class="btn btn-primary" @click="openCreate">
+        <span>➕</span>
+        <span>添加员工</span>
+      </button>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 80px">ID</th>
+              <th>姓名</th>
+              <th>工号</th>
+              <th>职位</th>
+              <th>联系电话</th>
+              <th style="width: 100px">状态</th>
+              <th style="width: 150px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in list" :key="item.id">
+              <td>{{ item.id }}</td>
+              <td>
+                <div class="employee-name">
+                  <span class="employee-avatar">{{ getInitial(item.name) }}</span>
+                  <span>{{ item.name }}</span>
+                </div>
+              </td>
+              <td>{{ item.employeeNo || '-' }}</td>
+              <td>{{ item.position || '-' }}</td>
+              <td>{{ item.phone || '-' }}</td>
+              <td>
+                <span class="badge" :class="item.status === 'active' ? 'badge-success' : 'badge-default'">
+                  {{ item.status === 'active' ? '在职' : '离职' }}
+                </span>
+              </td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-icon" @click="openEdit(item)" title="编辑">
+                    <span>✏️</span>
+                  </button>
+                  <button class="btn-icon" @click="toggleStatus(item)" :title="item.status === 'active' ? '设为离职' : '设为在职'">
+                    <span>{{ item.status === 'active' ? '🚪' : '✅' }}</span>
+                  </button>
+                  <button class="btn-icon" @click="remove(item.id)" title="删除">
+                    <span>🗑️</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="list.length === 0 && !loading">
+              <td colspan="7" class="empty-cell">
+                <div class="empty-state">
+                  <div class="empty-icon">👥</div>
+                  <div class="empty-title">暂无员工</div>
+                  <div class="empty-description">点击上方按钮添加第一位员工</div>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="loading">
+              <td colspan="7" class="loading-cell">
+                <div class="spinner spinner-sm"></div>
+                <span>加载中...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 分页 -->
+      <div class="card-footer" v-if="pagination.total > pagination.pageSize">
+        <div class="pagination">
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page === 1"
+            @click="changePage(pagination.page - 1)"
+          >
+            上一页
+          </button>
+          <span class="pagination-info">
+            第 {{ pagination.page }} / {{ Math.ceil(pagination.total / pagination.pageSize) }} 页
+          </span>
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page * pagination.pageSize >= pagination.total"
+            @click="changePage(pagination.page + 1)"
+          >
+            下一页
+          </button>
         </div>
       </div>
     </div>
-    
-    <!-- 数据表格 -->
-    <div class="data-grid">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>姓名</th>
-            <th>编码</th>
-            <th>类型</th>
-            <th>工作时间</th>
-            <th>状态</th>
-            <th>微信</th>
-            <th>工序</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="e in items" :key="e.id">
-            <td>{{ e.id }}</td>
-            <td>{{ e.name }}</td>
-            <td>{{ e.code || '-' }}</td>
-            <td>
-              <span class="tag" :class="e.employeeType === 'salesman' ? 'tag-blue' : ''">
-                {{ e.employeeType === 'salesman' ? '业务员' : '工人' }}
-              </span>
-            </td>
-            <td>{{ e.workStartTime }}-{{ e.workEndTime }}</td>
-            <td>{{ e.status === 'active' ? '在职' : '离职' }}</td>
-            <td>
-              <span v-if="e.wxOpenId" class="tag">已绑定</span>
-              <span v-else class="muted">-</span>
-            </td>
-            <td>
-              <span v-if="!(e.processes||[]).length" class="muted">无</span>
-              <span v-for="p in e.processes" :key="p.id" class="tag">{{ p.name }}</span>
-            </td>
-            <td>
-              <button @click="edit(e)">编辑</button>
-              <button class="danger" @click="remove(e.id)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="empty" v-if="!items.length">暂无员工数据</div>
 
-    <!-- 新增/编辑对话框 -->
-    <dialog ref="dlg">
-      <form @submit.prevent="save">
-        <div class="modal-header">{{ form.id ? '编辑员工' : '新增员工' }}</div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-field">
-              <label class="required">姓名:</label>
-              <input v-model="form.name" required />
+    <!-- 编辑弹窗 -->
+    <div v-if="modalVisible" class="modal-overlay" @click.self="closeModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">{{ isEdit ? '编辑员工' : '添加员工' }}</h3>
+          <button class="modal-close" @click="closeModal">×</button>
+        </div>
+        <form @submit.prevent="save">
+          <div class="modal-body">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">
+                  姓名 <span class="required">*</span>
+                </label>
+                <input
+                  v-model="form.name"
+                  type="text"
+                  placeholder="请输入员工姓名"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">工号</label>
+                <input
+                  v-model="form.employeeNo"
+                  type="text"
+                  placeholder="如：YG-001"
+                />
+              </div>
             </div>
-            <div class="form-field">
-              <label class="required">员工类型:</label>
-              <select v-model="form.employeeType">
-                <option value="worker">工人</option>
-                <option value="salesman">业务员</option>
-              </select>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">职位</label>
+                <input
+                  v-model="form.position"
+                  type="text"
+                  placeholder="如：车工、质检员"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">联系电话</label>
+                <input
+                  v-model="form.phone"
+                  type="tel"
+                  placeholder="请输入手机号"
+                />
+              </div>
             </div>
-          </div>
-          <div class="form-row">
-            <div class="form-field">
-              <label class="required">状态:</label>
+            <div class="form-group">
+              <label class="form-label">状态</label>
               <select v-model="form.status">
                 <option value="active">在职</option>
                 <option value="inactive">离职</option>
               </select>
             </div>
-            <div class="form-field">
-              <label>查看所有合同:</label>
-              <input type="checkbox" v-model="form.canViewAllContracts" />
-              <span class="checkbox-label">{{ form.canViewAllContracts ? '是' : '否' }}</span>
+            <div class="form-group">
+              <label class="form-label">备注</label>
+              <textarea
+                v-model="form.remark"
+                rows="2"
+                placeholder="员工备注信息..."
+              ></textarea>
             </div>
           </div>
-          <div class="form-row" v-if="form.employeeType === 'worker'">
-            <div class="form-field">
-              <label>上班时间:</label>
-              <input type="time" v-model="form.workStartTime" />
-            </div>
-            <div class="form-field">
-              <label>下班时间:</label>
-              <input type="time" v-model="form.workEndTime" />
-            </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              取消
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="saving">
+              <span v-if="saving" class="spinner spinner-sm"></span>
+              <span>保存</span>
+            </button>
           </div>
-          <div class="field-group">
-            <div class="group-title">工序授权</div>
-            <div class="checkbox-group">
-              <label v-for="p in processes" :key="p.id" class="checkbox-item">
-                <input type="checkbox" :value="p.id" v-model="selectedProcessIds" /> {{ p.name }}
-              </label>
-            </div>
-          </div>
-          <div class="field-group" v-if="form.id">
-            <div class="group-title">权限分配</div>
-            <div class="checkbox-group">
-              <label v-for="perm in allPermissions" :key="perm.id" class="checkbox-item">
-                <input type="checkbox" :value="perm.id" v-model="selectedPermissionIds" /> 
-                {{ perm.name }}
-              </label>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" @click="close">取消</button>
-          <button class="primary" type="submit">保存</button>
-        </div>
-      </form>
-    </dialog>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { listEmployees, createEmployee, updateEmployee, deleteEmployee, assignEmployeeProcesses } from '../api/employees';
-import { listProcesses } from '../api/processes';
-import { getPermissions, assignEmployeePermissions, getEmployeePermissions } from '../api/permissions';
+import http from '../api/http';
 
-const query = reactive({ page:1, limit:100, keyword:'', status:'', employeeType:'' });
-const items = ref([]);
-const processes = ref([]);
-const allPermissions = ref([]);
-const dlg = ref();
-const form = reactive({ 
-  id:null, 
-  name:'', 
-  status:'active',
-  employeeType: 'worker',
-  workStartTime: '08:00',
-  workEndTime: '18:00',
-  canViewAllContracts: false
+const list = ref([]);
+const loading = ref(false);
+const modalVisible = ref(false);
+const isEdit = ref(false);
+const saving = ref(false);
+
+const filter = reactive({ name: '', status: '' });
+const pagination = reactive({ page: 1, pageSize: 20, total: 0 });
+const form = reactive({
+  id: null,
+  name: '',
+  employeeNo: '',
+  position: '',
+  phone: '',
+  status: 'active',
+  remark: ''
 });
-const selectedProcessIds = ref([]);
-const selectedPermissionIds = ref([]);
 
-const load = async () => { 
-  const r = await listEmployees(query); 
-  if(r.success){ 
-    items.value = r.data.employees || []; 
-  } 
+let debounceTimer = null;
+const debounceLoad = () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => load(), 300);
 };
 
-const loadProcesses = async () => { 
-  const r = await listProcesses({ limit:500 }); 
-  if(r.success) processes.value = r.data.processes || []; 
+const resetFilter = () => {
+  filter.name = '';
+  filter.status = '';
+  pagination.page = 1;
+  load();
 };
 
-const loadPermissions = async () => {
-  const r = await getPermissions();
-  if(r.success) allPermissions.value = r.data || [];
+const changePage = (page) => {
+  pagination.page = page;
+  load();
 };
 
-const loadEmployeePermissions = async (employeeId) => {
-  const r = await getEmployeePermissions(employeeId);
-  if(r.success) {
-    selectedPermissionIds.value = (r.data || []).map(p => p.id);
+const getInitial = (name) => {
+  return name ? name.charAt(0) : '?';
+};
+
+const load = async () => {
+  loading.value = true;
+  try {
+    const params = { page: pagination.page, pageSize: pagination.pageSize };
+    if (filter.name) params.name = filter.name;
+    if (filter.status) params.status = filter.status;
+    const res = await http.get('/shangyin/employees', { params });
+    list.value = res.data.rows || res.data || [];
+    pagination.total = res.data.count || list.value.length;
+  } catch (e) {
+    alert('加载失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    loading.value = false;
   }
 };
 
-const openCreate = () => { 
-  Object.assign(form, { 
-    id:null, 
-    name:'', 
-    status:'active',
-    employeeType: 'worker',
-    workStartTime: '08:00',
-    workEndTime: '18:00',
-    canViewAllContracts: false
-  }); 
-  selectedProcessIds.value = [];
-  selectedPermissionIds.value = [];
-  dlg.value.showModal(); 
-};
-
-const edit = (e) => { 
+const openCreate = () => {
+  isEdit.value = false;
   Object.assign(form, {
-    ...e,
-    workStartTime: (e.workStartTime || '08:00').substring(0, 5),
-    workEndTime: (e.workEndTime || '18:00').substring(0, 5)
-  }); 
-  selectedProcessIds.value = (e.processes||[]).map(p=>p.id);
-  if (e.id) {
-    loadEmployeePermissions(e.id);
-  }
-  dlg.value.showModal(); 
+    id: null,
+    name: '',
+    employeeNo: '',
+    position: '',
+    phone: '',
+    status: 'active',
+    remark: ''
+  });
+  modalVisible.value = true;
 };
 
-const close = () => dlg.value.close();
+const openEdit = (item) => {
+  isEdit.value = true;
+  Object.assign(form, item);
+  modalVisible.value = true;
+};
+
+const closeModal = () => {
+  modalVisible.value = false;
+};
 
 const save = async () => {
+  saving.value = true;
   try {
-    const payload = { 
-      name: form.name, 
-      status: form.status,
-      employeeType: form.employeeType,
-      workStartTime: form.workStartTime,
-      workEndTime: form.workEndTime,
-      canViewAllContracts: form.canViewAllContracts
-    };
-    const processIds = [...selectedProcessIds.value];
-    
-    if (form.id) {
-      await updateEmployee(form.id, payload);
-      await assignEmployeeProcesses(form.id, processIds);
-      await assignEmployeePermissions(form.id, selectedPermissionIds.value);
+    if (isEdit.value) {
+      await http.put(`/shangyin/employees/${form.id}`, form);
     } else {
-      payload.processIds = processIds;
-      const response = await createEmployee(payload);
-      if (response?.data?.employee) {
-        form.id = response.data.employee.id;
-        if (selectedPermissionIds.value.length > 0) {
-          await assignEmployeePermissions(form.id, selectedPermissionIds.value);
-        }
-      }
+      await http.post('/shangyin/employees', form);
     }
-    close();
-    await load();
-  } catch (error) {
-    alert(error?.response?.data?.message || '保存失败');
+    closeModal();
+    load();
+  } catch (e) {
+    alert('保存失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    saving.value = false;
+  }
+};
+
+const toggleStatus = async (item) => {
+  const newStatus = item.status === 'active' ? 'inactive' : 'active';
+  const action = newStatus === 'active' ? '设为在职' : '设为离职';
+  
+  if (!confirm(`确定要将 ${item.name} ${action}吗？`)) return;
+  
+  try {
+    await http.put(`/shangyin/employees/${item.id}`, { ...item, status: newStatus });
+    load();
+  } catch (e) {
+    alert('操作失败：' + (e.response?.data?.message || e.message));
   }
 };
 
 const remove = async (id) => {
-  if(!confirm('确认删除该员工？删除后将无法恢复。')) return;
+  if (!confirm('确定删除此员工？')) return;
   try {
-    await deleteEmployee(id);
-    await load();
-  } catch (error) {
-    alert(error?.response?.data?.message || '删除失败');
+    await http.delete(`/shangyin/employees/${id}`);
+    load();
+  } catch (e) {
+    alert('删除失败：' + (e.response?.data?.message || e.message));
   }
 };
 
-onMounted(() => { 
-  load(); 
-  loadProcesses();
-  loadPermissions();
-});
+onMounted(load);
 </script>
 
 <style scoped>
-.employee-page {
-  height: 100%;
-}
-
-/* 查询栏 */
-.query-bar {
-  background: #e8e8e8;
-  border: 1px solid #a0a0a0;
-  padding: 8px;
-  margin-bottom: 8px;
-}
-
-.query-bar .form-row {
-  margin-bottom: 0;
-}
-
-/* 数据网格 */
-.data-grid {
-  background: #ffffff;
-  border: 1px solid #a0a0a0;
-  overflow: auto;
-  max-height: calc(100% - 60px);
-}
-
-.data-grid table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.data-grid th {
-  background: #d4d4d4;
-  padding: 6px 8px;
-  text-align: left;
-  border: 1px solid #a0a0a0;
-  font-weight: bold;
-}
-
-.data-grid td {
-  padding: 6px 8px;
-  border: 1px solid #c0c0c0;
-}
-
-.data-grid tr:hover {
-  background: #e8f4fc;
-}
-
-/* 标签 */
-.tag {
-  display: inline-block;
-  padding: 1px 6px;
-  background: #f0f0f0;
-  border: 1px solid #c0c0c0;
-  font-size: 11px;
-  margin: 1px;
-}
-
-.tag-blue {
-  background: #e6f7ec;
-  border-color: #3BA372;
-  color: #3BA372;
-}
-
-.muted {
-  color: #999;
-}
-
-.empty {
-  text-align: center;
-  padding: 40px 0;
-  color: #999;
-  background: #ffffff;
-  border: 1px solid #a0a0a0;
-  margin-top: 8px;
-}
-
-/* 对话框 */
-dialog {
-  border: 1px solid #a0a0a0;
-  border-radius: 2px;
-  padding: 0;
-  width: 600px;
-  max-width: 90vw;
-  max-height: 85vh;
-  overflow: auto;
-  background: #f0f0f0;
-}
-
-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.modal-header {
-  background: linear-gradient(to bottom, #e8e8e8, #d0d0d0);
-  padding: 8px 12px;
-  border-bottom: 1px solid #a0a0a0;
-  font-size: 13px;
-  font-weight: bold;
-}
-
-.modal-body {
-  padding: 12px;
-  background: #f0f0f0;
-}
-
-.modal-footer {
-  padding: 8px 12px;
-  border-top: 1px solid #a0a0a0;
-  background: #e8e8e8;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-/* 表单字段组 */
-.field-group {
-  border: 1px solid #c0c0c0;
-  background: #ffffff;
-  margin-top: 12px;
-  padding: 8px;
-}
-
-.group-title {
-  background: #d4d4d4;
-  padding: 4px 8px;
-  margin: -8px -8px 8px -8px;
-  font-weight: bold;
-  font-size: 12px;
-  border-bottom: 1px solid #c0c0c0;
-}
-
-.checkbox-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.checkbox-item {
+.page-header-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  gap: var(--space-4);
 }
 
-.checkbox-label {
-  font-size: 12px;
-  color: #666;
-  margin-left: 4px;
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  max-width: 600px;
 }
 
-.required::before {
-  content: "*";
-  color: #ff0000;
-  margin-right: 2px;
+.search-input {
+  flex: 1;
+  height: 40px;
+}
+
+.employee-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.employee-avatar {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: var(--color-primary);
+  border-radius: 50%;
+}
+
+.table-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.btn-icon:hover {
+  background: var(--bg-hover);
+}
+
+.empty-cell {
+  padding: var(--space-10) !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.empty-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.loading-cell {
+  padding: var(--space-10) !important;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.pagination-info {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.required {
+  color: var(--color-error);
+}
+
+@media (max-width: 768px) {
+  .page-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-bar {
+    max-width: none;
+    flex-wrap: wrap;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

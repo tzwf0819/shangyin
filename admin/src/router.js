@@ -1,43 +1,35 @@
-﻿import { createRouter, createWebHashHistory } from 'vue-router';
-import Dashboard from './pages/Dashboard.vue';
-import Processes from './pages/Processes.vue';
-import ProductTypes from './pages/ProductTypes.vue';
-import Employees from './pages/Employees.vue';
-import Contracts from './pages/Contracts.vue';
-import Login from './pages/Login.vue';
-import ProductionRecords from './pages/ProductionRecords.vue';
-import WechatEmployees from './pages/WechatEmployees.vue';
-import ProductionProgress from './pages/ProductionProgress.vue';
-import EmployeePerformance from './pages/EmployeePerformance.vue';
-import Permissions from './pages/Permissions.vue';
-import PerformanceSummary from './pages/PerformanceSummary.vue';
+import { createRouter, createWebHistory } from 'vue-router';
 
 const routes = [
   { path: '/', redirect: '/dashboard' },
-  { path: '/login', component: Login },
-  { path: '/dashboard', component: Dashboard },
-  { path: '/processes', component: Processes },
-  { path: '/product-types', component: ProductTypes },
-  { path: '/employees', component: Employees },
-  { path: '/permissions', component: Permissions },
-  { path: '/performance-summary', component: PerformanceSummary },
-  { path: '/contracts', component: Contracts },
-  { path: '/production-records', component: ProductionRecords },
-  { path: '/production-progress', component: ProductionProgress },
-  { path: '/employee-performance', component: EmployeePerformance },
-  { path: '/wechat-employees', component: WechatEmployees },
+  { path: '/login', name: 'Login', component: () => import('./pages/Login.vue'), meta: { public: true } },
+  { path: '/dashboard', name: 'Dashboard', component: () => import('./pages/Dashboard.vue') },
+  { path: '/contracts', name: 'Contracts', component: () => import('./pages/Contracts.vue') },
+  { path: '/processes', name: 'Processes', component: () => import('./pages/Processes.vue') },
+  { path: '/product-types', name: 'ProductTypes', component: () => import('./pages/ProductTypes.vue') },
+  { path: '/employees', name: 'Employees', component: () => import('./pages/Employees.vue') },
+  { path: '/wechat-employees', name: 'WechatEmployees', component: () => import('./pages/WechatEmployees.vue') },
+  { path: '/permissions', name: 'Permissions', component: () => import('./pages/Permissions.vue') },
+  { path: '/performance-summary', name: 'PerformanceSummary', component: () => import('./pages/PerformanceSummary.vue') },
+  { path: '/production-records', name: 'ProductionRecords', component: () => import('./pages/ProductionRecords.vue') },
+  { path: '/production-progress', name: 'ProductionProgress', component: () => import('./pages/ProductionProgress.vue') },
+  { path: '/employee-performance', name: 'EmployeePerformance', component: () => import('./pages/EmployeePerformance.vue') }
 ];
 
 const router = createRouter({
-  history: createWebHashHistory(),
-  routes,
+  history: createWebHistory(),
+  routes
 });
 
 router.beforeEach((to, from, next) => {
-  if (to.path === '/login') return next();
   const token = localStorage.getItem('ADMIN_TOKEN');
-  if (!token) return next('/login');
-  next();
+  if (to.meta?.public) {
+    next();
+  } else if (!token) {
+    next('/login');
+  } else {
+    next();
+  }
 });
 
 export default router;

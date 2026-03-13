@@ -1,474 +1,546 @@
 <template>
-  <div class="performance-page">
-    <div class="page-header">
-      <h2>生产绩效汇总</h2>
-      <button class="primary" @click="exportData">导出 Excel</button>
-    </div>
-
-    <!-- 筛选条件 -->
-    <div class="filter-section">
-      <div class="field">
-        <label>开始日期</label>
-        <input type="date" v-model="filters.startDate" @change="load" />
+  <div class="page-container">
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label class="filter-label">时间范围</label>
+        <input v-model="filter.startDate" type="date" />
+        <span class="filter-separator">至</span>
+        <input v-model="filter.endDate" type="date" />
       </div>
-      <div class="field">
-        <label>结束日期</label>
-        <input type="date" v-model="filters.endDate" @change="load" />
-      </div>
-      <div class="field">
-        <label>员工</label>
-        <select v-model="filters.employeeId" @change="load">
+      <div class="filter-group">
+        <label class="filter-label">员工</label>
+        <select v-model="filter.employeeId">
           <option value="">全部员工</option>
           <option v-for="emp in employees" :key="emp.id" :value="emp.id">
-            {{ emp.name }} ({{ emp.employeeType === 'salesman' ? '业务员' : '工人' }})
+            {{ emp.name }}
           </option>
         </select>
       </div>
+      <div class="filter-group">
+        <label class="filter-label">合同</label>
+        <select v-model="filter.contractId">
+          <option value="">全部合同</option>
+          <option v-for="c in contracts" :key="c.id" :value="c.id">
+            {{ c.contractNo }}
+          </option>
+        </select>
+      </div>
+      <button class="btn btn-primary" @click="loadData" :disabled="loading">
+        <span v-if="loading" class="spinner spinner-sm"></span>
+        <span v-else>🔍 查询</span>
+      </button>
+      <button class="btn btn-secondary" @click="exportData">
+        <span>📥 导出</span>
+      </button>
     </div>
 
-    <!-- 汇总统计 -->
-    <div class="summary-cards">
-      <div class="card">
-        <div class="card-title">总记录数</div>
-        <div class="card-value">{{ totalStats.recordCount }}</div>
-      </div>
-      <div class="card">
-        <div class="card-title">总产量</div>
-        <div class="card-value">{{ totalStats.totalQuantity }}</div>
-      </div>
-      <div class="card">
-        <div class="card-title">总工资</div>
-        <div class="card-value">¥{{ totalStats.totalPayAmount.toFixed(2) }}</div>
-      </div>
-    </div>
-
-    <!-- 员工绩效表格 -->
-    <div class="table-wrapper" v-if="summaryData.length">
-      <h3>员工绩效汇总</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>员工 ID</th>
-            <th>姓名</th>
-            <th>类型</th>
-            <th>记录数</th>
-            <th>总产量</th>
-            <th>总工资</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in summaryData" :key="item.employeeId">
-            <td>{{ item.employeeId }}</td>
-            <td>{{ item.employeeName }}</td>
-            <td>{{ item.employeeType === 'salesman' ? '业务员' : '工人' }}</td>
-            <td>{{ item.recordCount }}</td>
-            <td>{{ item.totalQuantity }}</td>
-            <td class="amount">¥{{ item.totalPayAmount.toFixed(2) }}</td>
-            <td>
-              <button @click="viewDetail(item)">详情</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 工序统计表格 -->
-    <div class="table-wrapper" v-if="processStatsData.length">
-      <h3>工序生产统计</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>员工</th>
-            <th>工序名称</th>
-            <th>生产次数</th>
-            <th>总产量</th>
-            <th>总工资</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in processStatsData" :key="item.processId + '-' + item.employeeId">
-            <td>{{ item.employeeName }}</td>
-            <td>{{ item.processName }}</td>
-            <td>{{ item.processCount }}</td>
-            <td>{{ item.totalQuantity }}</td>
-            <td class="amount">¥{{ item.totalPayAmount.toFixed(2) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 详情对话框 -->
-    <dialog ref="detailDlg">
-      <div class="modal-header">
-        <span>{{ selectedEmployee?.employeeName }} - 绩效详情</span>
-        <button @click="closeDetail">✕</button>
-      </div>
-      <div class="modal-body">
-        <div v-if="selectedEmployee">
-          <div class="detail-summary">
-            <div class="stat-item">
-              <div class="stat-label">总记录数</div>
-              <div class="stat-value">{{ selectedEmployee.summary.recordCount }}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">总产量</div>
-              <div class="stat-value">{{ selectedEmployee.summary.totalQuantity }}</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-label">总工资</div>
-              <div class="stat-value amount">¥{{ selectedEmployee.summary.totalPayAmount.toFixed(2) }}</div>
-            </div>
-          </div>
-          <h4>工序明细</h4>
-          <table class="detail-table">
-            <thead>
-              <tr>
-                <th>工序名称</th>
-                <th>生产次数</th>
-                <th>工资</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="proc in selectedEmployee.processStats" :key="proc.processId">
-                <td>{{ proc.processName }}</td>
-                <td>{{ proc.processCount }}</td>
-                <td class="amount">¥{{ proc.totalPayAmount.toFixed(2) }}</td>
-              </tr>
-            </tbody>
-          </table>
+    <!-- 统计卡片 -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #0078d420; color: #0078d4;">📊</div>
+        <div class="stat-info">
+          <div class="stat-value">{{ summary.totalTasks || 0 }}</div>
+          <div class="stat-label">总任务数</div>
         </div>
       </div>
-    </dialog>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #107c1020; color: #107c10;">✅</div>
+        <div class="stat-info">
+          <div class="stat-value">{{ summary.completedTasks || 0 }}</div>
+          <div class="stat-label">已完成</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #ffc10720; color: #856404;">⏳</div>
+        <div class="stat-info">
+          <div class="stat-value">{{ summary.inProgressTasks || 0 }}</div>
+          <div class="stat-label">进行中</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background: #a8000020; color: #a80000;">💰</div>
+        <div class="stat-info">
+          <div class="stat-value">¥{{ formatMoney(summary.totalPerformance || 0) }}</div>
+          <div class="stat-label">绩效总额</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>员工</th>
+              <th>合同编号</th>
+              <th>产品</th>
+              <th>工序</th>
+              <th class="text-right">数量</th>
+              <th class="text-right">单价</th>
+              <th class="text-right">金额</th>
+              <th>完成日期</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in dataList" :key="item.id">
+              <td>{{ item.employeeName }}</td>
+              <td>{{ item.contractNo }}</td>
+              <td>{{ item.productName || '-' }}</td>
+              <td>{{ item.processName || '-' }}</td>
+              <td class="text-right">{{ item.quantity }}</td>
+              <td class="text-right">¥{{ formatMoney(item.unitPrice) }}</td>
+              <td class="text-right font-bold">¥{{ formatMoney(item.amount) }}</td>
+              <td>{{ formatDate(item.completedAt) }}</td>
+            </tr>
+            <tr v-if="dataList.length === 0 && !loading">
+              <td colspan="8" class="empty-cell">
+                <div class="empty-state">
+                  <div class="empty-icon">📈</div>
+                  <div class="empty-title">暂无数据</div>
+                  <div class="empty-description">请选择筛选条件后点击查询</div>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="loading">
+              <td colspan="8" class="loading-cell">
+                <div class="spinner spinner-sm"></div>
+                <span>加载中...</span>
+              </td>
+            </tr>
+          </tbody>
+          <tfoot v-if="dataList.length > 0">
+            <tr class="total-row">
+              <td colspan="4" class="text-right">合计：</td>
+              <td class="text-right">{{ totalQuantity }}</td>
+              <td></td>
+              <td class="text-right font-bold">¥{{ formatMoney(totalAmount) }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- 图表区域 -->
+    <div class="charts-row">
+      <div class="card chart-card">
+        <div class="card-header">
+          <h4 class="card-title">员工绩效排名</h4>
+        </div>
+        <div class="chart-content">
+          <div v-for="emp in employeeRanking" :key="emp.id" class="chart-bar-item">
+            <span class="bar-label">{{ emp.name }}</span>
+            <div class="bar-wrapper">
+              <div
+                class="bar-fill"
+                :style="{ width: emp.percentage + '%', background: emp.color }"
+              ></div>
+            </div>
+            <span class="bar-value">¥{{ formatMoney(emp.amount) }}</span>
+          </div>
+          <div v-if="employeeRanking.length === 0" class="chart-empty">
+            暂无数据
+          </div>
+        </div>
+      </div>
+
+      <div class="card chart-card">
+        <div class="card-header">
+          <h4 class="card-title">工序绩效分布</h4>
+        </div>
+        <div class="chart-content">
+          <div v-for="proc in processDistribution" :key="proc.id" class="chart-bar-item">
+            <span class="bar-label">{{ proc.name }}</span>
+            <div class="bar-wrapper">
+              <div
+                class="bar-fill"
+                :style="{ width: proc.percentage + '%', background: proc.color }"
+              ></div>
+            </div>
+            <span class="bar-value">¥{{ formatMoney(proc.amount) }}</span>
+          </div>
+          <div v-if="processDistribution.length === 0" class="chart-empty">
+            暂无数据
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, reactive, onMounted, computed } from 'vue';
 import http from '../api/http';
 
-export default {
-  name: 'PerformanceSummary',
-  data() {
-    return {
-      filters: {
-        startDate: this.formatDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
-        endDate: this.formatDate(new Date())
-      },
-      employees: [],
-      summaryData: [],
-      processStatsData: [],
-      totalStats: {
-        recordCount: 0,
-        totalQuantity: 0,
-        totalPayAmount: 0
-      },
-      selectedEmployee: null
-    };
-  },
-  mounted() {
-    this.loadEmployees();
-    this.load();
-  },
-  methods: {
-    formatDate(date) {
-      const d = new Date(date);
-      const month = (d.getMonth() + 1).toString().padStart(2, '0');
-      const day = d.getDate().toString().padStart(2, '0');
-      return `${d.getFullYear()}-${month}-${day}`;
-    },
-    async loadEmployees() {
-      try {
-        const res = await http.get('/shangyin/employees', { status: 'active' });
-        if (res.success) {
-          this.employees = res.data.employees || [];
-        }
-      } catch (error) {
-        console.error('加载员工列表失败', error);
-      }
-    },
-    async load() {
-      await this.loadSummary();
-      await this.loadProcessStats();
-    },
-    async loadSummary() {
-      try {
-        const params = {
-          startDate: this.filters.startDate,
-          endDate: this.filters.endDate
-        };
-        if (this.filters.employeeId) {
-          params.employeeId = this.filters.employeeId;
-        }
+const loading = ref(false);
+const dataList = ref([]);
+const summary = ref({});
+const employees = ref([]);
+const contracts = ref([]);
 
-        const res = await http.get('/shangyin/performance/summary', params);
-        if (res.success) {
-          this.summaryData = res.data || [];
-          this.calculateTotal();
-        }
-      } catch (error) {
-        console.error('加载绩效汇总失败', error);
-        alert('加载绩效汇总失败');
-      }
-    },
-    async loadProcessStats() {
-      try {
-        const params = {
-          startDate: this.filters.startDate,
-          endDate: this.filters.endDate
-        };
-        if (this.filters.employeeId) {
-          params.employeeId = this.filters.employeeId;
-        }
+const filter = reactive({
+  startDate: getFirstDayOfMonth(),
+  endDate: getToday(),
+  employeeId: '',
+  contractId: ''
+});
 
-        const res = await http.get('/shangyin/performance/process-stats', params);
-        if (res.success) {
-          this.processStatsData = res.data || [];
-        }
-      } catch (error) {
-        console.error('加载工序统计失败', error);
-      }
-    },
-    calculateTotal() {
-      this.totalStats = this.summaryData.reduce((acc, item) => {
-        acc.recordCount += item.recordCount;
-        acc.totalQuantity += item.totalQuantity;
-        acc.totalPayAmount += item.totalPayAmount;
-        return acc;
-      }, { recordCount: 0, totalQuantity: 0, totalPayAmount: 0 });
-    },
-    async viewDetail(item) {
-      try {
-        const res = await http.get(`/shangyin/performance/employee/${item.employeeId}`, {
-          startDate: this.filters.startDate,
-          endDate: this.filters.endDate
-        });
-        if (res.success) {
-          this.selectedEmployee = res.data;
-          this.$refs.detailDlg.showModal();
-        }
-      } catch (error) {
-        console.error('加载详情失败', error);
-        alert('加载详情失败');
-      }
-    },
-    closeDetail() {
-      this.$refs.detailDlg.close();
-      this.selectedEmployee = null;
-    },
-    exportData() {
-      // 导出 Excel 功能
-      const data = [
-        ['员工 ID', '姓名', '类型', '记录数', '总产量', '总工资'],
-        ...this.summaryData.map(item => [
-          item.employeeId,
-          item.employeeName,
-          item.employeeType === 'salesman' ? '业务员' : '工人',
-          item.recordCount,
-          item.totalQuantity,
-          item.totalPayAmount.toFixed(2)
-        ])
-      ];
+const totalQuantity = computed(() => {
+  return dataList.value.reduce((sum, item) => sum + (item.quantity || 0), 0);
+});
 
-      const csvContent = data.map(row => row.join(',')).join('\n');
-      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `绩效汇总_${this.filters.startDate}_${this.filters.endDate}.csv`;
-      link.click();
+const totalAmount = computed(() => {
+  return dataList.value.reduce((sum, item) => sum + (item.amount || 0), 0);
+});
+
+const employeeRanking = computed(() => {
+  const map = {};
+  dataList.value.forEach(item => {
+    if (!map[item.employeeId]) {
+      map[item.employeeId] = { id: item.employeeId, name: item.employeeName, amount: 0 };
     }
+    map[item.employeeId].amount += item.amount || 0;
+  });
+  const list = Object.values(map).sort((a, b) => b.amount - a.amount).slice(0, 10);
+  const max = Math.max(...list.map(i => i.amount), 1);
+  const colors = ['#0078d4', '#107c10', '#ffc107', '#a80000', '#8764b8', '#00b7c3', '#ff8c00'];
+  return list.map((item, idx) => ({
+    ...item,
+    percentage: (item.amount / max) * 100,
+    color: colors[idx % colors.length]
+  }));
+});
+
+const processDistribution = computed(() => {
+  const map = {};
+  dataList.value.forEach(item => {
+    if (!map[item.processId]) {
+      map[item.processId] = { id: item.processId, name: item.processName || '未知', amount: 0 };
+    }
+    map[item.processId].amount += item.amount || 0;
+  });
+  const list = Object.values(map).sort((a, b) => b.amount - a.amount).slice(0, 10);
+  const max = Math.max(...list.map(i => i.amount), 1);
+  const colors = ['#107c10', '#0078d4', '#ffc107', '#a80000', '#8764b8', '#00b7c3', '#ff8c00'];
+  return list.map((item, idx) => ({
+    ...item,
+    percentage: (item.amount / max) * 100,
+    color: colors[idx % colors.length]
+  }));
+});
+
+function getToday() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function getFirstDayOfMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+
+const formatDate = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('zh-CN');
+};
+
+const formatMoney = (amount) => {
+  if (amount === null || amount === undefined) return '0.00';
+  return Number(amount).toFixed(2);
+};
+
+const loadEmployees = async () => {
+  try {
+    const res = await http.get('/shangyin/employees');
+    employees.value = res.data.rows || res.data || [];
+  } catch (e) {
+    console.warn('加载员工失败', e);
   }
 };
+
+const loadContracts = async () => {
+  try {
+    const res = await http.get('/shangyin/contracts');
+    contracts.value = res.data.rows || res.data || [];
+  } catch (e) {
+    console.warn('加载合同失败', e);
+  }
+};
+
+const loadData = async () => {
+  loading.value = true;
+  try {
+    const params = {
+      startDate: filter.startDate,
+      endDate: filter.endDate
+    };
+    if (filter.employeeId) params.employeeId = filter.employeeId;
+    if (filter.contractId) params.contractId = filter.contractId;
+    
+    const res = await http.get('/shangyin/performance-summary', { params });
+    dataList.value = res.data.rows || res.data || [];
+    summary.value = res.data.summary || {};
+  } catch (e) {
+    alert('加载失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    loading.value = false;
+  }
+};
+
+const exportData = () => {
+  // 导出CSV
+  if (dataList.value.length === 0) {
+    alert('没有可导出的数据');
+    return;
+  }
+  
+  const headers = ['员工', '合同编号', '产品', '工序', '数量', '单价', '金额', '完成日期'];
+  const rows = dataList.value.map(item => [
+    item.employeeName,
+    item.contractNo,
+    item.productName || '-',
+    item.processName || '-',
+    item.quantity,
+    item.unitPrice,
+    item.amount,
+    formatDate(item.completedAt)
+  ]);
+  
+  const csv = [headers, ...rows]
+    .map(row => row.map(cell => `"${cell}"`).join(','))
+    .join('\n');
+  
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `绩效汇总_${filter.startDate}_${filter.endDate}.csv`;
+  link.click();
+};
+
+onMounted(() => {
+  loadEmployees();
+  loadContracts();
+  loadData();
+});
 </script>
 
 <style scoped>
-.performance-page {
-  padding: 20px;
-}
-
-.page-header {
+.filter-bar {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
 }
 
-.filter-section {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  padding: 20px;
-  background: #fff;
-  border-radius: 8px;
-}
-
-.field {
+.filter-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
-.field label {
+.filter-label {
+  font-size: var(--text-sm);
   font-weight: 500;
-  color: #666;
+  color: var(--text-secondary);
 }
 
-.field input,
-.field select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+.filter-separator {
+  color: var(--text-tertiary);
+  padding: 0 var(--space-2);
 }
 
-.summary-cards {
+.stats-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
-.card {
-  background: linear-gradient(135deg, #3BA372 0%, #2d8a5e 100%);
-  color: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  text-align: center;
-}
-
-.card-title {
-  font-size: 14px;
-  opacity: 0.9;
-  margin-bottom: 10px;
-}
-
-.card-value {
-  font-size: 32px;
-  font-weight: bold;
-}
-
-.table-wrapper {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 20px;
-}
-
-.table-wrapper h3 {
-  margin-bottom: 15px;
-  color: #333;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background: #f5f5f5;
-}
-
-th, td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-.amount {
-  color: #3BA372;
-  font-weight: bold;
-}
-
-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button.primary {
-  background: #3BA372;
-  color: #fff;
-}
-
-dialog {
-  border: none;
-  border-radius: 8px;
-  padding: 0;
-  max-width: 700px;
-  width: 90%;
-}
-
-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.modal-header {
-  padding: 20px;
-  border-bottom: 1px solid #eee;
+.stat-card {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 18px;
-  font-weight: bold;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
-.modal-header button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #999;
+.stat-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  border-radius: var(--radius-lg);
 }
 
-.modal-body {
-  padding: 20px;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.detail-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 15px;
-  background: #f5f5f5;
-  border-radius: 8px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
+.stat-info {
+  flex: 1;
 }
 
 .stat-value {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
-.stat-value.amount {
-  color: #3BA372;
+.stat-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
-h4 {
-  margin: 20px 0 15px;
-  color: #333;
+.empty-cell {
+  padding: var(--space-10) !important;
 }
 
-.detail-table {
-  width: 100%;
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.detail-table th,
-.detail-table td {
-  padding: 10px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.empty-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.loading-cell {
+  padding: var(--space-10) !important;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.total-row {
+  background: var(--bg-surface-secondary);
+  font-weight: 600;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.font-bold {
+  font-weight: 600;
+}
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.chart-card {
+  padding: var(--space-5);
+}
+
+.chart-card .card-header {
+  background: transparent;
+  border-bottom: none;
+  padding: 0 0 var(--space-4);
+}
+
+.chart-card .card-title {
+  font-size: var(--text-lg);
+}
+
+.chart-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.chart-bar-item {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.bar-label {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-wrapper {
+  height: 24px;
+  background: var(--bg-surface-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.bar-value {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.chart-empty {
+  text-align: center;
+  padding: var(--space-8);
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 1200px) {
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-group {
+    width: 100%;
+  }
+  
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .chart-bar-item {
+    grid-template-columns: 80px 1fr 80px;
+  }
 }
 </style>

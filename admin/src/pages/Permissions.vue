@@ -1,269 +1,469 @@
 <template>
-  <div class="permissions-page">
-    <div class="page-header">
-      <h2>权限管理</h2>
-      <button class="primary" @click="openCreate">新增权限</button>
+  <div class="page-container">
+    <!-- 页面头部 -->
+    <div class="page-header-actions">
+      <div class="search-bar">
+        <input
+          v-model="filter.name"
+          type="text"
+          class="search-input"
+          placeholder="搜索角色名称..."
+          @input="debounceLoad"
+        />
+        <button class="btn btn-secondary" @click="resetFilter">
+          <span>🔄</span>
+          <span>重置</span>
+        </button>
+      </div>
+      <button class="btn btn-primary" @click="openCreate">
+        <span>➕</span>
+        <span>新建角色</span>
+      </button>
     </div>
 
-    <!-- 权限列表 -->
-    <div class="table-wrapper" v-if="permissions.length">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>权限名称</th>
-            <th>权限编码</th>
-            <th>模块</th>
-            <th>描述</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in permissions" :key="item.id">
-            <td>{{ item.id }}</td>
-            <td>{{ item.name }}</td>
-            <td><code>{{ item.code }}</code></td>
-            <td>{{ item.module }}</td>
-            <td>{{ item.description || '-' }}</td>
-            <td>
-              <button @click="edit(item)">编辑</button>
-              <button class="danger" @click="remove(item.id)">删除</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="empty" v-else>暂无权限</div>
+    <!-- 数据表格 -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 80px">ID</th>
+              <th>角色名称</th>
+              <th>描述</th>
+              <th style="width: 200px">权限</th>
+              <th style="width: 150px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in list" :key="item.id">
+              <td>{{ item.id }}</td>
+              <td><strong>{{ item.name }}</strong></td>
+              <td>{{ item.description || '-' }}</td>
+              <td>
+                <div class="permission-tags">
+                  <span
+                    v-for="perm in getPermissionNames(item.permissions)"
+                    :key="perm"
+                    class="permission-tag"
+                  >
+                    {{ perm }}
+                  </span>
+                  <span v-if="!item.permissions || item.permissions.length === 0" class="text-muted">
+                    暂无权限
+                  </span>
+                </div>
+              </td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-icon" @click="openEdit(item)" title="编辑">
+                    <span>✏️</span>
+                  </button>
+                  <button class="btn-icon" @click="remove(item.id)" title="删除">
+                    <span>🗑️</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="list.length === 0 && !loading">
+              <td colspan="5" class="empty-cell">
+                <div class="empty-state">
+                  <div class="empty-icon">🔐</div>
+                  <div class="empty-title">暂无角色</div>
+                  <div class="empty-description">点击上方按钮创建第一个角色</div>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="loading">
+              <td colspan="5" class="loading-cell">
+                <div class="spinner spinner-sm"></div>
+                <span>加载中...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-    <!-- 新增/编辑对话框 -->
-    <dialog ref="dlg">
-      <form @submit.prevent="save">
-        <div class="modal-header">{{ form.id ? '编辑权限' : '新增权限' }}</div>
-        <div class="modal-body">
-          <div class="field">
-            <label>权限名称 *</label>
-            <input v-model="form.name" required placeholder="例如：查看所有合同" />
-          </div>
-          <div class="field">
-            <label>权限编码 *</label>
-            <input v-model="form.code" required placeholder="例如：contracts:view:all" />
-          </div>
-          <div class="field">
-            <label>所属模块</label>
-            <select v-model="form.module">
-              <option value="default">默认</option>
-              <option value="contracts">合同管理</option>
-              <option value="production">生产管理</option>
-              <option value="employees">员工管理</option>
-              <option value="processes">工序管理</option>
-              <option value="performance">绩效管理</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>描述</label>
-            <textarea v-model="form.description" rows="3" placeholder="权限描述"></textarea>
-          </div>
+      <!-- 分页 -->
+      <div class="card-footer" v-if="pagination.total > pagination.pageSize">
+        <div class="pagination">
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page === 1"
+            @click="changePage(pagination.page - 1)"
+          >
+            上一页
+          </button>
+          <span class="pagination-info">
+            第 {{ pagination.page }} / {{ Math.ceil(pagination.total / pagination.pageSize) }} 页
+          </span>
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page * pagination.pageSize >= pagination.total"
+            @click="changePage(pagination.page + 1)"
+          >
+            下一页
+          </button>
         </div>
-        <div class="modal-footer">
-          <button type="button" @click="close">取消</button>
-          <button class="primary" type="submit">保存</button>
+      </div>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <div v-if="modalVisible" class="modal-overlay" @click.self="closeModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">{{ isEdit ? '编辑角色' : '新建角色' }}</h3>
+          <button class="modal-close" @click="closeModal">×</button>
         </div>
-      </form>
-    </dialog>
+        <form @submit.prevent="save">
+          <div class="modal-body">
+            <div class="form-group">
+              <label class="form-label">
+                角色名称 <span class="required">*</span>
+              </label>
+              <input
+                v-model="form.name"
+                type="text"
+                placeholder="如：管理员、普通用户"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">描述</label>
+              <textarea
+                v-model="form.description"
+                rows="2"
+                placeholder="角色描述（可选）"
+              ></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">权限配置</label>
+              <div class="permissions-list">
+                <label
+                  v-for="perm in allPermissions"
+                  :key="perm.key"
+                  class="permission-checkbox"
+                >
+                  <input
+                    type="checkbox"
+                    :value="perm.key"
+                    v-model="form.permissions"
+                  />
+                  <span class="checkbox-label">
+                    <strong>{{ perm.name }}</strong>
+                    <span class="checkbox-desc">{{ perm.description }}</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeModal">
+              取消
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="saving">
+              <span v-if="saving" class="spinner spinner-sm"></span>
+              <span>保存</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
-<script>
+<script setup>
+import { ref, reactive, onMounted } from 'vue';
 import http from '../api/http';
 
-export default {
-  name: 'Permissions',
-  data() {
-    return {
-      permissions: [],
-      form: {
-        id: null,
-        name: '',
-        code: '',
-        description: '',
-        module: 'default'
-      },
-      dlg: null
-    };
-  },
-  mounted() {
-    this.load();
-    this.dlg = this.$refs.dlg;
-  },
-  methods: {
-    async load() {
-      try {
-        const res = await http.get('/shangyin/permissions');
-        if (res.success) {
-          this.permissions = res.data || [];
-        }
-      } catch (error) {
-        console.error('加载权限失败', error);
-        alert('加载权限失败');
-      }
-    },
-    openCreate() {
-      this.form = { id: null, name: '', code: '', description: '', module: 'default' };
-      this.dlg.showModal();
-    },
-    edit(item) {
-      this.form = { ...item };
-      this.dlg.showModal();
-    },
-    async save() {
-      try {
-        let res;
-        if (this.form.id) {
-          res = await http.put(`/shangyin/permissions/${this.form.id}`, this.form);
-        } else {
-          res = await http.post('/shangyin/permissions', this.form);
-        }
-        if (res.success) {
-          alert('保存成功');
-          this.dlg.close();
-          this.load();
-        }
-      } catch (error) {
-        console.error('保存失败', error);
-        alert(error.response?.data?.message || '保存失败');
-      }
-    },
-    close() {
-      this.dlg.close();
-    },
-    async remove(id) {
-      if (!confirm('确定删除此权限？')) return;
-      try {
-        const res = await http.delete(`/shangyin/permissions/${id}`);
-        if (res.success) {
-          alert('删除成功');
-          this.load();
-        }
-      } catch (error) {
-        console.error('删除失败', error);
-        alert('删除失败');
-      }
-    }
+const list = ref([]);
+const loading = ref(false);
+const modalVisible = ref(false);
+const isEdit = ref(false);
+const saving = ref(false);
+
+const filter = reactive({ name: '' });
+const pagination = reactive({ page: 1, pageSize: 20, total: 0 });
+const form = reactive({ id: null, name: '', description: '', permissions: [] });
+
+// 所有可用权限
+const allPermissions = [
+  { key: 'contracts:view', name: '查看合同', description: '查看合同列表和详情' },
+  { key: 'contracts:edit', name: '编辑合同', description: '创建和修改合同' },
+  { key: 'contracts:delete', name: '删除合同', description: '删除合同' },
+  { key: 'employees:view', name: '查看员工', description: '查看员工列表' },
+  { key: 'employees:edit', name: '编辑员工', description: '管理员工信息' },
+  { key: 'processes:view', name: '查看工序', description: '查看工序列表' },
+  { key: 'processes:edit', name: '编辑工序', description: '管理工序信息' },
+  { key: 'production:view', name: '查看生产', description: '查看生产记录和进度' },
+  { key: 'production:edit', name: '编辑生产', description: '管理生产记录' },
+  { key: 'reports:view', name: '查看报表', description: '查看绩效汇总等报表' },
+  { key: 'system:admin', name: '系统管理', description: '系统设置和权限管理' }
+];
+
+let debounceTimer = null;
+const debounceLoad = () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => load(), 300);
+};
+
+const resetFilter = () => {
+  filter.name = '';
+  pagination.page = 1;
+  load();
+};
+
+const changePage = (page) => {
+  pagination.page = page;
+  load();
+};
+
+const getPermissionNames = (permissions) => {
+  if (!permissions || permissions.length === 0) return [];
+  return permissions
+    .map(key => allPermissions.find(p => p.key === key)?.name)
+    .filter(Boolean);
+};
+
+const load = async () => {
+  loading.value = true;
+  try {
+    const params = { page: pagination.page, pageSize: pagination.pageSize };
+    if (filter.name) params.name = filter.name;
+    const res = await http.get('/shangyin/permissions', { params });
+    list.value = res.data.rows || res.data || [];
+    pagination.total = res.data.count || list.value.length;
+  } catch (e) {
+    alert('加载失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    loading.value = false;
   }
 };
+
+const openCreate = () => {
+  isEdit.value = false;
+  Object.assign(form, { id: null, name: '', description: '', permissions: [] });
+  modalVisible.value = true;
+};
+
+const openEdit = (item) => {
+  isEdit.value = true;
+  Object.assign(form, {
+    id: item.id,
+    name: item.name,
+    description: item.description || '',
+    permissions: Array.isArray(item.permissions) ? [...item.permissions] : []
+  });
+  modalVisible.value = true;
+};
+
+const closeModal = () => {
+  modalVisible.value = false;
+};
+
+const save = async () => {
+  saving.value = true;
+  try {
+    if (isEdit.value) {
+      await http.put(`/shangyin/permissions/${form.id}`, form);
+    } else {
+      await http.post('/shangyin/permissions', form);
+    }
+    closeModal();
+    load();
+  } catch (e) {
+    alert('保存失败：' + (e.response?.data?.message || e.message));
+  } finally {
+    saving.value = false;
+  }
+};
+
+const remove = async (id) => {
+  if (!confirm('确定删除此角色？')) return;
+  try {
+    await http.delete(`/shangyin/permissions/${id}`);
+    load();
+  } catch (e) {
+    alert('删除失败：' + (e.response?.data?.message || e.message));
+  }
+};
+
+onMounted(load);
 </script>
 
 <style scoped>
-.permissions-page {
-  padding: 20px;
-}
-
-.page-header {
+.page-header-actions {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  gap: var(--space-4);
 }
 
-.table-wrapper {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-thead {
-  background: #f5f5f5;
-}
-
-th, td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-code {
-  background: #f5f5f5;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.empty {
-  text-align: center;
-  padding: 60px 0;
-  color: #999;
-}
-
-dialog {
-  border: none;
-  border-radius: 8px;
-  padding: 0;
-  max-width: 500px;
-  width: 90%;
-}
-
-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.modal-header {
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.field {
-  margin-bottom: 16px;
-}
-
-.field label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-}
-
-.field input,
-.field select,
-.field textarea {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.modal-footer {
-  padding: 20px;
-  border-top: 1px solid #eee;
+.search-bar {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  max-width: 500px;
 }
 
-button {
-  padding: 8px 16px;
+.search-input {
+  flex: 1;
+  height: 40px;
+}
+
+.permission-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.permission-tag {
+  display: inline-flex;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-radius: var(--radius-full);
+}
+
+.text-muted {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.table-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-md);
+  font-size: 16px;
   cursor: pointer;
+  transition: background var(--transition-fast);
 }
 
-button.primary {
-  background: #3BA372;
-  color: #fff;
+.btn-icon:hover {
+  background: var(--bg-hover);
 }
 
-button.danger {
-  background: #dc2626;
-  color: #fff;
+.empty-cell {
+  padding: var(--space-10) !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.empty-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.loading-cell {
+  padding: var(--space-10) !important;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+}
+
+.pagination-info {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.permissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 300px;
+  overflow-y: auto;
+  padding: var(--space-3);
+  background: var(--bg-surface-secondary);
+  border-radius: var(--radius-md);
+}
+
+.permission-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.permission-checkbox:hover {
+  background: var(--bg-hover);
+}
+
+.permission-checkbox input {
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+}
+
+.checkbox-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.checkbox-label strong {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.checkbox-desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.required {
+  color: var(--color-error);
+}
+
+@media (max-width: 768px) {
+  .page-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-bar {
+    max-width: none;
+  }
 }
 </style>

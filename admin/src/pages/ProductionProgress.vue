@@ -1,327 +1,625 @@
-﻿<template>
-  <div>
-    <div class="toolbar">
-      <input v-model="filters.contractNumber" placeholder="合同编号" @keyup.enter="search" />
-      <input v-model="filters.productKeyword" placeholder="产品名称/编号" @keyup.enter="search" />
-      <button class="primary" @click="search" :disabled="loading">搜索</button>
+<template>
+  <div class="page-container">
+    <!-- 页面头部 -->
+    <div class="page-header-actions">
+      <div class="search-bar">
+        <input
+          v-model="filter.contractNo"
+          type="text"
+          class="search-input"
+          placeholder="搜索合同编号..."
+          @input="debounceLoad"
+        />
+        <select v-model="filter.status" @change="load">
+          <option value="">全部状态</option>
+          <option value="pending">未开始</option>
+          <option value="in_progress">进行中</option>
+          <option value="completed">已完成</option>
+          <option value="delayed">延期</option>
+        </select>
+        <button class="btn btn-secondary" @click="resetFilter">
+          <span>🔄</span>
+          <span>重置</span>
+        </button>
+      </div>
     </div>
 
-    <div class="table-wrapper" v-if="items.length">
-      <table>
-        <thead>
-          <tr>
-            <th>合同编号</th>
-            <th>产品名称</th>
-            <th>产品编号</th>
-            <th>产品类型</th>
-            <th>签订日期</th>
-            <th>交货期限</th>
-            <th>生产记录数</th>
-            <th>最近进度</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in items" :key="item.id">
-            <td>{{ item.contractNumber || '-' }}</td>
-            <td>{{ item.productName || '-' }}</td>
-            <td>{{ item.productCode || '-' }}</td>
-            <td>{{ item.productType || '-' }}</td>
-            <td>{{ formatDate(item.contractSignedDate) }}</td>
-            <td>{{ item.deliveryDeadline || '-' }}</td>
-            <td>{{ item.recordCount }}</td>
-            <td>{{ formatDate(item.latestRecordAt) }}</td>
-            <td>
-              <button @click="openDetail(item)" :disabled="detailLoading">详情</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="empty" v-else>暂无合同产品</div>
-
-    <div class="pagination">
-      <button :disabled="!hasPrev || loading" @click="changePage(page - 1)">上一页</button>
-      <span>第 {{ page }} 页</span>
-      <button :disabled="!hasNext || loading" @click="changePage(page + 1)">下一页</button>
-    </div>
-
-    <dialog ref="dlgDetail" class="dialog-large">
-      <form method="dialog" @submit.prevent>
-        <div class="modal-header">产品生产记录</div>
-        <div class="modal-body">
-          <section v-if="detailProduct" class="product-overview">
-            <div><strong>合同编号：</strong>{{ detailProduct.contractNumber || '-' }}</div>
-            <div><strong>产品名称：</strong>{{ detailProduct.productName || '-' }}</div>
-            <div><strong>产品编号：</strong>{{ detailProduct.productCode || '-' }}</div>
-            <div><strong>产品类型：</strong>{{ detailProduct.productType || '-' }}</div>
-            <div><strong>签订日期：</strong>{{ formatDate(detailProduct.contractSignedDate) }}</div>
-            <div><strong>交货期限：</strong>{{ detailProduct.deliveryDeadline || '-' }}</div>
-            <div><strong>计划数量：</strong>{{ detailProduct.quantity || '-' }}</div>
-          </section>
-
-          <section class="records-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>时间</th>
-                  <th>节点</th>
-                  <th>执行人</th>
-                  <th>数量</th>
-                  <th>用时(分)</th>
-                  <th>绩效</th>
-                  <th>备注</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="detailLoading">
-                  <td colspan="7" class="muted">加载中...</td>
-                </tr>
-                <tr v-else-if="!detailRecords.length">
-                  <td colspan="7" class="muted">暂无记录</td>
-                </tr>
-                <tr v-else v-for="record in detailRecords" :key="record.id">
-                  <td>{{ formatDate(record.createdAt) }}</td>
-                  <td>{{ record.processName || '-' }}</td>
-                  <td>{{ record.employeeName || '-' }}</td>
-                  <td>{{ record.quantity === null || record.quantity === undefined ? '-' : record.quantity }}</td>
-                  <td>{{ record.actualTimeMinutes === null || record.actualTimeMinutes === undefined ? '-' : record.actualTimeMinutes }}</td>
-                  <td>{{ record.payAmount === null || record.payAmount === undefined ? '-' : record.payAmount.toFixed(2) }}</td>
-                  <td>{{ record.notes || '-' }}</td>
-                </tr>
-                <tr v-if="detailRecords.length">
-                  <td colspan="5" class="summary-label">合计绩效</td>
-                  <td class="summary-value">{{ detailTotalPay.toFixed(2) }}</td>
-                  <td></td>
-                </tr>
-              </tbody>
-            </table>
-          </section>
+    <!-- 进度概览 -->
+    <div class="progress-overview">
+      <div class="overview-card">
+        <div class="overview-icon" style="background: #0078d420; color: #0078d4;">📋</div>
+        <div class="overview-info">
+          <div class="overview-value">{{ overview.total }}</div>
+          <div class="overview-label">总任务</div>
         </div>
-        <div class="modal-footer">
-          <button type="button" @click="closeDetail">关闭</button>
+      </div>
+      <div class="overview-card">
+        <div class="overview-icon" style="background: #107c1020; color: #107c10;">✅</div>
+        <div class="overview-info">
+          <div class="overview-value">{{ overview.completed }}</div>
+          <div class="overview-label">已完成</div>
         </div>
-      </form>
-    </dialog>
+      </div>
+      <div class="overview-card">
+        <div class="overview-icon" style="background: #ffc10720; color: #856404;">⏳</div>
+        <div class="overview-info">
+          <div class="overview-value">{{ overview.inProgress }}</div>
+          <div class="overview-label">进行中</div>
+        </div>
+      </div>
+      <div class="overview-card">
+        <div class="overview-icon" style="background: #a8000020; color: #a80000;">⚠️</div>
+        <div class="overview-info">
+          <div class="overview-value">{{ overview.delayed }}</div>
+          <div class="overview-label">延期</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 140px">合同编号</th>
+              <th>产品</th>
+              <th>工序</th>
+              <th>负责人</th>
+              <th>计划时间</th>
+              <th class="text-center">进度</th>
+              <th style="width: 100px">状态</th>
+              <th style="width: 120px">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in list" :key="item.id">
+              <td><strong>{{ item.contractNo }}</strong></td>
+              <td>{{ item.productName || '-' }}</td>
+              <td>{{ item.processName || '-' }}</td>
+              <td>{{ item.employeeName || '-' }}</td>
+              <td>
+                <div class="plan-date">
+                  <div>{{ formatDate(item.plannedStart) }}</div>
+                  <div class="text-muted">至 {{ formatDate(item.plannedEnd) }}</div>
+                </div>
+              </td>
+              <td>
+                <div class="progress-cell">
+                  <div class="progress-bar">
+                    <div
+                      class="progress-fill"
+                      :style="{ width: item.progress + '%', background: getProgressColor(item) }"
+                    ></div>
+                  </div>
+                  <span class="progress-text">{{ item.progress }}%</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge" :class="getStatusClass(item.status)">
+                  {{ getStatusText(item.status) }}
+                </span>
+              </td>
+              <td>
+                <div class="table-actions">
+                  <button class="btn-icon" @click="openProgressModal(item)" title="更新进度">
+                    <span>📊</span>
+                  </button>
+                  <button class="btn-icon" @click="viewDetail(item)" title="查看详情">
+                    <span>👁️</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="list.length === 0 && !loading">
+              <td colspan="8" class="empty-cell">
+                <div class="empty-state">
+                  <div class="empty-icon">📋</div>
+                  <div class="empty-title">暂无生产进度</div>
+                  <div class="empty-description">暂无生产任务数据</div>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="loading">
+              <td colspan="8" class="loading-cell">
+                <div class="spinner spinner-sm"></div>
+                <span>加载中...</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- 分页 -->
+      <div class="card-footer" v-if="pagination.total > pagination.pageSize">
+        <div class="pagination">
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page === 1"
+            @click="changePage(pagination.page - 1)"
+          >
+            上一页
+          </button>
+          <span class="pagination-info">
+            第 {{ pagination.page }} / {{ Math.ceil(pagination.total / pagination.pageSize) }} 页
+          </span>
+          <button
+            class="btn btn-sm btn-secondary"
+            :disabled="pagination.page * pagination.pageSize >= pagination.total"
+            @click="changePage(pagination.page + 1)"
+          >
+            下一页
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 进度更新弹窗 -->
+    <div v-if="progressModalVisible" class="modal-overlay" @click.self="closeProgressModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h3 class="modal-title">更新生产进度</h3>
+          <button class="modal-close" @click="closeProgressModal">×</button>
+        </div>
+        <form @submit.prevent="saveProgress">
+          <div class="modal-body">
+            <div class="progress-info">
+              <div class="info-row">
+                <span class="info-label">合同：</span>
+                <span class="info-value">{{ progressForm.contractNo }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">工序：</span>
+                <span class="info-value">{{ progressForm.processName }}</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">当前进度 (%)</label>
+              <div class="progress-input-group">
+                <input
+                  v-model.number="progressForm.progress"
+                  type="range"
+                  min="0"
+                  max="100"
+                  class="progress-range"
+                />
+                <input
+                  v-model.number="progressForm.progress"
+                  type="number"
+                  min="0"
+                  max="100"
+                  class="progress-number"
+                />
+                <span>%</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">状态</label>
+              <select v-model="progressForm.status">
+                <option value="pending">未开始</option>
+                <option value="in_progress">进行中</option>
+                <option value="completed">已完成</option>
+                <option value="delayed">延期</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">备注</label>
+              <textarea
+                v-model="progressForm.remark"
+                rows="3"
+                placeholder="进度更新说明..."
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" @click="closeProgressModal">
+              取消
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="saving">
+              <span v-if="saving" class="spinner spinner-sm"></span>
+              <span>保存</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
-import { listProgress, getProductProgressRecords } from '../api/production';
+import { ref, reactive, onMounted } from 'vue';
+import http from '../api/http';
 
-const filters = reactive({ contractNumber: '', productKeyword: '' });
-const page = ref(1);
-const limit = 20;
-const total = ref(0);
-const items = ref([]);
+const list = ref([]);
 const loading = ref(false);
+const progressModalVisible = ref(false);
+const saving = ref(false);
 
-const dlgDetail = ref(null);
-const detailLoading = ref(false);
-const detailProduct = ref(null);
-const detailRecords = ref([]);
-const detailTotalPay = ref(0);
+const filter = reactive({ contractNo: '', status: '' });
+const pagination = reactive({ page: 1, pageSize: 20, total: 0 });
+const overview = reactive({ total: 0, completed: 0, inProgress: 0, delayed: 0 });
 
-const hasPrev = computed(() => page.value > 1);
-const hasNext = computed(() => page.value * limit < total.value);
+const progressForm = reactive({
+  id: null,
+  contractNo: '',
+  processName: '',
+  progress: 0,
+  status: 'pending',
+  remark: ''
+});
 
-const buildQuery = () => {
-  const params = {
-    page: page.value,
-    limit,
+let debounceTimer = null;
+const debounceLoad = () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => load(), 300);
+};
+
+const resetFilter = () => {
+  filter.contractNo = '';
+  filter.status = '';
+  pagination.page = 1;
+  load();
+};
+
+const changePage = (page) => {
+  pagination.page = page;
+  load();
+};
+
+const formatDate = (date) => {
+  if (!date) return '-';
+  return new Date(date).toLocaleDateString('zh-CN');
+};
+
+const getStatusText = (status) => {
+  const map = {
+    pending: '未开始',
+    in_progress: '进行中',
+    completed: '已完成',
+    delayed: '延期'
   };
-  if (filters.contractNumber && filters.contractNumber.trim()) {
-    params.contractNumber = filters.contractNumber.trim();
-  }
-  if (filters.productKeyword && filters.productKeyword.trim()) {
-    params.productKeyword = filters.productKeyword.trim();
-  }
-  return params;
+  return map[status] || status;
+};
+
+const getStatusClass = (status) => {
+  const map = {
+    pending: 'badge-default',
+    in_progress: 'badge-warning',
+    completed: 'badge-success',
+    delayed: 'badge-error'
+  };
+  return map[status] || 'badge-default';
+};
+
+const getProgressColor = (item) => {
+  if (item.status === 'completed') return '#107c10';
+  if (item.status === 'delayed') return '#a80000';
+  if (item.progress >= 80) return '#0078d4';
+  if (item.progress >= 50) return '#ffc107';
+  return '#605e5c';
 };
 
 const load = async () => {
   loading.value = true;
   try {
-    const response = await listProgress(buildQuery());
-    if (response.success) {
-      items.value = response.data?.items || [];
-      total.value = response.data?.total || 0;
-    } else {
-      items.value = [];
-      total.value = 0;
-    }
-  } catch (error) {
-    console.error('加载生产进度失败:', error);
-    alert('加载生产进度失败');
+    const params = { page: pagination.page, pageSize: pagination.pageSize };
+    if (filter.contractNo) params.contractNo = filter.contractNo;
+    if (filter.status) params.status = filter.status;
+    const res = await http.get('/shangyin/production-progress', { params });
+    list.value = res.data.rows || res.data || [];
+    pagination.total = res.data.count || list.value.length;
+    // 更新概览
+    const stats = res.data.overview || {};
+    Object.assign(overview, {
+      total: stats.total || 0,
+      completed: stats.completed || 0,
+      inProgress: stats.inProgress || 0,
+      delayed: stats.delayed || 0
+    });
+  } catch (e) {
+    alert('加载失败：' + (e.response?.data?.message || e.message));
   } finally {
     loading.value = false;
   }
 };
 
-const search = () => {
-  page.value = 1;
-  load();
+const openProgressModal = (item) => {
+  Object.assign(progressForm, {
+    id: item.id,
+    contractNo: item.contractNo,
+    processName: item.processName,
+    progress: item.progress || 0,
+    status: item.status || 'pending',
+    remark: item.remark || ''
+  });
+  progressModalVisible.value = true;
 };
 
-const changePage = (nextPage) => {
-  if (nextPage === page.value || nextPage <= 0 || loading.value) return;
-  page.value = nextPage;
-  load();
+const closeProgressModal = () => {
+  progressModalVisible.value = false;
 };
 
-const formatDate = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-};
-
-const fetchProductDetail = async (productId) => {
-  detailLoading.value = true;
+const saveProgress = async () => {
+  saving.value = true;
   try {
-    const response = await getProductProgressRecords(productId);
-    if (!response.success) {
-      throw new Error(response.message || '获取生产记录失败');
-    }
-    const data = response.data || {};
-    if (data.product) {
-      detailProduct.value = { ...detailProduct.value, ...data.product };
-    }
-    detailRecords.value = (data.records || []).map((record) => ({
-      ...record,
-      payAmount: record.payAmount === null || record.payAmount === undefined ? null : Number(record.payAmount),
-    }));
-    detailTotalPay.value = Number(data.totalPayAmount || 0);
-  } catch (error) {
-    console.error('加载产品生产记录失败:', error);
-    alert(error?.message || '获取生产记录失败');
-    closeDetail();
+    await http.put(`/shangyin/production-progress/${progressForm.id}`, {
+      progress: progressForm.progress,
+      status: progressForm.status,
+      remark: progressForm.remark
+    });
+    closeProgressModal();
+    load();
+  } catch (e) {
+    alert('保存失败：' + (e.response?.data?.message || e.message));
   } finally {
-    detailLoading.value = false;
+    saving.value = false;
   }
 };
 
-const openDetail = async (product) => {
-  detailProduct.value = { ...product };
-  detailRecords.value = [];
-  detailTotalPay.value = 0;
-  if (dlgDetail.value?.showModal) {
-    try {
-      dlgDetail.value.showModal();
-    } catch (error) {
-      console.warn('show dialog failed', error);
-    }
-  }
-  await fetchProductDetail(product.id);
+const viewDetail = (item) => {
+  alert(`合同详情：${item.contractNo}\n工序：${item.processName}\n进度：${item.progress}%`);
 };
 
-const closeDetail = () => {
-  if (dlgDetail.value) {
-    try {
-      dlgDetail.value.close();
-    } catch (error) {
-      console.warn('close dialog failed', error);
-    }
-  }
-};
-
-onMounted(() => {
-  load();
-});
+onMounted(load);
 </script>
 
 <style scoped>
-.toolbar {
+.page-header-actions {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+  gap: var(--space-4);
 }
-.table-wrapper {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow-x: auto;
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  max-width: 600px;
 }
-table {
-  width: 100%;
-  border-collapse: collapse;
+
+.search-input {
+  flex: 1;
+  height: 40px;
 }
-th,
-td {
-  padding: 8px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 13px;
-  text-align: left;
+
+.progress-overview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
 }
-.primary {
-  background: #2563eb;
-  color: #fff;
+
+.overview-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.overview-icon {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  border-radius: var(--radius-lg);
+}
+
+.overview-info {
+  flex: 1;
+}
+
+.overview-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.overview-label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.plan-date {
+  font-size: var(--text-sm);
+}
+
+.text-muted {
+  color: var(--text-tertiary);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.progress-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-surface-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 40px;
+}
+
+.table-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
   border: none;
-  padding: 6px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
+  font-size: 16px;
   cursor: pointer;
+  transition: background var(--transition-fast);
 }
+
+.btn-icon:hover {
+  background: var(--bg-hover);
+}
+
+.empty-cell {
+  padding: var(--space-10) !important;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: var(--space-3);
+  opacity: 0.5;
+}
+
+.empty-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.empty-description {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.loading-cell {
+  padding: var(--space-10) !important;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
 .pagination {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 16px;
+  justify-content: center;
+  gap: var(--space-4);
 }
-.empty {
-  color: #64748b;
-  font-size: 13px;
+
+.pagination-info {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
-.dialog-large {
-  width: min(720px, 95%);
+
+.progress-info {
+  background: var(--bg-surface-secondary);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
 }
-.modal-header {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-.modal-body {
+
+.info-row {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-height: 70vh;
-  overflow-y: auto;
+  margin-bottom: var(--space-2);
 }
-.modal-footer {
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  min-width: 60px;
+}
+
+.info-value {
+  color: var(--text-primary);
+}
+
+.progress-input-group {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  align-items: center;
+  gap: var(--space-3);
 }
-.product-overview {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 8px;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 8px;
-  font-size: 13px;
+
+.progress-range {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-surface-secondary);
+  border-radius: var(--radius-full);
+  outline: none;
 }
-.product-overview strong {
-  margin-right: 4px;
+
+.progress-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  cursor: pointer;
 }
-.records-table table {
-  width: 100%;
-}
-.muted {
-  color: #6b7280;
+
+.progress-number {
+  width: 70px;
   text-align: center;
-  font-size: 13px;
 }
-.summary-label {
-  text-align: right;
-  font-weight: 600;
+
+@media (max-width: 1200px) {
+  .progress-overview {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
-.summary-value {
-  font-weight: 600;
-}
-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+
+@media (max-width: 768px) {
+  .page-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-bar {
+    max-width: none;
+    flex-wrap: wrap;
+  }
+  
+  .progress-overview {
+    grid-template-columns: 1fr;
+  }
+  
+  .progress-cell {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
 }
 </style>
