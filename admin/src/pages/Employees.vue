@@ -1,20 +1,37 @@
 <template>
-  <div>
-    <div class="toolbar">
-      <input v-model="query.keyword" placeholder="姓名/编码" @keyup.enter="load" />
-      <select v-model="query.status" @change="load">
-        <option value="">全部</option>
-        <option value="active">在职</option>
-        <option value="inactive">离职</option>
-      </select>
-      <select v-model="query.employeeType" @change="load">
-        <option value="">全部类型</option>
-        <option value="worker">工人</option>
-        <option value="salesman">业务员</option>
-      </select>
-      <button class="primary" @click="openCreate">新增员工</button>
+  <div class="employee-page">
+    <!-- 查询工具栏 -->
+    <div class="query-bar">
+      <div class="form-row">
+        <div class="form-field">
+          <label>姓名/编码:</label>
+          <input v-model="query.keyword" placeholder="输入姓名或编码" @keyup.enter="load" />
+        </div>
+        <div class="form-field">
+          <label>状态:</label>
+          <select v-model="query.status" @change="load">
+            <option value="">全部</option>
+            <option value="active">在职</option>
+            <option value="inactive">离职</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>员工类型:</label>
+          <select v-model="query.employeeType" @change="load">
+            <option value="">全部</option>
+            <option value="worker">工人</option>
+            <option value="salesman">业务员</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <button class="primary" @click="load">查询</button>
+          <button class="primary" @click="openCreate">新增员工</button>
+        </div>
+      </div>
     </div>
-    <div class="table-wrapper" v-if="items.length">
+    
+    <!-- 数据表格 -->
+    <div class="data-grid">
       <table>
         <thead>
           <tr>
@@ -40,9 +57,9 @@
               </span>
             </td>
             <td>{{ e.workStartTime }}-{{ e.workEndTime }}</td>
-            <td>{{ e.status }}</td>
+            <td>{{ e.status === 'active' ? '在职' : '离职' }}</td>
             <td>
-              <span v-if="e.wxOpenId" class="tag">绑定</span>
+              <span v-if="e.wxOpenId" class="tag">已绑定</span>
               <span v-else class="muted">-</span>
             </td>
             <td>
@@ -57,59 +74,64 @@
         </tbody>
       </table>
     </div>
-    <div class="empty" v-else>暂无员工</div>
+    <div class="empty" v-if="!items.length">暂无员工数据</div>
 
+    <!-- 新增/编辑对话框 -->
     <dialog ref="dlg">
       <form @submit.prevent="save">
         <div class="modal-header">{{ form.id ? '编辑员工' : '新增员工' }}</div>
         <div class="modal-body">
-          <div class="field">
-            <label>姓名 *</label>
-            <input v-model="form.name" required />
+          <div class="form-row">
+            <div class="form-field">
+              <label class="required">姓名:</label>
+              <input v-model="form.name" required />
+            </div>
+            <div class="form-field">
+              <label class="required">员工类型:</label>
+              <select v-model="form.employeeType">
+                <option value="worker">工人</option>
+                <option value="salesman">业务员</option>
+              </select>
+            </div>
           </div>
-          <div class="field">
-            <label>员工类型 *</label>
-            <select v-model="form.employeeType">
-              <option value="worker">工人</option>
-              <option value="salesman">业务员</option>
-            </select>
+          <div class="form-row">
+            <div class="form-field">
+              <label class="required">状态:</label>
+              <select v-model="form.status">
+                <option value="active">在职</option>
+                <option value="inactive">离职</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label>查看所有合同:</label>
+              <input type="checkbox" v-model="form.canViewAllContracts" />
+              <span class="checkbox-label">{{ form.canViewAllContracts ? '是' : '否' }}</span>
+            </div>
           </div>
-          <div class="field">
-            <label>状态 *</label>
-            <select v-model="form.status">
-              <option value="active">active</option>
-              <option value="inactive">inactive</option>
-            </select>
+          <div class="form-row" v-if="form.employeeType === 'worker'">
+            <div class="form-field">
+              <label>上班时间:</label>
+              <input type="time" v-model="form.workStartTime" />
+            </div>
+            <div class="form-field">
+              <label>下班时间:</label>
+              <input type="time" v-model="form.workEndTime" />
+            </div>
           </div>
-          <div class="field" v-if="form.employeeType === 'worker'">
-            <label>上班时间</label>
-            <input type="time" v-model="form.workStartTime" />
-          </div>
-          <div class="field" v-if="form.employeeType === 'worker'">
-            <label>下班时间</label>
-            <input type="time" v-model="form.workEndTime" />
-          </div>
-          <div class="field">
-            <label>可以查看所有合同</label>
-            <input type="checkbox" v-model="form.canViewAllContracts" />
-            <span style="font-size:12px;color:#666;margin-left:8px;">
-              {{ form.canViewAllContracts ? '是（业务员权限）' : '否' }}
-            </span>
-          </div>
-          <div class="field">
-            <label>工序授权</label>
-            <div>
-              <label v-for="p in processes" :key="p.id" style="display:inline-block;margin:2px 8px 4px 0;">
+          <div class="field-group">
+            <div class="group-title">工序授权</div>
+            <div class="checkbox-group">
+              <label v-for="p in processes" :key="p.id" class="checkbox-item">
                 <input type="checkbox" :value="p.id" v-model="selectedProcessIds" /> {{ p.name }}
               </label>
             </div>
           </div>
-          <div class="field" v-if="form.id">
-            <label>权限分配</label>
-            <div>
-              <label v-for="perm in allPermissions" :key="perm.id" style="display:inline-block;margin:2px 8px 4px 0;">
+          <div class="field-group" v-if="form.id">
+            <div class="group-title">权限分配</div>
+            <div class="checkbox-group">
+              <label v-for="perm in allPermissions" :key="perm.id" class="checkbox-item">
                 <input type="checkbox" :value="perm.id" v-model="selectedPermissionIds" /> 
-                {{ perm.name }} ({{ perm.code }})
+                {{ perm.name }}
               </label>
             </div>
           </div>
@@ -215,14 +237,12 @@ const save = async () => {
     if (form.id) {
       await updateEmployee(form.id, payload);
       await assignEmployeeProcesses(form.id, processIds);
-      // 分配权限
       await assignEmployeePermissions(form.id, selectedPermissionIds.value);
     } else {
       payload.processIds = processIds;
       const response = await createEmployee(payload);
       if (response?.data?.employee) {
         form.id = response.data.employee.id;
-        // 创建后分配权限
         if (selectedPermissionIds.value.length > 0) {
           await assignEmployeePermissions(form.id, selectedPermissionIds.value);
         }
@@ -231,10 +251,7 @@ const save = async () => {
     close();
     await load();
   } catch (error) {
-    const message = error && error.response && error.response.data && error.response.data.message 
-      ? error.response.data.message 
-      : '保存失败';
-    alert(message);
+    alert(error?.response?.data?.message || '保存失败');
   }
 };
 
@@ -244,10 +261,7 @@ const remove = async (id) => {
     await deleteEmployee(id);
     await load();
   } catch (error) {
-    const message = error && error.response && error.response.data && error.response.data.message 
-      ? error.response.data.message 
-      : '删除失败';
-    alert(message);
+    alert(error?.response?.data?.message || '删除失败');
   }
 };
 
@@ -259,63 +273,66 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
+.employee-page {
+  height: 100%;
 }
 
-.toolbar input,
-.toolbar select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+/* 查询栏 */
+.query-bar {
+  background: #e8e8e8;
+  border: 1px solid #a0a0a0;
+  padding: 8px;
+  margin-bottom: 8px;
 }
 
-.toolbar button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+.query-bar .form-row {
+  margin-bottom: 0;
 }
 
-.toolbar button.primary {
-  background: #3BA372;
-  color: #fff;
+/* 数据网格 */
+.data-grid {
+  background: #ffffff;
+  border: 1px solid #a0a0a0;
+  overflow: auto;
+  max-height: calc(100% - 60px);
 }
 
-.table-wrapper {
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-table {
+.data-grid table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 12px;
 }
 
-thead {
-  background: #f5f5f5;
-}
-
-th, td {
-  padding: 12px 16px;
+.data-grid th {
+  background: #d4d4d4;
+  padding: 6px 8px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border: 1px solid #a0a0a0;
+  font-weight: bold;
 }
 
+.data-grid td {
+  padding: 6px 8px;
+  border: 1px solid #c0c0c0;
+}
+
+.data-grid tr:hover {
+  background: #e8f4fc;
+}
+
+/* 标签 */
 .tag {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 1px 6px;
   background: #f0f0f0;
-  border-radius: 12px;
-  font-size: 12px;
-  margin: 2px;
+  border: 1px solid #c0c0c0;
+  font-size: 11px;
+  margin: 1px;
 }
 
 .tag-blue {
   background: #e6f7ec;
+  border-color: #3BA372;
   color: #3BA372;
 }
 
@@ -325,77 +342,90 @@ th, td {
 
 .empty {
   text-align: center;
-  padding: 60px 0;
+  padding: 40px 0;
   color: #999;
+  background: #ffffff;
+  border: 1px solid #a0a0a0;
+  margin-top: 8px;
 }
 
+/* 对话框 */
 dialog {
-  border: none;
-  border-radius: 8px;
+  border: 1px solid #a0a0a0;
+  border-radius: 2px;
   padding: 0;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
+  width: 600px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow: auto;
+  background: #f0f0f0;
 }
 
 dialog::backdrop {
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-  font-size: 18px;
+  background: linear-gradient(to bottom, #e8e8e8, #d0d0d0);
+  padding: 8px 12px;
+  border-bottom: 1px solid #a0a0a0;
+  font-size: 13px;
   font-weight: bold;
 }
 
 .modal-body {
-  padding: 20px;
-}
-
-.field {
-  margin-bottom: 16px;
-}
-
-.field label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-}
-
-.field input[type="text"],
-.field input[type="time"],
-.field select {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 12px;
+  background: #f0f0f0;
 }
 
 .modal-footer {
-  padding: 20px;
-  border-top: 1px solid #eee;
+  padding: 8px 12px;
+  border-top: 1px solid #a0a0a0;
+  background: #e8e8e8;
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+/* 表单字段组 */
+.field-group {
+  border: 1px solid #c0c0c0;
+  background: #ffffff;
+  margin-top: 12px;
+  padding: 8px;
 }
 
-button.primary {
-  background: #3BA372;
-  color: #fff;
+.group-title {
+  background: #d4d4d4;
+  padding: 4px 8px;
+  margin: -8px -8px 8px -8px;
+  font-weight: bold;
+  font-size: 12px;
+  border-bottom: 1px solid #c0c0c0;
 }
 
-button.danger {
-  background: #dc2626;
-  color: #fff;
+.checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.checkbox-label {
+  font-size: 12px;
+  color: #666;
+  margin-left: 4px;
+}
+
+.required::before {
+  content: "*";
+  color: #ff0000;
+  margin-right: 2px;
 }
 </style>
