@@ -126,7 +126,7 @@ const handleLogin = async () => {
   loading.value = true;
   
   try {
-    const res = await http.post('/shangyin/auth/login', form);
+    const res = await http.post('/shangyin/admin-auth/login', form);
     if (res.data?.token) {
       localStorage.setItem('ADMIN_TOKEN', res.data.token);
       if (rememberMe.value) {
