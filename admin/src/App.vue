@@ -248,8 +248,10 @@ if (typeof window !== 'undefined') {
 .app-wrapper {
   display: flex;
   flex-direction: column;
+  width: 100vw;
   height: 100vh;
   background: var(--bg-page);
+  overflow: hidden;
 }
 
 /* 顶部导航栏 */
@@ -563,6 +565,7 @@ if (typeof window !== 'undefined') {
 .app-body {
   display: flex;
   flex: 1;
+  width: 100%;
   overflow: hidden;
   --sidebar-width: 260px;
 }
@@ -683,8 +686,12 @@ if (typeof window !== 'undefined') {
   flex: 1;
   display: flex;
   flex-direction: column;
+  width: calc(100% - var(--sidebar-width));
   overflow: hidden;
-  min-width: 0;
+}
+
+.app-sidebar.collapsed ~ .app-main {
+  width: calc(100% - 64px);
 }
 
 .main-header {
@@ -712,6 +719,7 @@ if (typeof window !== 'undefined') {
 
 .main-content {
   flex: 1;
+  width: 100%;
   padding: 24px;
   overflow: auto;
   background: var(--bg-page);

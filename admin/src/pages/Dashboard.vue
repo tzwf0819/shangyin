@@ -120,7 +120,7 @@ onMounted(load);
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
 }
 
@@ -175,7 +175,7 @@ onMounted(load);
 
 .quick-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 16px;
 }
 
@@ -258,7 +258,7 @@ onMounted(load);
 }
 
 /* 响应式 */
-@media (max-width: 1200px) {
+@media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -268,7 +268,7 @@ onMounted(load);
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 480px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }
