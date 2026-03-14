@@ -86,7 +86,7 @@
       </header>
       
       <!-- 主体区域 -->
-      <div class="app-body">
+      <div class="app-body" :style="{ '--sidebar-width': sidebarCollapsed ? '64px' : '260px' }">
         <!-- 侧边导航栏 -->
         <aside class="app-sidebar" :class="{ collapsed: sidebarCollapsed }">
           <nav class="sidebar-nav">
@@ -564,17 +564,19 @@ if (typeof window !== 'undefined') {
   display: flex;
   flex: 1;
   overflow: hidden;
+  --sidebar-width: 260px;
 }
 
 /* 侧边栏 */
 .app-sidebar {
-  width: 260px;
+  width: var(--sidebar-width);
   background: var(--bg-surface);
   border-right: 1px solid var(--border-primary);
   display: flex;
   flex-direction: column;
   transition: width var(--transition-normal);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .app-sidebar.collapsed {
@@ -682,6 +684,7 @@ if (typeof window !== 'undefined') {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .main-header {
@@ -716,8 +719,8 @@ if (typeof window !== 'undefined') {
 
 /* PC端优化 - 大屏幕 */
 @media (min-width: 1400px) {
-  .app-sidebar {
-    width: 280px;
+  .app-body {
+    --sidebar-width: 280px;
   }
   
   .app-sidebar.collapsed {

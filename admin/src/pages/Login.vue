@@ -139,7 +139,8 @@ const handleLogin = async () => {
       } else {
         localStorage.removeItem('REMEMBER_USER');
       }
-      router.replace('/');
+      // 使用 window.location 强制刷新以确保状态更新
+      window.location.href = '/shangyin/admin/';
     }
   } catch (err) {
     error.value = err.response?.data?.message || '登录失败，请重试';
