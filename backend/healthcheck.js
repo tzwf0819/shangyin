@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+/**
+ * 后端健康检查脚本
+ * 用于Docker健康检查
+ */
+
+const http = require('http');
+
+const options = {
+  hostname: 'localhost',
+  port: process.env.PORT || 3000,
+  path: '/shangyin/',
+  method: 'GET',
+  timeout: 5000
+};
+
+const req = http.request(options, (res) => {
+  if (res.statusCode === 200) {
+    console.log('Health check passed');
+    process.exit(0);
+  } else {
+    console.log(`Health check failed with status: ${res.statusCode}`);
+    process.exit(1);
+  }
+});
+
+req.on('error', (error) => {
+  console.error('Health check error:', error.message);
+  process.exit(1);
+});
+
+req.on('timeout', () => {
+  console.error('Health check timeout');
+  req.destroy();
+  process.exit(1);
+});
+
+req.end();
