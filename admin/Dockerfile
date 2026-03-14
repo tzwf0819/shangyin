@@ -18,6 +18,9 @@ RUN npm run build
 # 生产阶段 - 使用 Nginx 提供静态文件
 FROM nginx:alpine
 
+# 安装健康检查工具
+RUN apk add --no-cache wget
+
 # 复制构建产物到 Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
 
