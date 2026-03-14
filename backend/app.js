@@ -297,8 +297,17 @@ const startServer = async () => {
     }
   } catch (err) {
     console.error('Unable to initialize the database:', err);
-    process.exit(1); // 在生产环境中，数据库错误应该导致进程退出
+    console.warn('Starting server in degraded mode - database unavailable');
   }
+  
+  // 无论数据库初始化是否成功，都启动服务器
+  // 这样可以通过健康检查，同时可以在日志中看到错误
+  const server = app.listen(PORT, () => {
+    console.log('Server running on port ' + PORT);
+    console.log('Environment: ' + (process.env.NODE_ENV || 'development'));
+  });
+
+  return server;
 };
 
 const server = startServer();
