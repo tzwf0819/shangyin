@@ -6,7 +6,7 @@
       <div class="stats-grid">
         <div class="stat-card" v-for="s in stats" :key="s.key">
           <div class="stat-icon" :style="{ background: s.color + '20', color: s.color }">
-            {{ s.icon }}
+            <Icon :name="s.icon" :size="28" />
           </div>
           <div class="stat-info">
             <div class="stat-value">{{ s.value }}</div>
@@ -21,19 +21,27 @@
       <div class="section-title">快捷操作</div>
       <div class="quick-grid">
         <button class="quick-card" @click="$router.push('/contracts')">
-          <div class="quick-icon" style="background: #0078d420; color: #0078d4;">文</div>
+          <div class="quick-icon" style="background: #0078d420; color: #0078d4;">
+            <Icon name="file-text" :size="32" />
+          </div>
           <div class="quick-text">新建合同</div>
         </button>
         <button class="quick-card" @click="$router.push('/employees')">
-          <div class="quick-icon" style="background: #107c1020; color: #107c10;">人</div>
+          <div class="quick-icon" style="background: #107c1020; color: #107c10;">
+            <Icon name="user" :size="32" />
+          </div>
           <div class="quick-text">添加员工</div>
         </button>
         <button class="quick-card" @click="$router.push('/processes')">
-          <div class="quick-icon" style="background: #ffc10720; color: #856404;">设</div>
+          <div class="quick-icon" style="background: #ffc10720; color: #856404;">
+            <Icon name="settings" :size="32" />
+          </div>
           <div class="quick-text">添加工序</div>
         </button>
         <button class="quick-card" @click="$router.push('/product-types')">
-          <div class="quick-icon" style="background: #a8000020; color: #a80000;">包</div>
+          <div class="quick-icon" style="background: #a8000020; color: #a80000;">
+            <Icon name="package" :size="32" />
+          </div>
           <div class="quick-text">添加产品</div>
         </button>
       </div>
@@ -53,11 +61,13 @@
         </div>
         <div class="info-row">
           <span class="info-label">最后更新</span>
-          <span class="info-value">2026-03-13</span>
+          <span class="info-value">2026-03-14</span>
         </div>
         <div class="info-row">
           <span class="info-label">运行状态</span>
-          <span class="info-value status-online">[OK] 正常运行</span>
+          <span class="info-value status-online">
+            <Icon name="check" :size="14" /> 正常运行
+          </span>
         </div>
       </div>
     </div>
@@ -67,12 +77,13 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const stats = ref([
-  { key: 'productTypes', label: '产品类型', value: '-', icon: '包', color: '#0078d4' },
-  { key: 'processes', label: '工序数量', value: '-', icon: '设', color: '#107c10' },
-  { key: 'employees', label: '员工人数', value: '-', icon: '群', color: '#ffc107' },
-  { key: 'contracts', label: '合同数量', value: '-', icon: '文', color: '#a80000' }
+  { key: 'productTypes', label: '产品类型', value: '-', icon: 'package', color: '#0078d4' },
+  { key: 'processes', label: '工序数量', value: '-', icon: 'settings', color: '#107c10' },
+  { key: 'employees', label: '员工人数', value: '-', icon: 'users', color: '#ffc107' },
+  { key: 'contracts', label: '合同数量', value: '-', icon: 'file-text', color: '#a80000' }
 ]);
 
 const load = async () => {
@@ -134,7 +145,6 @@ onMounted(load);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
   border-radius: var(--radius-lg);
 }
 
@@ -194,7 +204,6 @@ onMounted(load);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
   border-radius: var(--radius-lg);
 }
 
@@ -239,6 +248,9 @@ onMounted(load);
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .status-online {

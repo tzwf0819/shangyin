@@ -18,7 +18,7 @@
           <option value="delayed">延期</option>
         </select>
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>刷</span>
+          <Icon name="refresh" :size="16" />
           <span>重置</span>
         </button>
       </div>
@@ -27,28 +27,28 @@
     <!-- 进度概览 -->
     <div class="progress-overview">
       <div class="overview-card">
-        <div class="overview-icon" style="background: #0078d420; color: #0078d4;">单</div>
+        <div class="overview-icon" style="background: #0078d420; color: #0078d4;"><Icon name="file-text" :size="28" /></div>
         <div class="overview-info">
           <div class="overview-value">{{ overview.total }}</div>
           <div class="overview-label">总任务</div>
         </div>
       </div>
       <div class="overview-card">
-        <div class="overview-icon" style="background: #107c1020; color: #107c10;">[OK]</div>
+        <div class="overview-icon" style="background: #107c1020; color: #107c10;"><Icon name="check-circle" :size="28" /></div>
         <div class="overview-info">
           <div class="overview-value">{{ overview.completed }}</div>
           <div class="overview-label">已完成</div>
         </div>
       </div>
       <div class="overview-card">
-        <div class="overview-icon" style="background: #ffc10720; color: #856404;">...</div>
+        <div class="overview-icon" style="background: #ffc10720; color: #856404;"><Icon name="loader" :size="28" /></div>
         <div class="overview-info">
           <div class="overview-value">{{ overview.inProgress }}</div>
           <div class="overview-label">进行中</div>
         </div>
       </div>
       <div class="overview-card">
-        <div class="overview-icon" style="background: #a8000020; color: #a80000;">[!]</div>
+        <div class="overview-icon" style="background: #a8000020; color: #a80000;"><Icon name="alert-circle" :size="28" /></div>
         <div class="overview-info">
           <div class="overview-value">{{ overview.delayed }}</div>
           <div class="overview-label">延期</div>
@@ -103,10 +103,10 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="openProgressModal(item)" title="更新进度">
-                    <span>表</span>
+                    <Icon name="edit" :size="16" />
                   </button>
                   <button class="btn-icon" @click="viewDetail(item)" title="查看详情">
-                    <span>看</span>
+                    <Icon name="eye" :size="16" />
                   </button>
                 </div>
               </td>
@@ -114,7 +114,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="8" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">单</div>
+                  <div class="empty-icon"><Icon name="file-text" :size="48" /></div>
                   <div class="empty-title">暂无生产进度</div>
                   <div class="empty-description">暂无生产任务数据</div>
                 </div>
@@ -229,6 +229,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const list = ref([]);
 const loading = ref(false);

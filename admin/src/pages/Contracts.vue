@@ -19,12 +19,12 @@
           <option value="cancelled">已取消</option>
         </select>
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>刷</span>
+          <Icon name="refresh" :size="16" />
           <span>重置</span>
         </button>
       </div>
       <button class="btn btn-primary" @click="openCreate">
-        <span>+</span>
+        <Icon name="plus" :size="16" />
         <span>新建合同</span>
       </button>
     </div>
@@ -57,13 +57,13 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="viewDetail(item)" title="查看">
-                    <span>看</span>
+                    <Icon name="eye" :size="16" />
                   </button>
                   <button class="btn-icon" @click="openEdit(item)" title="编辑">
-                    <span>编</span>
+                    <Icon name="edit" :size="16" />
                   </button>
                   <button class="btn-icon" @click="remove(item.id)" title="删除">
-                    <span>删</span>
+                    <Icon name="trash" :size="16" />
                   </button>
                 </div>
               </td>
@@ -71,7 +71,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="6" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">文</div>
+                  <Icon name="file-text" :size="48" class="empty-icon" />
                   <div class="empty-title">暂无合同</div>
                   <div class="empty-description">点击上方按钮创建第一份合同</div>
                 </div>
@@ -95,6 +95,7 @@
             :disabled="pagination.page === 1"
             @click="changePage(pagination.page - 1)"
           >
+            <Icon name="chevron-left" :size="14" />
             上一页
           </button>
           <span class="pagination-info">
@@ -106,6 +107,7 @@
             @click="changePage(pagination.page + 1)"
           >
             下一页
+            <Icon name="chevron-right" :size="14" />
           </button>
         </div>
       </div>
@@ -116,7 +118,9 @@
       <div class="modal modal-lg">
         <div class="modal-header">
           <h3 class="modal-title">{{ isEdit ? '编辑合同' : '新建合同' }}</h3>
-          <button class="modal-close" @click="closeModal">×</button>
+          <button class="modal-close" @click="closeModal">
+            <Icon name="close" :size="20" />
+          </button>
         </div>
         <form @submit.prevent="save">
           <div class="modal-body">
@@ -161,7 +165,7 @@
               <label class="form-label">
                 合同明细
                 <button type="button" class="btn btn-sm btn-secondary" @click="addItem">
-                  <span>+</span>
+                  <Icon name="plus" :size="14" />
                   <span>添加产品</span>
                 </button>
               </label>
@@ -176,7 +180,7 @@
                   <input v-model.number="item.quantity" type="number" min="1" placeholder="数量" required />
                   <input v-model.number="item.unitPrice" type="number" step="0.01" min="0" placeholder="单价" required />
                   <button type="button" class="btn-icon" @click="removeItem(index)">
-                    <span>删</span>
+                    <Icon name="trash" :size="16" />
                   </button>
                 </div>
               </div>
@@ -210,6 +214,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const list = ref([]);
 const productTypes = ref([]);
@@ -429,13 +434,14 @@ onMounted(() => {
   background: transparent;
   border: none;
   border-radius: var(--radius-md);
-  font-size: 16px;
   cursor: pointer;
   transition: background var(--transition-fast);
+  color: var(--text-secondary);
 }
 
 .btn-icon:hover {
   background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .empty-cell {
@@ -450,9 +456,9 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 48px;
   margin-bottom: var(--space-3);
   opacity: 0.5;
+  color: var(--text-tertiary);
 }
 
 .empty-title {

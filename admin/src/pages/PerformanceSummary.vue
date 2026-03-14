@@ -28,38 +28,40 @@
       </div>
       <button class="btn btn-primary" @click="loadData" :disabled="loading">
         <span v-if="loading" class="spinner spinner-sm"></span>
-        <span v-else>搜 查询</span>
+        <Icon v-else name="search" :size="16" />
+        <span v-if="!loading">查询</span>
       </button>
       <button class="btn btn-secondary" @click="exportData">
-        <span>下 导出</span>
+        <Icon name="download" :size="16" />
+        <span>导出</span>
       </button>
     </div>
 
     <!-- 统计卡片 -->
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-icon" style="background: #0078d420; color: #0078d4;">表</div>
+        <div class="stat-icon" style="background: #0078d420; color: #0078d4;"><Icon name="clipboard-list" :size="28" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ summary.totalTasks || 0 }}</div>
           <div class="stat-label">总任务数</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: #107c1020; color: #107c10;">[OK]</div>
+        <div class="stat-icon" style="background: #107c1020; color: #107c10;"><Icon name="check-circle" :size="28" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ summary.completedTasks || 0 }}</div>
           <div class="stat-label">已完成</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: #ffc10720; color: #856404;">...</div>
+        <div class="stat-icon" style="background: #ffc10720; color: #856404;"><Icon name="loader" :size="28" /></div>
         <div class="stat-info">
           <div class="stat-value">{{ summary.inProgressTasks || 0 }}</div>
           <div class="stat-label">进行中</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon" style="background: #a8000020; color: #a80000;">钱</div>
+        <div class="stat-icon" style="background: #a8000020; color: #a80000;"><Icon name="currency-yen" :size="28" /></div>
         <div class="stat-info">
           <div class="stat-value">¥{{ formatMoney(summary.totalPerformance || 0) }}</div>
           <div class="stat-label">绩效总额</div>
@@ -97,7 +99,7 @@
             <tr v-if="dataList.length === 0 && !loading">
               <td colspan="8" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">图</div>
+                  <div class="empty-icon"><Icon name="bar-chart" :size="48" /></div>
                   <div class="empty-title">暂无数据</div>
                   <div class="empty-description">请选择筛选条件后点击查询</div>
                 </div>
@@ -173,6 +175,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const loading = ref(false);
 const dataList = ref([]);

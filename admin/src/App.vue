@@ -9,10 +9,12 @@
       <header class="app-header">
         <div class="header-left">
           <button class="menu-toggle" @click="sidebarCollapsed = !sidebarCollapsed">
-            <span class="icon-menu">三</span>
+            <Icon name="menu" :size="18" />
           </button>
           <div class="header-brand">
-            <span class="brand-icon">茚</span>
+            <span class="brand-icon">
+              <Icon name="layers" :size="20" />
+            </span>
             <span class="brand-text">上茚 ERP</span>
           </div>
         </div>
@@ -41,38 +43,40 @@
               @keyup.enter="handleSearch"
             />
             <button class="search-btn" @click="handleSearch">
-              <span class="icon-search">搜</span>
+              <Icon name="search" :size="16" />
             </button>
           </div>
           
           <div class="header-actions">
             <button class="action-btn" title="通知">
-              <span class="icon-bell">铃</span>
+              <Icon name="bell" :size="18" />
               <span v-if="notificationCount" class="badge">{{ notificationCount }}</span>
             </button>
             <button class="action-btn" title="帮助">
-              <span class="icon-help">?</span>
+              <Icon name="help" :size="18" />
             </button>
             
             <div class="user-menu">
               <button class="user-btn" @click="showUserMenu = !showUserMenu">
-                <span class="user-avatar">管</span>
+                <span class="user-avatar">
+                  <Icon name="user" :size="16" />
+                </span>
                 <span class="user-name">管理员</span>
-                <span class="user-arrow">v</span>
+                <Icon name="chevron-down" :size="14" />
               </button>
               
               <div v-if="showUserMenu" class="user-dropdown">
                 <div class="dropdown-item" @click="goToProfile">
-                  <span class="dropdown-icon">人</span>
+                  <Icon name="user" :size="16" />
                   <span>个人资料</span>
                 </div>
                 <div class="dropdown-item" @click="goToSettings">
-                  <span class="dropdown-icon">设</span>
+                  <Icon name="settings" :size="16" />
                   <span>系统设置</span>
                 </div>
                 <div class="dropdown-divider"></div>
                 <div class="dropdown-item logout" @click="handleLogout">
-                  <span class="dropdown-icon">退</span>
+                  <Icon name="logout" :size="16" />
                   <span>退出登录</span>
                 </div>
               </div>
@@ -100,7 +104,9 @@
                 :class="{ active: isActive(item.path) }"
                 :title="sidebarCollapsed ? item.label : ''"
               >
-                <span class="nav-icon">{{ item.icon }}</span>
+                <span class="nav-icon">
+                  <Icon :name="item.icon" :size="18" />
+                </span>
                 <span class="nav-label">{{ item.label }}</span>
               </RouterLink>
             </div>
@@ -138,6 +144,7 @@
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Login from './pages/Login.vue';
+import Icon from './components/Icon.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -164,27 +171,27 @@ const menuGroups = [
   {
     name: '核心功能',
     items: [
-      { path: '/dashboard', label: '仪表盘', icon: '统' },
-      { path: '/contracts', label: '合同管理', icon: '同' },
-      { path: '/production-records', label: '生产记录', icon: '记' },
-      { path: '/production-progress', label: '生产进度', icon: '进' }
+      { path: '/dashboard', label: '仪表盘', icon: 'dashboard' },
+      { path: '/contracts', label: '合同管理', icon: 'contract' },
+      { path: '/production-records', label: '生产记录', icon: 'records' },
+      { path: '/production-progress', label: '生产进度', icon: 'progress' }
     ]
   },
   {
     name: '基础数据',
     items: [
-      { path: '/processes', label: '工序管理', icon: '工' },
-      { path: '/product-types', label: '产品类型', icon: '品' },
-      { path: '/employees', label: '员工管理', icon: '员' },
-      { path: '/wechat-employees', label: '微信员工', icon: '微' }
+      { path: '/processes', label: '工序管理', icon: 'process' },
+      { path: '/product-types', label: '产品类型', icon: 'product' },
+      { path: '/employees', label: '员工管理', icon: 'employee' },
+      { path: '/wechat-employees', label: '微信员工', icon: 'wechat' }
     ]
   },
   {
     name: '系统管理',
     items: [
-      { path: '/permissions', label: '权限管理', icon: '权' },
-      { path: '/performance-summary', label: '绩效汇总', icon: '汇' },
-      { path: '/employee-performance', label: '员工绩效', icon: '效' }
+      { path: '/permissions', label: '权限管理', icon: 'permission' },
+      { path: '/performance-summary', label: '绩效汇总', icon: 'summary' },
+      { path: '/employee-performance', label: '员工绩效', icon: 'performance' }
     ]
   }
 ];
@@ -280,8 +287,9 @@ if (typeof window !== 'undefined') {
 }
 
 .icon-menu {
-  font-weight: bold;
-  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .menu-toggle:hover {
@@ -303,8 +311,6 @@ if (typeof window !== 'undefined') {
   justify-content: center;
   background: var(--color-primary);
   color: white;
-  font-size: 18px;
-  font-weight: 600;
   border-radius: var(--radius-md);
 }
 
@@ -417,8 +423,9 @@ if (typeof window !== 'undefined') {
 }
 
 .icon-bell, .icon-help {
-  font-size: 16px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn:hover {
@@ -470,8 +477,6 @@ if (typeof window !== 'undefined') {
   justify-content: center;
   background: var(--color-primary-light);
   color: var(--color-primary);
-  font-size: 14px;
-  font-weight: 600;
   border-radius: 50%;
 }
 
@@ -483,8 +488,7 @@ if (typeof window !== 'undefined') {
   justify-content: center;
   background: var(--bg-hover);
   border-radius: var(--radius-sm);
-  font-size: 12px;
-  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 .user-name {
@@ -710,16 +714,7 @@ if (typeof window !== 'undefined') {
   background: var(--bg-page);
 }
 
-/* PC端优化 */
-.app-wrapper {
-  min-width: 1200px;
-}
-
-.app-main {
-  min-width: 900px;
-}
-
-/* 大屏幕优化 */
+/* PC端优化 - 大屏幕 */
 @media (min-width: 1400px) {
   .app-sidebar {
     width: 280px;
@@ -743,26 +738,23 @@ if (typeof window !== 'undefined') {
   }
 }
 
-/* 响应式适配 */
+/* 平板和中等屏幕适配 */
 @media (max-width: 1200px) {
   .header-center {
     display: none;
   }
   
-  .app-wrapper {
-    min-width: auto;
+  .header-search {
+    width: 160px;
   }
   
-  .app-main {
-    min-width: auto;
+  .search-input {
+    width: 120px;
   }
 }
 
-@media (max-width: 768px) {
-  .app-wrapper {
-    min-width: auto;
-  }
-  
+/* 小屏幕适配 */
+@media (max-width: 992px) {
   .app-sidebar {
     position: fixed;
     left: 0;
@@ -770,18 +762,54 @@ if (typeof window !== 'undefined') {
     bottom: 0;
     z-index: 99;
     transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
   }
   
   .app-sidebar:not(.collapsed) {
     transform: translateX(0);
   }
   
+  .app-main {
+    margin-left: 0;
+  }
+  
+  .menu-toggle {
+    display: flex;
+  }
+  
   .header-search {
     display: none;
+  }
+}
+
+/* 手机端适配 */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 12px;
   }
   
   .brand-text {
     font-size: 16px;
+  }
+  
+  .header-brand {
+    gap: 8px;
+  }
+  
+  .main-content {
+    padding: 16px;
+  }
+  
+  .page-title {
+    font-size: 22px;
+  }
+  
+  .user-name {
+    display: none;
+  }
+  
+  .header-actions {
+    gap: 4px;
   }
 }
 </style>

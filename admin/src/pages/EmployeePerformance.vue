@@ -16,17 +16,23 @@
         </div>
         <button class="btn btn-primary" @click="loadData" :disabled="loading">
           <span v-if="loading" class="spinner spinner-sm"></span>
-          <span v-else>搜 查询</span>
+          <template v-else>
+            <Icon name="search" :size="16" />
+            <span>查询</span>
+          </template>
         </button>
       </div>
       <button class="btn btn-secondary" @click="exportData">
-        <span>下 导出</span>
+        <Icon name="download" :size="16" />
+        <span>导出</span>
       </button>
     </div>
 
     <!-- 员工概览卡片 -->
     <div v-if="selectedEmployee" class="employee-card">
-      <div class="employee-avatar">{{ getInitial(selectedEmployee.name) }}</div>
+      <div class="employee-avatar">
+        <Icon name="user" :size="36" />
+      </div>
       <div class="employee-info">
         <h2 class="employee-name">{{ selectedEmployee.name }}</h2>
         <p class="employee-meta">
@@ -88,7 +94,7 @@
             <tr v-if="dataList.length === 0 && !loading">
               <td colspan="8" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">人</div>
+                  <Icon name="user" :size="48" class="empty-icon" />
                   <div class="empty-title">暂无绩效记录</div>
                   <div class="empty-description">请选择员工并设置时间范围后查询</div>
                 </div>
@@ -143,6 +149,7 @@
 <script setup>
 import { ref, reactive, onMounted, computed } from 'vue';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const loading = ref(false);
 const dataList = ref([]);
@@ -188,9 +195,7 @@ const formatMoney = (amount) => {
   return Number(amount).toFixed(2);
 };
 
-const getInitial = (name) => {
-  return name ? name.charAt(0) : '?';
-};
+
 
 const getStatusText = (status) => {
   const map = {
@@ -415,9 +420,9 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 48px;
   margin-bottom: var(--space-3);
   opacity: 0.5;
+  color: var(--text-tertiary);
 }
 
 .empty-title {

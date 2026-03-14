@@ -11,12 +11,12 @@
           @input="debounceLoad"
         />
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>刷</span>
+          <Icon name="refresh" :size="16" />
           <span>重置</span>
         </button>
       </div>
       <button class="btn btn-primary" @click="openCreate">
-        <span>+</span>
+        <Icon name="plus" :size="16" />
         <span>新建角色</span>
       </button>
     </div>
@@ -56,10 +56,10 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="openEdit(item)" title="编辑">
-                    <span>编</span>
+                    <Icon name="edit" :size="16" />
                   </button>
                   <button class="btn-icon" @click="remove(item.id)" title="删除">
-                    <span>删</span>
+                    <Icon name="trash" :size="16" />
                   </button>
                 </div>
               </td>
@@ -67,7 +67,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="5" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">锁</div>
+                  <div class="empty-icon"><Icon name="lock" :size="48" /></div>
                   <div class="empty-title">暂无角色</div>
                   <div class="empty-description">点击上方按钮创建第一个角色</div>
                 </div>
@@ -174,6 +174,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const list = ref([]);
 const loading = ref(false);

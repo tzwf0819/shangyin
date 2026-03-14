@@ -11,12 +11,12 @@
           @input="debounceLoad"
         />
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>刷</span>
+          <Icon name="refresh" :size="16" />
           <span>重置</span>
         </button>
       </div>
       <button class="btn btn-primary" @click="openCreate">
-        <span>+</span>
+        <Icon name="plus" :size="16" />
         <span>添加产品类型</span>
       </button>
     </div>
@@ -43,10 +43,10 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="openEdit(item)" title="编辑">
-                    <span>编</span>
+                    <Icon name="edit" :size="16" />
                   </button>
                   <button class="btn-icon" @click="remove(item.id)" title="删除">
-                    <span>删</span>
+                    <Icon name="trash" :size="16" />
                   </button>
                 </div>
               </td>
@@ -54,7 +54,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="5" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">包</div>
+                  <Icon class="empty-icon" name="package" :size="48" />
                   <div class="empty-title">暂无产品类型</div>
                   <div class="empty-description">点击上方按钮添加第一条产品类型</div>
                 </div>
@@ -99,7 +99,7 @@
       <div class="modal">
         <div class="modal-header">
           <h3 class="modal-title">{{ isEdit ? '编辑产品类型' : '添加产品类型' }}</h3>
-          <button class="modal-close" @click="closeModal">×</button>
+          <button class="modal-close" @click="closeModal"><Icon name="close" :size="20" /></button>
         </div>
         <form @submit.prevent="save">
           <div class="modal-body">
@@ -141,6 +141,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const list = ref([]);
 const loading = ref(false);

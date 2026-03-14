@@ -5,21 +5,21 @@
       <div class="login-brand">
         <div class="brand-content">
           <div class="brand-logo">
-            <div class="logo-icon">单</div>
+            <Icon name="layers" :size="48" />
           </div>
           <h1 class="brand-title">上茚 ERP</h1>
           <p class="brand-subtitle">工厂管理系统</p>
           <div class="brand-features">
             <div class="feature-item">
-              <span class="feature-icon">快</span>
+              <Icon name="zap" :size="20" />
               <span>高效生产管理</span>
             </div>
             <div class="feature-item">
-              <span class="feature-icon">锁</span>
+              <Icon name="shield" :size="20" />
               <span>安全可靠</span>
             </div>
             <div class="feature-item">
-              <span class="feature-icon">表</span>
+              <Icon name="bar-chart" :size="20" />
               <span>数据可视化</span>
             </div>
           </div>
@@ -40,7 +40,9 @@
                 <span>用户名</span>
               </label>
               <div class="input-wrapper">
-                <span class="input-icon">人</span>
+                <span class="input-icon">
+                  <Icon name="user" :size="18" />
+                </span>
                 <input
                   v-model="form.username"
                   type="text"
@@ -56,7 +58,9 @@
                 <span>密码</span>
               </label>
               <div class="input-wrapper">
-                <span class="input-icon">锁</span>
+                <span class="input-icon">
+                  <Icon name="lock" :size="18" />
+                </span>
                 <input
                   v-model="form.password"
                   :type="showPassword ? 'text' : 'password'"
@@ -70,7 +74,7 @@
                   @click="showPassword = !showPassword"
                   :disabled="loading"
                 >
-                  <span>{{ showPassword ? '隐' : '显' }}</span>
+                  <Icon :name="showPassword ? 'eye-off' : 'eye'" :size="18" />
                 </button>
               </div>
             </div>
@@ -90,7 +94,7 @@
           </form>
           
           <div v-if="error" class="error-message">
-            <span class="error-icon">[!]</span>
+            <Icon name="alert-circle" :size="18" />
             <span>{{ error }}</span>
           </div>
           
@@ -107,6 +111,7 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const router = useRouter();
 
@@ -179,7 +184,7 @@ if (savedUser) {
   align-items: center;
   justify-content: center;
   padding: var(--space-10);
-  background: linear-gradient(135deg, #0078d4 0%, #106ebe 50%, #005a9e 100%);
+  background: var(--color-primary);
   color: white;
 }
 
@@ -188,20 +193,14 @@ if (savedUser) {
 }
 
 .brand-logo {
-  margin-bottom: var(--space-6);
-}
-
-.logo-icon {
   width: 100px;
   height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 60px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-xl);
-  margin: 0 auto;
-  backdrop-filter: blur(8px);
+  margin: 0 auto var(--space-6);
 }
 
 .brand-title {
@@ -230,10 +229,6 @@ if (savedUser) {
   gap: var(--space-3);
   font-size: var(--text-base);
   opacity: 0.9;
-}
-
-.feature-icon {
-  font-size: 20px;
 }
 
 /* 右侧登录区 */
@@ -298,9 +293,10 @@ if (savedUser) {
 .input-icon {
   position: absolute;
   left: var(--space-3);
-  font-size: 18px;
   color: var(--text-tertiary);
   pointer-events: none;
+  display: flex;
+  align-items: center;
 }
 
 .input-wrapper input {
@@ -335,14 +331,15 @@ if (savedUser) {
   justify-content: center;
   background: transparent;
   border: none;
-  font-size: 18px;
   cursor: pointer;
+  color: var(--text-tertiary);
   opacity: 0.6;
   transition: opacity var(--transition-fast);
 }
 
 .toggle-password:hover {
   opacity: 1;
+  color: var(--text-secondary);
 }
 
 .form-options {
@@ -429,10 +426,6 @@ if (savedUser) {
   margin-top: var(--space-4);
 }
 
-.error-icon {
-  font-size: 16px;
-}
-
 .form-footer {
   margin-top: var(--space-8);
   text-align: center;
@@ -461,13 +454,9 @@ if (savedUser) {
   }
   
   .brand-logo {
-    margin-bottom: var(--space-4);
-  }
-  
-  .logo-icon {
     width: 80px;
     height: 80px;
-    font-size: 48px;
+    margin-bottom: var(--space-4);
   }
   
   .brand-title {

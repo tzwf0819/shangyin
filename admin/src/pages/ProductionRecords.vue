@@ -17,12 +17,12 @@
           <option value="completed">已完成</option>
         </select>
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>刷</span>
+          <Icon name="refresh" :size="16" />
           <span>重置</span>
         </button>
       </div>
       <button class="btn btn-primary" @click="openCreate">
-        <span>+</span>
+        <Icon name="plus" :size="16" />
         <span>新建记录</span>
       </button>
     </div>
@@ -59,13 +59,13 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="openEdit(item)" title="编辑">
-                    <span>编</span>
+                    <Icon name="edit" :size="16" />
                   </button>
                   <button class="btn-icon" @click="updateStatus(item)" title="更新状态">
-                    <span>刷</span>
+                    <Icon name="refresh" :size="16" />
                   </button>
                   <button class="btn-icon" @click="remove(item.id)" title="删除">
-                    <span>删</span>
+                    <Icon name="trash" :size="16" />
                   </button>
                 </div>
               </td>
@@ -73,7 +73,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="8" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">记</div>
+                  <div class="empty-icon"><Icon name="clipboard" :size="48" /></div>
                   <div class="empty-title">暂无生产记录</div>
                   <div class="empty-description">点击上方按钮创建第一条记录</div>
                 </div>
@@ -233,6 +233,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const list = ref([]);
 const contracts = ref([]);

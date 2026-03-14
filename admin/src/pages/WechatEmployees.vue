@@ -23,7 +23,7 @@
           <option value="inactive">未绑定</option>
         </select>
         <button class="btn btn-secondary" @click="resetFilter">
-          <span>刷</span>
+          <Icon name="refresh" :size="16" />
           <span>重置</span>
         </button>
       </div>
@@ -67,7 +67,7 @@
               <td>
                 <div class="table-actions">
                   <button class="btn-icon" @click="openEdit(item)" title="编辑">
-                    <span>编</span>
+                    <Icon name="edit" :size="16" />
                   </button>
                   <button
                     v-if="item.openId"
@@ -75,7 +75,7 @@
                     @click="unbind(item)"
                     title="解绑微信"
                   >
-                    <span>链</span>
+                    <Icon name="link-off" :size="16" />
                   </button>
                 </div>
               </td>
@@ -83,7 +83,7 @@
             <tr v-if="list.length === 0 && !loading">
               <td colspan="7" class="empty-cell">
                 <div class="empty-state">
-                  <div class="empty-icon">信</div>
+                  <div class="empty-icon"><Icon name="message-circle" :size="48" /></div>
                   <div class="empty-title">暂无微信员工</div>
                   <div class="empty-description">员工通过小程序绑定后会自动显示</div>
                 </div>
@@ -167,6 +167,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import http from '../api/http';
+import Icon from '../components/Icon.vue';
 
 const list = ref([]);
 const loading = ref(false);
