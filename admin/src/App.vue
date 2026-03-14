@@ -719,11 +719,6 @@ if (typeof window !== 'undefined') {
   min-width: 900px;
 }
 
-.main-content {
-  max-width: 1600px;
-  margin: 0 auto;
-}
-
 /* 大屏幕优化 */
 @media (min-width: 1400px) {
   .app-sidebar {
